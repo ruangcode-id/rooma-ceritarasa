@@ -1,0 +1,450 @@
+// =============================================
+// Prisma Schema — Sistem Reservasi Restoran
+// ERD FINAL v2 — 100% Match
+// =============================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------
+// ENUMS
+// -----------------------------------------------
+
+enum UserRole {
+  admin
+  owner
+}
+
+enum ReservationStatus {
+  pending
+  confirmed
+  checked_in
+  no_show
+  cancelled
+}
+
+enum PaymentType {
+  deposit
+  full
+  refund
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+enum EventRequestStatus {
+  pending
+  offered
+  accepted
+  rejected
+  cancelled
+}
+
+enum EventOfferStatus {
+  sent
+  accepted
+  rejected
+}
+
+enum EventPaymentType {
+  deposit
+  full
+}
+
+enum EventPaymentStatus {
+  pending
+  paid
+  failed
+}
+
+enum GalleryCategory {
+  food
+  interior
+  event
+  team
+}
+
+enum NotificationType {
+  new_reservation
+  cancellation
+  check_in
+  payment_confirmed
+}
+
+// -----------------------------------------------
+// 1. AUTH — hanya admin & owner
+// -----------------------------------------------
+
+model User {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(150)
+  password  String   @db.Text
+  role      UserRole
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  vipCardsIssued     VipCard[]           @relation("IssuedByUser")
+  settingsUpdated    RestaurantSetting[] @relation("UpdatedByUser")
+  blockedDates       BlockedDate[]       @relation("CreatedByUser")
+  reservationsCreated Reservation[]      @relation("CreatedByUser")
+  checkIns           CheckIn[]           @relation("CheckedInByUser")
+  eventOffers        EventOffer[]        @relation("CreatedByUser")
+  galleryPhotos      GalleryPhoto[]      @relation("UploadedByUser")
+  eventsCreated      Event[]             @relation("CreatedByUser")
+  jobListings        JobListing[]        @relation("CreatedByUser")
+  notifications      Notification[]      @relation("UserNotifications")
+  pushSubscriptions  PushSubscription[]  @relation("UserPushSubscriptions")
+
+  @@map("users")
+}
+
+// -----------------------------------------------
+// 2. TAMU — tidak login, data dari form reservasi
+// -----------------------------------------------
+
+model Guest {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(100)
+  email     String?  @db.VarChar(150)
+  phone     String   @db.VarChar(20)
+  isVip     Boolean  @default(false) @map("is_vip")
+  notes     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  vipCards       VipCard[]
+  reservations   Reservation[]
+  eventRequests  EventRequest[]
+
+  @@index([phone], map: "idx_guests_phone")
+  @@map("guests")
+}
+
+model VipCard {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  guestId      String    @map("guest_id") @db.Uuid
+  cardNumber   String    @unique @map("card_number") @db.VarChar(50)
+  qrCodeUrl    String    @map("qr_code_url") @db.Text
+  cardImageUrl String?   @map("card_image_url") @db.Text
+  issuedBy     String?   @map("issued_by") @db.Uuid
+  issuedAt     DateTime  @default(now()) @map("issued_at")
+  expiredAt    DateTime? @map("expired_at")
+  isActive     Boolean   @default(true) @map("is_active")
+
+  // Relations
+  guest  Guest @relation(fields: [guestId], references: [id])
+  issuer User? @relation("IssuedByUser", fields: [issuedBy], references: [id])
+
+  @@map("vip_cards")
+}
+
+// -----------------------------------------------
+// 3. KONFIGURASI RESTORAN
+// -----------------------------------------------
+
+model RestaurantSetting {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String?  @db.VarChar(100)
+  address              String?  @db.Text
+  phone                String?  @db.VarChar(20)
+  email                String?  @db.VarChar(150)
+  whatsappNumber       String?  @map("whatsapp_number") @db.VarChar(20)
+  depositPercent       Decimal? @map("deposit_percent") @db.Decimal(5, 2)
+  cancellationPolicy   String?  @map("cancellation_policy") @db.Text
+  seoTitle             String?  @map("seo_title") @db.VarChar(200)
+  seoDescription       String?  @map("seo_description") @db.Text
+  confirmationTemplate String?  @map("confirmation_template") @db.Text
+  reminderTemplate     String?  @map("reminder_template") @db.Text
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  updatedBy            String?  @map("updated_by") @db.Uuid
+
+  // Relations
+  updater User? @relation("UpdatedByUser", fields: [updatedBy], references: [id])
+
+  @@map("restaurant_settings")
+}
+
+model Session {
+  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  label     String  @db.VarChar(50)
+  startTime DateTime @map("start_time") @db.Time()
+  endTime   DateTime @map("end_time") @db.Time()
+  capacity  Int
+  isActive  Boolean @default(true) @map("is_active")
+
+  // Relations
+  reservations  Reservation[]
+  eventRequests EventRequest[]
+
+  @@map("sessions")
+}
+
+model BlockedDate {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date      DateTime @db.Date
+  reason    String?  @db.VarChar(200)
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  creator User? @relation("CreatedByUser", fields: [createdBy], references: [id])
+
+  @@map("blocked_dates")
+}
+
+// -----------------------------------------------
+// 4. MEJA
+// -----------------------------------------------
+
+model Table {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tableNumber String  @unique @map("table_number") @db.VarChar(10)
+  capacity    Int
+  positionX   Int?    @map("position_x")
+  positionY   Int?    @map("position_y")
+  isActive    Boolean @default(true) @map("is_active")
+
+  // Relations
+  reservationTables ReservationTable[]
+
+  @@map("tables")
+}
+
+// -----------------------------------------------
+// 5. RESERVASI
+// -----------------------------------------------
+
+model Reservation {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  guestId        String            @map("guest_id") @db.Uuid
+  sessionId      String            @map("session_id") @db.Uuid
+  date           DateTime          @db.Date
+  partySize      Int               @map("party_size")
+  status         ReservationStatus
+  specialRequest String?           @map("special_request") @db.Text
+  internalNotes  String?           @map("internal_notes") @db.Text
+  cancelToken    String?           @unique @map("cancel_token") @db.VarChar(100)
+  createdBy      String?           @map("created_by") @db.Uuid
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  // Relations
+  guest             Guest              @relation(fields: [guestId], references: [id])
+  session           Session            @relation(fields: [sessionId], references: [id])
+  creator           User?              @relation("CreatedByUser", fields: [createdBy], references: [id])
+  reservationTables ReservationTable[]
+  checkIn           CheckIn?
+  payments          Payment[]
+
+  @@index([date, sessionId], map: "idx_reservations_date_session")
+  @@map("reservations")
+}
+
+model ReservationTable {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reservationId String @map("reservation_id") @db.Uuid
+  tableId       String @map("table_id") @db.Uuid
+
+  // Relations
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+  table       Table       @relation(fields: [tableId], references: [id])
+
+  @@map("reservation_tables")
+}
+
+model CheckIn {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reservationId String   @unique @map("reservation_id") @db.Uuid
+  checkedInAt   DateTime @default(now()) @map("checked_in_at")
+  checkedInBy   String?  @map("checked_in_by") @db.Uuid
+
+  // Relations
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+  checker     User?       @relation("CheckedInByUser", fields: [checkedInBy], references: [id])
+
+  @@map("check_ins")
+}
+
+// -----------------------------------------------
+// 6. PAYMENT RESERVASI
+// -----------------------------------------------
+
+model Payment {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reservationId   String        @map("reservation_id") @db.Uuid
+  type            PaymentType
+  amount          Decimal       @db.Decimal(12, 2)
+  status          PaymentStatus
+  midtransOrderId String?       @unique @map("midtrans_order_id") @db.VarChar(100)
+  midtransTxnId   String?       @map("midtrans_txn_id") @db.VarChar(100)
+  paymentMethod   String?       @map("payment_method") @db.VarChar(50)
+  paidAt          DateTime?     @map("paid_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  reservation Reservation @relation(fields: [reservationId], references: [id])
+
+  @@map("payments")
+}
+
+// -----------------------------------------------
+// 7. EVENT / ACARA KHUSUS
+// -----------------------------------------------
+
+model EventRequest {
+  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  guestId     String             @map("guest_id") @db.Uuid
+  sessionId   String?            @map("session_id") @db.Uuid
+  eventType   String?            @map("event_type") @db.VarChar(100)
+  eventDate   DateTime           @map("event_date") @db.Date
+  partySize   Int?               @map("party_size")
+  description String?            @db.Text
+  status      EventRequestStatus
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  guest         Guest          @relation(fields: [guestId], references: [id])
+  session       Session?       @relation(fields: [sessionId], references: [id])
+  eventOffers   EventOffer[]
+  eventPayments EventPayment[]
+
+  @@map("event_requests")
+}
+
+model EventOffer {
+  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventRequestId  String           @map("event_request_id") @db.Uuid
+  createdBy       String?          @map("created_by") @db.Uuid
+  price           Decimal?         @db.Decimal(12, 2)
+  description     String?          @db.Text
+  documentUrl     String?          @map("document_url") @db.Text
+  status          EventOfferStatus
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  eventRequest EventRequest @relation(fields: [eventRequestId], references: [id])
+  creator      User?        @relation("CreatedByUser", fields: [createdBy], references: [id])
+
+  @@map("event_offers")
+}
+
+model EventPayment {
+  id              String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  eventRequestId  String             @map("event_request_id") @db.Uuid
+  type            EventPaymentType?
+  amount          Decimal?           @db.Decimal(12, 2)
+  status          EventPaymentStatus?
+  paymentMethod   String?            @map("payment_method") @db.VarChar(50)
+  paidAt          DateTime?          @map("paid_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  eventRequest EventRequest @relation(fields: [eventRequestId], references: [id])
+
+  @@map("event_payments")
+}
+
+// -----------------------------------------------
+// 8. KONTEN — GALERI & EVENT PUBLIK
+// -----------------------------------------------
+
+model GalleryPhoto {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  url        String           @db.Text
+  caption    String?          @db.VarChar(200)
+  category   GalleryCategory?
+  sortOrder  Int              @default(0) @map("sort_order")
+  uploadedBy String?          @map("uploaded_by") @db.Uuid
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  uploader User? @relation("UploadedByUser", fields: [uploadedBy], references: [id])
+
+  @@map("gallery_photos")
+}
+
+model Event {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title       String   @db.VarChar(200)
+  description String?  @db.Text
+  imageUrl    String?  @map("image_url") @db.Text
+  eventDate   DateTime? @map("event_date") @db.Date
+  isPublished Boolean  @default(false) @map("is_published")
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  creator User? @relation("CreatedByUser", fields: [createdBy], references: [id])
+
+  @@map("events")
+}
+
+// -----------------------------------------------
+// 9. KARIR
+// -----------------------------------------------
+
+model JobListing {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title        String   @db.VarChar(150)
+  description  String?  @db.Text
+  requirements String?  @db.Text
+  isOpen       Boolean  @default(true) @map("is_open")
+  createdBy    String?  @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  creator User? @relation("CreatedByUser", fields: [createdBy], references: [id])
+
+  @@map("job_listings")
+}
+
+// -----------------------------------------------
+// 10. NOTIFIKASI (browser push — admin & owner)
+// -----------------------------------------------
+
+model Notification {
+  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  type      NotificationType
+  title     String?          @db.VarChar(200)
+  body      String?          @db.Text
+  isRead    Boolean          @default(false) @map("is_read")
+  relatedId String?          @map("related_id") @db.Uuid
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation("UserNotifications", fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  endpoint  String   @db.Text
+  p256dh    String   @db.Text
+  auth      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation("UserPushSubscriptions", fields: [userId], references: [id])
+
+  @@map("push_subscriptions")
+}
