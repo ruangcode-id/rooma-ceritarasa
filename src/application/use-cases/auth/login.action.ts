@@ -3,6 +3,7 @@
 import { signIn } from "@/auth";
 import { prisma } from "@/infrastructure/database/prisma";
 import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 type LoginState = {
@@ -53,5 +54,7 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
     throw error;
   }
 
-  return { error: null };
+  // In some NextAuth/Next.js combinations, `signIn()` may not throw a redirect
+  // for Credentials provider. Ensure we always land on the correct dashboard.
+  redirect(redirectTo);
 }
