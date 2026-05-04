@@ -81,6 +81,13 @@ enum NotificationType {
   payment_confirmed
 }
 
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+}
+
 // -----------------------------------------------
 // 1. AUTH — hanya admin & owner
 // -----------------------------------------------
@@ -215,9 +222,10 @@ model Table {
   id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tableNumber String  @unique @map("table_number") @db.VarChar(10)
   capacity    Int
-  positionX   Int?    @map("position_x")
-  positionY   Int?    @map("position_y")
+  posX        Int?    @map("position_x")
+  posY        Int?    @map("position_y")
   isActive    Boolean @default(true) @map("is_active")
+  status      TableStatus @default(AVAILABLE)
 
   // Relations
   reservationTables ReservationTable[]

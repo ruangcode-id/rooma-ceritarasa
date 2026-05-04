@@ -1,45 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SessionUseCase } from "@/application/use-cases/sessions/session.usecase";
 
-const parseDateParam = (dateStr: string | null) => {
-  if (!dateStr) return undefined;
-  // Expect YYYY-MM-DD
-  const date = new Date(`${dateStr}T00:00:00.000Z`);
-  return Number.isNaN(date.getTime()) ? undefined : date;
-};
-
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
-    const isActiveParam = searchParams.get("isActive");
-    const statusParam = searchParams.get("status");
-    const date = parseDateParam(searchParams.get("date"));
-    
-    let isActive: boolean | undefined = undefined;
-    if (isActiveParam === "true") isActive = true;
-    if (isActiveParam === "false") isActive = false;
+    const page = parseInt(searchParams.get("page") ?? "1");
+    const limit = parseInt(searchParams.get("limit") ?? "20");
+    const isActive = searchParams.get("isActive");
+    const dateStr = searchParams.get("date");
 
-    // Spec-friendly alias: status=active|inactive
-    if (statusParam === "active") isActive = true;
-    if (statusParam === "inactive") isActive = false;
+    let isActiveFilter: boolean | undefined;
+    if (isActive !== null) {
+      isActiveFilter = isActive === "true";
+    }
 
-    const result = await SessionUseCase.getSessionsAction({ page, limit, isActive, date });
+    let date: Date | undefined;
+    if (dateStr) {
+      date = new Date(`${dateStr}T00:00:00.000Z`);
+    }
+
+    const result = await SessionUseCase.getSessionsAction({
+      page,
+      limit,
+      isActive: isActiveFilter,
+      date,
+    });
 
     return NextResponse.json({
       success: true,
       data: result.sessions,
-      meta: {
-        total: result.total,
-        page,
-        limit,
-        totalPages: Math.ceil(result.total / limit),
-      },
+      total: result.total,
+      page,
+      limit,
     });
   } catch (error: any) {
-    if (error.message.includes("Unauthorized") || error.message.includes("Forbidden")) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 403 });
+    if (error.message === "Unauthorized" || error.message === "Forbidden") {
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
@@ -48,26 +44,18 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const newSession = await SessionUseCase.createSessionAction(body);
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          ...newSession,
-          currentCapacity: 0,
-          availableSlots: newSession.maxCapacity,
-        },
-      },
-      { status: 201 }
-    );
+    const session = await SessionUseCase.createSessionAction(body);
+    return NextResponse.json({ success: true, data: session }, { status: 201 });
   } catch (error: any) {
-    if (error.message.includes("Unauthorized") || error.message.includes("Forbidden")) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 403 });
+    if (error.message === "Unauthorized" || error.message === "Forbidden") {
+      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
     }
-    if (error.name === "ZodError") {
-      return NextResponse.json({ success: false, error: "Validation Error", details: error.errors }, { status: 400 });
+    if (error.message.includes("Start time must be before end time")) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    if (error.message.includes("dayOfWeek")) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
