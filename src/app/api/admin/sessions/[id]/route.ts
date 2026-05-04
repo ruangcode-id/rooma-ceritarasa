@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SessionUseCase } from "@/application/use-cases/sessions/session.usecase";
 
+const parseDateParam = (req: NextRequest) => {
+  const { searchParams } = new URL(req.url);
+  const dateStr = searchParams.get("date");
+  if (!dateStr) return undefined;
+  const date = new Date(`${dateStr}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const session = await SessionUseCase.getSessionByIdAction(id);
+    const date = parseDateParam(req);
+    const session = await SessionUseCase.getSessionByIdAction(id, date);
     return NextResponse.json({ success: true, data: session });
   } catch (error: any) {
     if (error.message.includes("Unauthorized") || error.message.includes("Forbidden")) {
@@ -26,10 +35,12 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
+    const date = parseDateParam(req);
     const body = await req.json();
-    const updatedSession = await SessionUseCase.updateSessionAction(id, body);
+    await SessionUseCase.updateSessionAction(id, body);
 
-    return NextResponse.json({ success: true, data: updatedSession });
+    const updatedWithAvailability = await SessionUseCase.getSessionByIdAction(id, date);
+    return NextResponse.json({ success: true, data: updatedWithAvailability });
   } catch (error: any) {
     if (error.message.includes("Unauthorized") || error.message.includes("Forbidden")) {
       return NextResponse.json({ success: false, error: error.message }, { status: 403 });

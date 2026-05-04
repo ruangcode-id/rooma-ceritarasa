@@ -180,11 +180,12 @@ model RestaurantSetting {
 
 model Session {
   id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  label     String  @db.VarChar(50)
+  name      String  @db.VarChar(50)
   startTime DateTime @map("start_time") @db.Time()
   endTime   DateTime @map("end_time") @db.Time()
-  capacity  Int
+  maxCapacity Int   @map("max_capacity")
   isActive  Boolean @default(true) @map("is_active")
+  dayOfWeek Int[]   @map("day_of_week")
 
   // Relations
   reservations  Reservation[]

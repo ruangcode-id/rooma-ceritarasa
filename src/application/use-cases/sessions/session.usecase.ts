@@ -12,31 +12,55 @@ export const SessionUseCase = {
   /**
    * Admin/Owner: List all sessions
    */
-  getSessionsAction: async (page: number = 1, limit: number = 20, isActive?: boolean) => {
+  getSessionsAction: async (args: {
+    page?: number;
+    limit?: number;
+    isActive?: boolean;
+    date?: Date;
+  }) => {
     await requireRole(["admin", "owner"]);
-    
+
+    const page = args.page ?? 1;
+    const limit = args.limit ?? 20;
     const skip = (page - 1) * limit;
-    return SessionRepository.getSessions(skip, limit, isActive);
+
+    const weekday = args.date ? args.date.getUTCDay() : undefined;
+
+    return SessionRepository.getSessions({
+      skip,
+      take: limit,
+      isActive: args.isActive,
+      date: args.date,
+      weekday,
+    });
   },
 
   /**
    * Public: List only active sessions (for booking page)
    */
-  getPublicSessionsAction: async () => {
+  getPublicSessionsAction: async (date: Date) => {
     // No role check needed
-    const result = await SessionRepository.getSessions(0, 100, true);
-    return result.sessions;
+    const sessions = await SessionRepository.getSessions({
+      skip: 0,
+      take: 100,
+      isActive: true,
+      date,
+      weekday: date.getUTCDay(),
+    });
+
+    return sessions.sessions
+      .filter((s) => s.availableSlots > 0);
   },
 
   /**
    * Admin/Owner: Detail session
    */
-  getSessionByIdAction: async (id: string) => {
+  getSessionByIdAction: async (id: string, date?: Date) => {
     await requireRole(["admin", "owner"]);
-    
-    const session = await SessionRepository.getSessionById(id);
+
+    const session = await SessionRepository.getSessionByIdWithAvailability(id, date);
     if (!session) throw new Error("Session not found");
-    
+
     return session;
   },
 
@@ -49,11 +73,12 @@ export const SessionUseCase = {
     const parsedData = createSessionSchema.parse(data);
 
     return SessionRepository.createSession({
-      label: parsedData.label,
+      name: parsedData.name,
       startTime: parseTime(parsedData.startTime),
       endTime: parseTime(parsedData.endTime),
-      capacity: parsedData.capacity,
+      maxCapacity: parsedData.maxCapacity,
       isActive: parsedData.isActive ?? true,
+      dayOfWeek: parsedData.dayOfWeek,
     });
   },
 

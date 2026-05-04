@@ -45,3 +45,5 @@ next-env.d.ts
 
 # local testing artifacts
 .auth_cookies.txt
+cookies.txt
+csrf.json
