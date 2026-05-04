@@ -119,7 +119,8 @@ model Guest {
   id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name      String    @db.VarChar(100)
   email     String?   @db.VarChar(150)
-  phone     String    @unique @db.VarChar(20)
+  // Unique hanya untuk guest aktif (diatur lewat partial unique index pada migration SQL).
+  phone     String    @db.VarChar(20)
   birthdate DateTime? @db.Date
   isVip     Boolean   @default(false) @map("is_vip")
   notes     String?   @db.Text
