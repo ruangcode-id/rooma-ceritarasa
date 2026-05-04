@@ -3,6 +3,8 @@ services:
     image: postgres:16
     container_name: rooma-postgres
     restart: unless-stopped
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_DB: rooma_db
       POSTGRES_USER: rooma_user
