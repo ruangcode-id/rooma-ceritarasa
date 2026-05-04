@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const TableStatusEnum = z.enum(["AVAILABLE", "OCCUPIED", "RESERVED"]);
+export const TableStatusEnum = z.enum(["AVAILABLE", "OCCUPIED", "RESERVED", "MAINTENANCE"]);
 
 // Schema untuk membuat Table baru
 export const createTableSchema = z.object({
