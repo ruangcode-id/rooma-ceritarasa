@@ -4,9 +4,12 @@ import { tableRepository } from "@/infrastructure/repositories/table.repository"
 import { updateTableSchema } from "@/infrastructure/validations/table.validation";
 
 // PATCH (Single)
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const id = params.id;
+    const { id } = await params;
     const body = await req.json();
     const validation = updateTableSchema.safeParse({ ...body, id });
 
@@ -23,9 +26,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 // DELETE
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const id = params.id;
+    const { id } = await params;
     await tableRepository.delete(id);
     return NextResponse.json({ success: true });
   } catch (error) {
