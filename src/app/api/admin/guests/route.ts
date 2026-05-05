@@ -29,13 +29,14 @@ export async function GET(request: Request) {
     return jsonValidationError(parsed.error);
   }
 
-  const { page, limit, sortBy, sortOrder } = parsed.data;
-  const total = await countActiveGuests();
+  const { page, limit, sortBy, sortOrder, phone } = parsed.data;
+  const total = await countActiveGuests(phone);
   const rows = await findManyGuestsPaginated({
     page,
     limit,
     sortBy,
     sortOrder,
+    phone,
   });
 
   const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
