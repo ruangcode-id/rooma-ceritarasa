@@ -57,6 +57,12 @@ export const guestListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   sortBy: z.enum(["name", "totalVisits", "createdAt"]).default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .optional()
+    .transform((v) => (v && v.length > 0 ? normalizeIndonesianPhone(v) : undefined)),
 });
 
 export type GuestListQuery = z.infer<typeof guestListQuerySchema>;
