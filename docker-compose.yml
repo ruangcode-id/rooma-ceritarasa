@@ -9,8 +9,6 @@ services:
       POSTGRES_DB: rooma_db
       POSTGRES_USER: rooma_user
       POSTGRES_PASSWORD: Rooma_RasaEnak221372
-    ports:
-      - "5432:5432"
     volumes:
       - rooma_pgdata:/var/lib/postgresql/data
     healthcheck:
