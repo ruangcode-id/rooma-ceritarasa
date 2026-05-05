@@ -22,6 +22,8 @@ npm install
 cp .env.example .env
 ```
 
+Note: the dev Docker compose maps Postgres to `localhost:5433`.
+
 3. Start PostgreSQL container:
 
 ```bash
