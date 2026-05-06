@@ -123,7 +123,7 @@ model Guest {
   phone     String    @db.VarChar(20)
   birthdate DateTime? @db.Date
   isVip     Boolean   @default(false) @map("is_vip")
-  notes     String?   @db.Text
+  tags      String[]  @default([]) @map("tags")
   deletedAt DateTime? @map("deleted_at")
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -132,8 +132,23 @@ model Guest {
   vipCards       VipCard[]
   reservations   Reservation[]
   eventRequests  EventRequest[]
+  guestNotes     GuestNote[]
 
   @@map("guests")
+}
+
+model GuestNote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  guestId   String   @map("guest_id") @db.Uuid
+  content   String   @db.Text
+  tags      String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+  @@map("guest_notes")
 }
 
 model VipCard {

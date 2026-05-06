@@ -49,13 +49,14 @@ export async function GET(request: Request) {
     return jsonValidationError(parsed.error);
   }
 
-  const { page, limit, sortBy, sortOrder } = parsed.data;
-  const total = await countActiveGuests();
+  const { page, limit, sortBy, sortOrder, tag } = parsed.data;
+  const total = await countActiveGuests({ tag });
   const rows = await findManyGuestsPaginated({
     page,
     limit,
     sortBy,
     sortOrder,
+    tag,
   });
 
   const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
       email: body.email,
       birthdate: body.birthdate,
       isVip: body.isVip,
-      notes: body.notes,
+      tags: body.tags,
     });
 
     const totalVisits = 0;
@@ -120,7 +121,7 @@ export async function POST(request: Request) {
         phone: guest.phone,
         birthdate: guest.birthdate,
         isVip: guest.isVip,
-        notes: guest.notes,
+        tags: guest.tags as any,
         createdAt: guest.createdAt,
         updatedAt: guest.updatedAt,
         totalVisits,

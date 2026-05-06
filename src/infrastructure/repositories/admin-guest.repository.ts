@@ -1,6 +1,7 @@
 import { prisma } from "@/infrastructure/database/prisma";
 import { Prisma, ReservationStatus } from "@/generated/prisma/client";
 import { normalizeIndonesianPhone } from "@/lib/phone";
+import type { GuestTag } from "@/validations/guest.validation";
 
 export type GuestSortField = "name" | "totalVisits" | "createdAt";
 
@@ -11,7 +12,7 @@ export type GuestListRow = {
   phone: string;
   birthdate: Date | null;
   isVip: boolean;
-  notes: string | null;
+  tags: GuestTag[];
   createdAt: Date;
   updatedAt: Date;
   totalVisits: number;
@@ -29,9 +30,14 @@ function mapSortField(sortBy: GuestSortField): string {
   }
 }
 
-export async function countActiveGuests(): Promise<number> {
+export async function countActiveGuests(params?: {
+  tag?: GuestTag;
+}): Promise<number> {
   return prisma.guest.count({
-    where: { deletedAt: null },
+    where: {
+      deletedAt: null,
+      ...(params?.tag && { tags: { has: params.tag } }),
+    },
   });
 }
 
@@ -40,6 +46,7 @@ export async function findManyGuestsPaginated(params: {
   limit: number;
   sortBy: GuestSortField;
   sortOrder: "asc" | "desc";
+  tag?: GuestTag;
 }): Promise<GuestListRow[]> {
   const skip = (params.page - 1) * params.limit;
   const orderColumn = mapSortField(params.sortBy);
@@ -53,7 +60,7 @@ export async function findManyGuestsPaginated(params: {
       phone: string;
       birthdate: Date | null;
       is_vip: boolean;
-      notes: string | null;
+      tags: string[];
       created_at: Date;
       updated_at: Date;
       total_visits: number | bigint;
@@ -65,7 +72,7 @@ export async function findManyGuestsPaginated(params: {
            g.phone,
            g.birthdate,
            g.is_vip,
-           g.notes,
+           g.tags,
            g.created_at,
            g.updated_at,
            COALESCE(rc.cnt, 0)::int AS total_visits
@@ -77,6 +84,7 @@ export async function findManyGuestsPaginated(params: {
       GROUP BY guest_id
     ) rc ON rc.guest_id = g.id
     WHERE g.deleted_at IS NULL
+      ${params.tag ? Prisma.sql`AND ${params.tag} = ANY(g.tags)` : Prisma.sql``}
     ORDER BY ${Prisma.raw(`${orderColumn} ${orderDir}`)}
     LIMIT ${params.limit}
     OFFSET ${skip}
@@ -89,7 +97,7 @@ export async function findManyGuestsPaginated(params: {
     phone: r.phone,
     birthdate: r.birthdate,
     isVip: r.is_vip,
-    notes: r.notes,
+    tags: (r.tags || []) as GuestTag[],
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     totalVisits: Number(r.total_visits),
@@ -118,6 +126,9 @@ export async function findGuestByIdActive(id: string) {
           createdAt: true,
         },
       },
+      guestNotes: {
+        orderBy: { createdAt: "desc" },
+      },
     },
   });
 }
@@ -137,7 +148,7 @@ export async function createGuest(data: {
   email?: string | null;
   birthdate?: Date | null;
   isVip: boolean;
-  notes?: string | null;
+  tags?: GuestTag[];
 }) {
   return prisma.guest.create({
     data: {
@@ -146,7 +157,7 @@ export async function createGuest(data: {
       email: data.email ?? undefined,
       birthdate: data.birthdate ?? undefined,
       isVip: data.isVip,
-      notes: data.notes ?? undefined,
+      tags: data.tags ?? [],
     },
   });
 }
@@ -181,7 +192,6 @@ export async function softDeleteGuest(id: string): Promise<boolean> {
 
 export async function searchGuests(query: string): Promise<GuestListRow[]> {
   const normalizedQuery = normalizeIndonesianPhone(query);
-
   const isPhoneSearch = /^\d+$/.test(normalizedQuery);
 
   const rows = await prisma.$queryRaw<
@@ -192,7 +202,7 @@ export async function searchGuests(query: string): Promise<GuestListRow[]> {
       phone: string;
       birthdate: Date | null;
       is_vip: boolean;
-      notes: string | null;
+      tags: string[];
       created_at: Date;
       updated_at: Date;
       total_visits: number | bigint;
@@ -204,7 +214,7 @@ export async function searchGuests(query: string): Promise<GuestListRow[]> {
            g.phone,
            g.birthdate,
            g.is_vip,
-           g.notes,
+           g.tags,
            g.created_at,
            g.updated_at,
            COALESCE(rc.cnt, 0)::int AS total_visits
@@ -232,9 +242,48 @@ export async function searchGuests(query: string): Promise<GuestListRow[]> {
     phone: r.phone,
     birthdate: r.birthdate,
     isVip: r.is_vip,
-    notes: r.notes,
+    tags: (r.tags || []) as GuestTag[],
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     totalVisits: Number(r.total_visits),
   }));
+}
+
+export async function createGuestNote(data: {
+  guestId: string;
+  content: string;
+  tags?: GuestTag[];
+}) {
+  return prisma.guestNote.create({
+    data: {
+      guestId: data.guestId,
+      content: data.content,
+      tags: data.tags ?? [],
+    },
+  });
+}
+
+export async function updateGuestNote(
+  noteId: string,
+  data: { content?: string; tags?: GuestTag[] },
+) {
+  return prisma.guestNote.update({
+    where: { id: noteId },
+    data: {
+      ...(data.content !== undefined && { content: data.content }),
+      ...(data.tags !== undefined && { tags: data.tags }),
+    },
+  });
+}
+
+export async function deleteGuestNote(noteId: string) {
+  return prisma.guestNote.delete({
+    where: { id: noteId },
+  });
+}
+
+export async function findGuestNoteById(noteId: string) {
+  return prisma.guestNote.findUnique({
+    where: { id: noteId },
+  });
 }

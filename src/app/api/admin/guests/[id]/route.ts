@@ -15,7 +15,7 @@ import {
   softDeleteGuest,
   updateGuest,
 } from "@/infrastructure/repositories/admin-guest.repository";
-import { guestListRowToJson, reservationVisitToJson } from "@/lib/guest-response";
+import { guestListRowToJson, reservationVisitToJson, guestNoteToJson } from "@/lib/guest-response";
 
 const idParamSchema = z.string().uuid();
 
@@ -55,12 +55,13 @@ export async function GET(_request: Request, context: RouteCtx) {
       phone: guest.phone,
       birthdate: guest.birthdate,
       isVip: guest.isVip,
-      notes: guest.notes,
+      tags: guest.tags as any,
       createdAt: guest.createdAt,
       updatedAt: guest.updatedAt,
       totalVisits,
     }),
     visitHistory: guest.reservations.map(reservationVisitToJson),
+    notes: guest.guestNotes.map(guestNoteToJson),
   });
 }
 
@@ -100,9 +101,7 @@ export async function PATCH(request: Request, context: RouteCtx) {
   if (body.phone !== undefined) data.phone = body.phone;
   if (body.email !== undefined) data.email = body.email;
   if (body.isVip !== undefined) data.isVip = body.isVip;
-  if (body.notes !== undefined) {
-    data.notes = body.notes === "" ? null : body.notes;
-  }
+  if (body.tags !== undefined) data.tags = body.tags;
   if (body.birthdate !== undefined) {
     data.birthdate = body.birthdate === null ? null : body.birthdate;
   }
@@ -128,7 +127,7 @@ export async function PATCH(request: Request, context: RouteCtx) {
         phone: guest.phone,
         birthdate: guest.birthdate,
         isVip: guest.isVip,
-        notes: guest.notes,
+        tags: guest.tags as any,
         createdAt: guest.createdAt,
         updatedAt: guest.updatedAt,
         totalVisits,
