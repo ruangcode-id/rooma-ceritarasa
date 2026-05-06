@@ -6,6 +6,7 @@ export interface GuestEntity {
   birthdate: Date | null;
   isVip: boolean;
   notes: string | null;
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
 }
