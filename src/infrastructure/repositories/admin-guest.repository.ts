@@ -1,5 +1,6 @@
 import { prisma } from "@/infrastructure/database/prisma";
 import { Prisma, ReservationStatus } from "@/generated/prisma/client";
+import { normalizeIndonesianPhone } from "@/lib/phone";
 
 export type GuestSortField = "name" | "totalVisits" | "createdAt";
 
@@ -176,4 +177,64 @@ export async function softDeleteGuest(id: string): Promise<boolean> {
     data: { deletedAt: new Date() },
   });
   return result.count > 0;
+}
+
+export async function searchGuests(query: string): Promise<GuestListRow[]> {
+  const normalizedQuery = normalizeIndonesianPhone(query);
+
+  const isPhoneSearch = /^\d+$/.test(normalizedQuery);
+
+  const rows = await prisma.$queryRaw<
+    Array<{
+      id: string;
+      name: string;
+      email: string | null;
+      phone: string;
+      birthdate: Date | null;
+      is_vip: boolean;
+      notes: string | null;
+      created_at: Date;
+      updated_at: Date;
+      total_visits: number | bigint;
+    }>
+  >(Prisma.sql`
+    SELECT g.id,
+           g.name,
+           g.email,
+           g.phone,
+           g.birthdate,
+           g.is_vip,
+           g.notes,
+           g.created_at,
+           g.updated_at,
+           COALESCE(rc.cnt, 0)::int AS total_visits
+    FROM guests g
+    LEFT JOIN (
+      SELECT guest_id, COUNT(*)::int AS cnt
+      FROM reservations
+      WHERE status = ${ReservationStatus.confirmed}
+      GROUP BY guest_id
+    ) rc ON rc.guest_id = g.id
+    WHERE g.deleted_at IS NULL
+      AND (
+        ${isPhoneSearch ? Prisma.sql`REPLACE(REPLACE(REPLACE(g.phone, '+62', ''), '0', ''), '-', '') LIKE ${"%" + normalizedQuery.replace(/\D/g, "") + "%"}` : Prisma.sql`FALSE`}
+        OR
+        ${!isPhoneSearch ? Prisma.sql`LOWER(g.name) LIKE ${"%" + query.toLowerCase() + "%"}` : Prisma.sql`FALSE`}
+      )
+    ORDER BY total_visits DESC
+    LIMIT 10
+  `);
+
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    email: r.email,
+    phone: r.phone,
+    birthdate: r.birthdate,
+    isVip: r.is_vip,
+    notes: r.notes,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    totalVisits: Number(r.total_visits),
+  }));
 }

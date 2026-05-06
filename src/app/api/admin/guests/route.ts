@@ -14,14 +14,34 @@ import {
   createGuest,
   findActiveGuestByPhone,
   findManyGuestsPaginated,
+  searchGuests,
 } from "@/infrastructure/repositories/admin-guest.repository";
 import { guestListRowToJson } from "@/lib/guest-response";
+import { z } from "zod";
+
+const searchQuerySchema = z.object({
+  q: z.string().min(1, "Query tidak boleh kosong"),
+});
 
 export async function GET(request: Request) {
   const authResult = await requireAdminApiSession();
   if (!authResult.ok) return authResult.response;
 
   const url = new URL(request.url);
+  const q = url.searchParams.get("q");
+
+  if (q !== null) {
+    const parsed = searchQuerySchema.safeParse({ q });
+    if (!parsed.success) {
+      return jsonValidationError(parsed.error);
+    }
+
+    const results = await searchGuests(parsed.data.q);
+    return jsonSuccessList(results.map(guestListRowToJson), {
+      total: results.length,
+    });
+  }
+
   const parsed = guestListQuerySchema.safeParse(
     Object.fromEntries(url.searchParams.entries()),
   );
