@@ -15,7 +15,7 @@ import {
   softDeleteGuest,
   updateGuest,
 } from "@/infrastructure/repositories/admin-guest.repository";
-import { guestListRowToJson, reservationVisitToJson } from "@/lib/guest-response";
+import { guestListRowToJson, guestNoteToJson, reservationVisitToJson } from "@/lib/guest-response";
 
 const idParamSchema = z.string().uuid();
 
@@ -56,10 +56,12 @@ export async function GET(_request: Request, context: RouteCtx) {
       birthdate: guest.birthdate,
       isVip: guest.isVip,
       notes: guest.notes,
+      tags: guest.tags,
       createdAt: guest.createdAt,
       updatedAt: guest.updatedAt,
       totalVisits,
     }),
+    guestNotes: guest.guestNotes.map(guestNoteToJson),
     visitHistory: guest.reservations.map(reservationVisitToJson),
   });
 }
@@ -129,6 +131,7 @@ export async function PATCH(request: Request, context: RouteCtx) {
         birthdate: guest.birthdate,
         isVip: guest.isVip,
         notes: guest.notes,
+        tags: guest.tags,
         createdAt: guest.createdAt,
         updatedAt: guest.updatedAt,
         totalVisits,

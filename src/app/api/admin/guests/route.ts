@@ -29,14 +29,15 @@ export async function GET(request: Request) {
     return jsonValidationError(parsed.error);
   }
 
-  const { page, limit, sortBy, sortOrder, phone } = parsed.data;
-  const total = await countActiveGuests(phone);
+  const { page, limit, sortBy, sortOrder, phone, tag } = parsed.data;
+  const total = await countActiveGuests(phone, tag);
   const rows = await findManyGuestsPaginated({
     page,
     limit,
     sortBy,
     sortOrder,
     phone,
+    tag,
   });
 
   const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
@@ -102,6 +103,7 @@ export async function POST(request: Request) {
         birthdate: guest.birthdate,
         isVip: guest.isVip,
         notes: guest.notes,
+        tags: guest.tags,
         createdAt: guest.createdAt,
         updatedAt: guest.updatedAt,
         totalVisits,

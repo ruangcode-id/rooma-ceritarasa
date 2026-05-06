@@ -9,9 +9,26 @@ export function guestListRowToJson(row: GuestListRow) {
     birthdate: row.birthdate ? row.birthdate.toISOString().slice(0, 10) : null,
     isVip: row.isVip,
     notes: row.notes,
+    tags: row.tags,
     totalVisits: row.totalVisits,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export function guestNoteToJson(note: {
+  id: string;
+  guestId: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  return {
+    id: note.id,
+    guestId: note.guestId,
+    content: note.content,
+    createdAt: note.createdAt.toISOString(),
+    updatedAt: note.updatedAt.toISOString(),
   };
 }
 

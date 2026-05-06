@@ -2,6 +2,7 @@ import { prisma } from "@/infrastructure/database/prisma";
 import { Prisma, ReservationStatus } from "@/generated/prisma/client";
 
 export type GuestSortField = "name" | "totalVisits" | "createdAt";
+export type GuestTag = "VIP" | "ALLERGY" | "BIRTHDAY" | "REGULAR" | "BLACKLIST";
 
 export type GuestListRow = {
   id: string;
@@ -11,9 +12,23 @@ export type GuestListRow = {
   birthdate: Date | null;
   isVip: boolean;
   notes: string | null;
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
   totalVisits: number;
+};
+
+export type GuestNoteRow = {
+  id: string;
+  guestId: string;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+type GuestNotesPage = {
+  rows: GuestNoteRow[];
+  total: number;
 };
 
 function mapSortField(sortBy: GuestSortField): string {
@@ -28,11 +43,12 @@ function mapSortField(sortBy: GuestSortField): string {
   }
 }
 
-export async function countActiveGuests(phone?: string): Promise<number> {
+export async function countActiveGuests(phone?: string, tag?: string): Promise<number> {
   return prisma.guest.count({
     where: {
       deletedAt: null,
       ...(phone ? { phone: { contains: phone, mode: "insensitive" as const } } : {}),
+      ...(tag ? { tags: { has: tag } } : {}),
     },
   });
 }
@@ -43,12 +59,16 @@ export async function findManyGuestsPaginated(params: {
   sortBy: GuestSortField;
   sortOrder: "asc" | "desc";
   phone?: string;
+  tag?: string;
 }): Promise<GuestListRow[]> {
   const skip = (params.page - 1) * params.limit;
   const orderColumn = mapSortField(params.sortBy);
   const orderDir = params.sortOrder === "asc" ? "ASC" : "DESC";
   const phoneFilter = params.phone
     ? Prisma.sql`AND g.phone ILIKE ${`%${params.phone}%`}`
+    : Prisma.empty;
+  const tagFilter = params.tag
+    ? Prisma.sql`AND ${params.tag} = ANY(g.tags)`
     : Prisma.empty;
 
   const rows = await prisma.$queryRaw<
@@ -60,6 +80,7 @@ export async function findManyGuestsPaginated(params: {
       birthdate: Date | null;
       is_vip: boolean;
       notes: string | null;
+      tags: string[] | null;
       created_at: Date;
       updated_at: Date;
       total_visits: number | bigint;
@@ -72,6 +93,7 @@ export async function findManyGuestsPaginated(params: {
            g.birthdate,
            g.is_vip,
            g.notes,
+           g.tags,
            g.created_at,
            g.updated_at,
            COALESCE(rc.cnt, 0)::int AS total_visits
@@ -84,6 +106,7 @@ export async function findManyGuestsPaginated(params: {
     ) rc ON rc.guest_id = g.id
     WHERE g.deleted_at IS NULL
     ${phoneFilter}
+    ${tagFilter}
     ORDER BY ${Prisma.raw(`${orderColumn} ${orderDir}`)}
     LIMIT ${params.limit}
     OFFSET ${skip}
@@ -97,6 +120,7 @@ export async function findManyGuestsPaginated(params: {
     birthdate: r.birthdate,
     isVip: r.is_vip,
     notes: r.notes,
+    tags: r.tags ?? [],
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     totalVisits: Number(r.total_visits),
@@ -125,6 +149,16 @@ export async function findGuestByIdActive(id: string) {
           createdAt: true,
         },
       },
+      guestNotes: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          guestId: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
     },
   });
 }
@@ -145,6 +179,7 @@ export async function createGuest(data: {
   birthdate?: Date | null;
   isVip: boolean;
   notes?: string | null;
+  tags?: string[];
 }) {
   return prisma.guest.create({
     data: {
@@ -154,6 +189,7 @@ export async function createGuest(data: {
       birthdate: data.birthdate ?? undefined,
       isVip: data.isVip,
       notes: data.notes ?? undefined,
+      tags: data.tags ?? [],
     },
   });
 }
@@ -184,4 +220,104 @@ export async function softDeleteGuest(id: string): Promise<boolean> {
     data: { deletedAt: new Date() },
   });
   return result.count > 0;
+}
+
+async function syncGuestSummaryNote(guestId: string): Promise<void> {
+  const latest = await prisma.guestNote.findFirst({
+    where: { guestId },
+    orderBy: { createdAt: "desc" },
+    select: { content: true },
+  });
+  await prisma.guest.update({
+    where: { id: guestId },
+    data: { notes: latest?.content ?? null },
+  });
+}
+
+export async function findGuestNotesByGuestId(
+  guestId: string,
+  page: number,
+  limit: number,
+): Promise<GuestNotesPage> {
+  const skip = (page - 1) * limit;
+  const [rows, total] = await Promise.all([
+    prisma.guestNote.findMany({
+      where: { guestId },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      select: {
+        id: true,
+        guestId: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.guestNote.count({ where: { guestId } }),
+  ]);
+  return { rows, total };
+}
+
+export async function createGuestNote(guestId: string, content: string): Promise<GuestNoteRow> {
+  const note = await prisma.guestNote.create({
+    data: { guestId, content },
+    select: {
+      id: true,
+      guestId: true,
+      content: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+  await syncGuestSummaryNote(guestId);
+  return note;
+}
+
+export async function updateGuestNote(
+  guestId: string,
+  noteId: string,
+  content: string,
+): Promise<GuestNoteRow | null> {
+  const existing = await prisma.guestNote.findFirst({
+    where: { id: noteId, guestId },
+    select: { id: true },
+  });
+  if (!existing) return null;
+  const note = await prisma.guestNote.update({
+    where: { id: noteId },
+    data: { content },
+    select: {
+      id: true,
+      guestId: true,
+      content: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+  await syncGuestSummaryNote(guestId);
+  return note;
+}
+
+export async function deleteGuestNote(guestId: string, noteId: string): Promise<boolean> {
+  const result = await prisma.guestNote.deleteMany({
+    where: { id: noteId, guestId },
+  });
+  if (result.count > 0) {
+    await syncGuestSummaryNote(guestId);
+  }
+  return result.count > 0;
+}
+
+export async function updateGuestTags(guestId: string, tags: string[]): Promise<{ id: string; tags: string[] } | null> {
+  const existing = await prisma.guest.findFirst({
+    where: { id: guestId, deletedAt: null },
+    select: { id: true },
+  });
+  if (!existing) return null;
+  return prisma.guest.update({
+    where: { id: guestId },
+    data: { tags },
+    select: { id: true, tags: true },
+  });
 }
