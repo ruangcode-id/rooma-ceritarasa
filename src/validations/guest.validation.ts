@@ -67,6 +67,7 @@ export const guestListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   sortBy: z.enum(["name", "totalVisits", "createdAt"]).default("createdAt"),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
+  q: z.string().trim().max(100).optional().transform((v) => (v && v.length > 0 ? v : undefined)),
   tag: guestTagSchema.optional(),
   phone: z
     .string()
