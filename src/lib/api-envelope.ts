@@ -7,6 +7,8 @@ export type ApiListMeta = {
   page: number;
   limit: number;
   totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 };
 
 export function jsonSuccess<T>(data: T, init?: ResponseInit) {

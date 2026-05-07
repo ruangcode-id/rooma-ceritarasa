@@ -16,6 +16,7 @@ import {
   findManyGuestsPaginated,
 } from "@/infrastructure/repositories/admin-guest.repository";
 import { guestListRowToJson } from "@/lib/guest-response";
+import { buildPaginationMeta } from "@/lib/pagination";
 
 export async function GET(request: Request) {
   const authResult = await requireAdminApiSession();
@@ -29,8 +30,8 @@ export async function GET(request: Request) {
     return jsonValidationError(parsed.error);
   }
 
-  const { page, limit, sortBy, sortOrder, phone, tag } = parsed.data;
-  const total = await countActiveGuests(phone, tag);
+  const { page, limit, sortBy, sortOrder, phone, tag, q } = parsed.data;
+  const total = await countActiveGuests(phone, tag, q);
   const rows = await findManyGuestsPaginated({
     page,
     limit,
@@ -38,15 +39,11 @@ export async function GET(request: Request) {
     sortOrder,
     phone,
     tag,
+    q,
   });
 
-  const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
-
   return jsonSuccessList(rows.map(guestListRowToJson), {
-    total,
-    page,
-    limit,
-    totalPages,
+    ...buildPaginationMeta(total, page, limit),
   });
 }
 

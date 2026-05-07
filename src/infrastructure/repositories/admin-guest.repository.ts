@@ -43,12 +43,20 @@ function mapSortField(sortBy: GuestSortField): string {
   }
 }
 
-export async function countActiveGuests(phone?: string, tag?: string): Promise<number> {
+export async function countActiveGuests(phone?: string, tag?: string, q?: string): Promise<number> {
   return prisma.guest.count({
     where: {
       deletedAt: null,
       ...(phone ? { phone: { contains: phone, mode: "insensitive" as const } } : {}),
       ...(tag ? { tags: { has: tag } } : {}),
+      ...(q
+        ? {
+            OR: [
+              { name: { contains: q, mode: "insensitive" as const } },
+              { phone: { contains: q, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
     },
   });
 }
@@ -60,6 +68,7 @@ export async function findManyGuestsPaginated(params: {
   sortOrder: "asc" | "desc";
   phone?: string;
   tag?: string;
+  q?: string;
 }): Promise<GuestListRow[]> {
   const skip = (params.page - 1) * params.limit;
   const orderColumn = mapSortField(params.sortBy);
@@ -69,6 +78,9 @@ export async function findManyGuestsPaginated(params: {
     : Prisma.empty;
   const tagFilter = params.tag
     ? Prisma.sql`AND ${params.tag} = ANY(g.tags)`
+    : Prisma.empty;
+  const qFilter = params.q
+    ? Prisma.sql`AND (g.name ILIKE ${`%${params.q}%`} OR g.phone ILIKE ${`%${params.q}%`})`
     : Prisma.empty;
 
   const rows = await prisma.$queryRaw<
@@ -107,6 +119,7 @@ export async function findManyGuestsPaginated(params: {
     WHERE g.deleted_at IS NULL
     ${phoneFilter}
     ${tagFilter}
+    ${qFilter}
     ORDER BY ${Prisma.raw(`${orderColumn} ${orderDir}`)}
     LIMIT ${params.limit}
     OFFSET ${skip}

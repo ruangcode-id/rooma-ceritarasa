@@ -8,6 +8,7 @@ import {
 } from "@/infrastructure/repositories/admin-guest.repository";
 import { guestNoteToJson } from "@/lib/guest-response";
 import { createGuestNoteSchema, guestNotesListQuerySchema } from "@/validations/guest.validation";
+import { buildPaginationMeta } from "@/lib/pagination";
 
 const idParamSchema = z.string().uuid();
 type RouteCtx = { params: Promise<{ id: string }> };
@@ -31,13 +32,9 @@ export async function GET(request: Request, context: RouteCtx) {
 
   const { page, limit } = query.data;
   const { rows, total } = await findGuestNotesByGuestId(parsedId.data, page, limit);
-  const totalPages = total === 0 ? 0 : Math.ceil(total / limit);
 
   return jsonSuccessList(rows.map(guestNoteToJson), {
-    total,
-    page,
-    limit,
-    totalPages,
+    ...buildPaginationMeta(total, page, limit),
   });
 }
 
