@@ -32,18 +32,18 @@ export const proxy = auth((request: NextAuthRequest) => {
 
   const role = session.user.role;
 
-  if (isAdminRoute && role !== "admin") {
+  if (isAdminRoute && role !== "admin" && role !== "owner") {
     if (pathname.startsWith("/api/")) {
       return forbiddenApi();
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
   if (isOwnerRoute && role !== "owner") {
     if (pathname.startsWith("/api/")) {
       return forbiddenApi();
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
   return NextResponse.next();
