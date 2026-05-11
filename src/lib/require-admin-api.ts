@@ -13,7 +13,7 @@ export async function requireAdminApiSession(): Promise<
       response: jsonError("Unauthorized", 401),
     };
   }
-  if (session.user.role !== "admin") {
+  if (session.user.role !== "admin" && session.user.role !== "owner") {
     return {
       ok: false,
       response: jsonError("Forbidden", 403),
