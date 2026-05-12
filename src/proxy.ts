@@ -14,7 +14,19 @@ export const proxy = auth((request: NextAuthRequest) => {
     return NextResponse.next();
   }
 
-  const session = request.auth;
+  let session;
+  try {
+    session = request.auth;
+  } catch (error) {
+    console.error("[proxy] auth() failed:", error);
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { success: false, error: "Authentication error" },
+        { status: 401 }
+      );
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   const unauthorizedApi = () =>
     NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
