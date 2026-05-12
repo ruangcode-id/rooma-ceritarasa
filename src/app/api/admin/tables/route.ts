@@ -1,9 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireRole } from "@/lib/auth";
 import { tableRepository } from "@/infrastructure/repositories/table.repository";
 import {
   createTableSchema,
   bulkUpdatePositionSchema,
 } from "@/infrastructure/validations/table.validation";
+
+async function requireAdminOrOwner() {
+  try {
+    await requireRole(["admin", "owner"]);
+    return null;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+
+    if (message.toLowerCase().includes("unauthorized")) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized",
+        },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Forbidden",
+      },
+      { status: 403 }
+    );
+  }
+}
 
 async function parseJsonBody(req: NextRequest) {
   try {
@@ -30,10 +58,19 @@ function isPrismaError(error: unknown, code: string) {
 
 // GET: List all tables
 export async function GET() {
+  const guardResponse = await requireAdminOrOwner();
+  if (guardResponse) return guardResponse;
+
   try {
     const tables = await tableRepository.getAll();
 
-    return NextResponse.json(tables, { status: 200 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: tables,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error fetching tables:", error);
 
@@ -50,6 +87,9 @@ export async function GET() {
 
 // POST: Create new table
 export async function POST(req: NextRequest) {
+  const guardResponse = await requireAdminOrOwner();
+  if (guardResponse) return guardResponse;
+
   try {
     const body = await parseJsonBody(req);
 
@@ -78,7 +118,13 @@ export async function POST(req: NextRequest) {
 
     const newTable = await tableRepository.create(validation.data);
 
-    return NextResponse.json(newTable, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: newTable,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating table:", error);
 
@@ -105,6 +151,9 @@ export async function POST(req: NextRequest) {
 
 // PATCH: Bulk update positions
 export async function PATCH(req: NextRequest) {
+  const guardResponse = await requireAdminOrOwner();
+  if (guardResponse) return guardResponse;
+
   try {
     const body = await parseJsonBody(req);
 
@@ -124,7 +173,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: "Format bulk update salah. Gunakan array [{ id, posX, posY }] atau { updates: [...] }",
+          message:
+            "Format bulk update salah. Gunakan array [{ id, posX, posY }] atau { updates: [...] }",
         },
         { status: 400 }
       );
