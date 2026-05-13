@@ -1,59 +1,94 @@
 import { prisma } from "@/infrastructure/database/prisma";
-import { TableStatus } from "@/generated/prisma/client";
+import { ReservationStatus, TableStatus } from "@/generated/prisma/client";
 
-const startOfUTCDate = (date: Date) =>
-  new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-
-const parseDateOnlyUTC = (dateStr: string) => {
-  const date = new Date(`${dateStr}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) {
-    throw new Error("Invalid date");
-  }
-  if (date.toISOString().slice(0, 10) !== dateStr) {
-    throw new Error("Invalid date");
-  }
-  return date;
+const startOfUTCDate = (date: Date) => {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
 };
 
-// For capacity, only count reservations that actually consume seats.
-const CAPACITY_STATUSES = ["confirmed", "checked_in"] as const;
-type CapacityStatus = (typeof CAPACITY_STATUSES)[number];
+const parseDateOnlyUTC = (date: Date | string) => {
+  if (date instanceof Date) {
+    if (Number.isNaN(date.getTime())) {
+      throw new Error("Invalid date");
+    }
 
-// For table assignment, also block tables already held by an in-progress reservation.
-const TABLE_BLOCK_STATUSES = ["pending", "confirmed", "checked_in"] as const;
-type TableBlockStatus = (typeof TABLE_BLOCK_STATUSES)[number];
+    return startOfUTCDate(date);
+  }
 
-export const getSessionAvailability = async (sessionId: string, date: Date | string) => {
-  const dateObj = typeof date === "string" ? parseDateOnlyUTC(date) : date;
-  const normalizedDate = startOfUTCDate(dateObj);
+  const parsedDate = new Date(`${date}T00:00:00.000Z`);
 
-  const session = await prisma.session.findUnique({
-    where: { id: sessionId },
-    select: { id: true, maxCapacity: true },
+  if (Number.isNaN(parsedDate.getTime())) {
+    throw new Error("Invalid date");
+  }
+
+  if (parsedDate.toISOString().slice(0, 10) !== date) {
+    throw new Error("Invalid date format. Use YYYY-MM-DD");
+  }
+
+  return parsedDate;
+};
+
+const CAPACITY_STATUSES = [
+  ReservationStatus.confirmed,
+  ReservationStatus.checked_in,
+];
+
+const TABLE_BLOCK_STATUSES = [
+  ReservationStatus.pending,
+  ReservationStatus.confirmed,
+  ReservationStatus.checked_in,
+];
+
+export const getSessionAvailability = async (
+  sessionId: string,
+  date: Date | string
+) => {
+  const normalizedDate = parseDateOnlyUTC(date);
+
+  const session = await prisma.restaurantSession.findUnique({
+    where: {
+      id: sessionId,
+    },
+    select: {
+      id: true,
+      name: true,
+      maxCapacity: true,
+      isActive: true,
+    },
   });
 
   if (!session) {
     throw new Error("Session not found");
   }
 
-  const agg = await prisma.reservation.aggregate({
+  if (!session.isActive) {
+    throw new Error("Session is not active");
+  }
+
+  const reservationAggregate = await prisma.reservation.aggregate({
     where: {
       sessionId,
       date: normalizedDate,
-      status: { in: CAPACITY_STATUSES as unknown as CapacityStatus[] },
+      status: {
+        in: CAPACITY_STATUSES,
+      },
     },
-    _sum: { partySize: true },
+    _sum: {
+      partySize: true,
+    },
   });
 
-  const used = agg._sum.partySize ?? 0;
-  const remaining = Math.max(0, session.maxCapacity - used);
+  const usedCapacity = reservationAggregate._sum.partySize ?? 0;
+  const remainingCapacity = Math.max(0, session.maxCapacity - usedCapacity);
 
   return {
-    sessionId,
-    date: normalizedDate,
+    sessionId: session.id,
+    sessionName: session.name,
+    date: normalizedDate.toISOString().slice(0, 10),
     maxCapacity: session.maxCapacity,
-    usedCapacity: used,
-    remainingCapacity: remaining,
+    usedCapacity,
+    remainingCapacity,
   };
 };
 
@@ -86,27 +121,41 @@ export const getAvailableTables = async (
     throw new Error("capacity must be a positive integer");
   }
 
-  const dateObj = typeof date === "string" ? parseDateOnlyUTC(date) : date;
-  const normalizedDate = startOfUTCDate(dateObj);
+  const normalizedDate = parseDateOnlyUTC(date);
 
   const tables = await prisma.table.findMany({
     where: {
       isActive: true,
-      capacity: { gte: capacity },
+      capacity: {
+        gte: capacity,
+      },
       status: {
-        notIn: [TableStatus.MAINTENANCE, TableStatus.OCCUPIED, TableStatus.RESERVED],
+        notIn: [
+          TableStatus.MAINTENANCE,
+          TableStatus.OCCUPIED,
+          TableStatus.RESERVED,
+        ],
       },
       reservationTables: {
         none: {
           reservation: {
             sessionId,
             date: normalizedDate,
-            status: { in: TABLE_BLOCK_STATUSES as unknown as TableBlockStatus[] },
+            status: {
+              in: TABLE_BLOCK_STATUSES,
+            },
           },
         },
       },
     },
-    orderBy: [{ capacity: "asc" }, { tableNumber: "asc" }],
+    orderBy: [
+      {
+        capacity: "asc",
+      },
+      {
+        tableNumber: "asc",
+      },
+    ],
     select: {
       id: true,
       tableNumber: true,
@@ -128,12 +177,15 @@ export const autoAssignTable = async (
 ) => {
   await validateCapacity(sessionId, date, guestCount);
 
-  const candidates = await getAvailableTables(sessionId, date, guestCount);
+  const availableTables = await getAvailableTables(
+    sessionId,
+    date,
+    guestCount
+  );
 
-  if (candidates.length === 0) {
+  if (availableTables.length === 0) {
     throw new Error("No available table for the requested guest count");
   }
 
-  // candidates already sorted by smallest capacity then tableNumber
-  return candidates[0];
+  return availableTables[0];
 };

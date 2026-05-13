@@ -14,7 +14,19 @@ export const proxy = auth((request: NextAuthRequest) => {
     return NextResponse.next();
   }
 
-  const session = request.auth;
+  let session;
+  try {
+    session = request.auth;
+  } catch (error) {
+    console.error("[proxy] auth() failed:", error);
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { success: false, error: "Authentication error" },
+        { status: 401 }
+      );
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   const unauthorizedApi = () =>
     NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
@@ -32,18 +44,18 @@ export const proxy = auth((request: NextAuthRequest) => {
 
   const role = session.user.role;
 
-  if (isAdminRoute && role !== "admin") {
+  if (isAdminRoute && role !== "admin" && role !== "owner") {
     if (pathname.startsWith("/api/")) {
       return forbiddenApi();
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
   if (isOwnerRoute && role !== "owner") {
     if (pathname.startsWith("/api/")) {
       return forbiddenApi();
     }
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
   return NextResponse.next();

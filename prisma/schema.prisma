@@ -103,6 +103,8 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
+  accounts    Account[]
+  sessions    UserSession[]
   vipCardsIssued     VipCard[]           @relation("IssuedByUser")
   settingsUpdated    RestaurantSetting[] @relation("UpdatedByUser")
   blockedDates       BlockedDate[]       @relation("CreatedByUser")
@@ -202,9 +204,9 @@ model RestaurantSetting {
   @@map("restaurant_settings")
 }
 
-model Session {
-  id        String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name      String  @db.VarChar(50)
+model RestaurantSession {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(50)
   startTime DateTime @map("start_time") @db.Time()
   endTime   DateTime @map("end_time") @db.Time()
   maxCapacity Int   @map("max_capacity")
@@ -215,7 +217,7 @@ model Session {
   reservations  Reservation[]
   eventRequests EventRequest[]
 
-  @@map("sessions")
+  @@map("restaurant_sessions")
 }
 
 model BlockedDate {
@@ -270,7 +272,7 @@ model Reservation {
 
   // Relations
   guest             Guest              @relation(fields: [guestId], references: [id])
-  session           Session            @relation(fields: [sessionId], references: [id])
+  session           RestaurantSession @relation(fields: [sessionId], references: [id])
   creator           User?              @relation("CreatedByUser", fields: [createdBy], references: [id])
   reservationTables ReservationTable[]
   checkIn           CheckIn?
@@ -345,7 +347,7 @@ model EventRequest {
 
   // Relations
   guest         Guest          @relation(fields: [guestId], references: [id])
-  session       Session?       @relation(fields: [sessionId], references: [id])
+  session       RestaurantSession? @relation(fields: [sessionId], references: [id])
   eventOffers   EventOffer[]
   eventPayments EventPayment[]
 
@@ -473,4 +475,48 @@ model PushSubscription {
   user User @relation("UserPushSubscriptions", fields: [userId], references: [id])
 
   @@map("push_subscriptions")
+}
+
+// -----------------------------------------------
+// AUTH.JS V5 — NextAuth Models
+// -----------------------------------------------
+
+model Account {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id") @db.VarChar(255)
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model UserSession {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionToken String   @unique @map("session_token") @db.VarChar(255)
+  userId       String   @map("user_id") @db.Uuid
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
 }
