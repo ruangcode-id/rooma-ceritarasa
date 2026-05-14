@@ -1,7 +1,7 @@
 import Midtrans from "midtrans-client";
 
-const MIDTRANS_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY ?? "Mid-server-P7_oMJL9HUczcjQk_3H0CGmz";
-const MIDTRANS_CLIENT_KEY = process.env.MIDTRANS_CLIENT_KEY ?? "Mid-client-xLbqncSSEFAmcHjT";
+const MIDTRANS_SERVER_KEY = process.env.MIDTRANS_SERVER_KEY ?? "";
+const MIDTRANS_CLIENT_KEY = process.env.MIDTRANS_CLIENT_KEY ?? "";
 const MIDTRANS_IS_PRODUCTION = process.env.MIDTRANS_IS_PRODUCTION === "true";
 
 let snap: InstanceType<typeof Midtrans.Snap> | null = null;

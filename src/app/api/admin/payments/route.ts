@@ -53,7 +53,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (body.refund) {
-      const amount = typeof body.refund.amount === "number" ? body.refund.amount : undefined;
+      const refund = typeof body.refund === "object" && body.refund !== null ? body.refund : null;
+      const amount = refund && typeof refund.amount === "number" ? refund.amount : undefined;
       const result = await refundPayment(body.orderId, amount);
       return jsonSuccess(result);
     }
@@ -62,7 +63,15 @@ export async function PATCH(req: NextRequest) {
       return jsonError("Missing status", 400);
     }
 
-    const result = await updatePaymentStatus(body.orderId, body.status);
+    const status = Object.values(PaymentStatus).includes(body.status)
+      ? body.status
+      : null;
+
+    if (!status) {
+      return jsonError("Invalid status", 400);
+    }
+
+    const result = await updatePaymentStatus(body.orderId, status);
     return jsonSuccess(result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Internal Server Error";
