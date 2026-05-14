@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { z } from "zod";
 import {
-  autoAssignTable,
+  autoAssignTables,
   getAvailableTables,
   getSessionAvailability,
   validateCapacity,
@@ -35,7 +35,9 @@ export async function POST(req: NextRequest) {
       capacityOk = false;
     }
 
-    const assigned = await autoAssignTable(parsed.sessionId, parsed.date, parsed.guestCount);
+    const assignedTables = capacityOk
+      ? await autoAssignTables(parsed.sessionId, parsed.date, parsed.guestCount)
+      : [];
 
     const tables = parsed.includeTables
       ? await getAvailableTables(parsed.sessionId, parsed.date, parsed.guestCount)
@@ -49,37 +51,45 @@ export async function POST(req: NextRequest) {
           date: availability.date.toISOString().slice(0, 10),
         },
         capacityOk,
-        assignedTable: assigned,
+        assignedTables,
+        assignedTable: assignedTables[0] ?? null,
         availableTables: tables,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+    const name = error instanceof Error ? error.name : "";
+    const code =
+        error && typeof error === "object" && "code" in error
+          ? String((error as { code?: unknown }).code)
+          : "";
+
     if (
-      typeof error?.message === "string" &&
-      (error.message.includes("Unauthorized") || error.message.includes("Forbidden"))
+      message &&
+      (message.includes("Unauthorized") || message.includes("Forbidden"))
     ) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
+      return NextResponse.json({ success: false, error: message }, { status: 401 });
     }
 
-    if (error?.name === "ZodError" || error?.message === "Invalid date") {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    if (name === "ZodError" || message === "Invalid date") {
+      return NextResponse.json({ success: false, error: message || "Invalid request" }, { status: 400 });
     }
 
     // Prisma invalid UUID / malformed id input
-    if (error?.code === "P2007" || error?.code === "P2023") {
+    if (code === "P2007" || code === "P2023") {
       return NextResponse.json({ success: false, error: "Invalid sessionId (must be UUID)" }, { status: 400 });
     }
 
     // Business errors
     if (
-      typeof error?.message === "string" &&
-      (error.message.includes("Session not found") ||
-        error.message.includes("guestCount") ||
-        error.message.includes("capacity") ||
-        error.message.includes("Not enough capacity") ||
-        error.message.includes("No available table"))
+      message &&
+      (message.includes("Session not found") ||
+        message.includes("guestCount") ||
+        message.includes("capacity") ||
+        message.includes("Not enough capacity") ||
+        message.includes("No available table"))
     ) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 
     console.error("/api/admin/capacity error:", error);

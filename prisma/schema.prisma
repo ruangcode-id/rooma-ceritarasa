@@ -264,6 +264,7 @@ model Reservation {
   specialRequest String?           @map("special_request") @db.Text
   internalNotes  String?           @map("internal_notes") @db.Text
   cancelToken    String?           @unique @map("cancel_token") @db.VarChar(100)
+  expiresAt      DateTime?         @map("expires_at")
   createdBy      String?           @map("created_by") @db.Uuid
   createdAt      DateTime          @default(now()) @map("created_at")
   updatedAt      DateTime          @updatedAt @map("updated_at")
