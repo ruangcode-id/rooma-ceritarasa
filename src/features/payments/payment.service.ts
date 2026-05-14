@@ -1,4 +1,4 @@
-import { getMidtransSnap } from "@/lib/midtrans";
+import { getMidtransCore, getMidtransSnap } from "@/lib/midtrans";
 import {
   CreatePaymentInput,
   CreatePaymentResult,
@@ -8,38 +8,12 @@ import {
   PaymentStatus,
   ReservationPaymentType,
 } from "./payment.types";
-import { generateOrderId, mapMidtransPaymentType, mapMidtransStatus } from "./payment.utils";
+import { generateOrderId, mapMidtransStatus } from "./payment.utils";
 import { paymentRepository } from "@/infrastructure/repositories/payment.repository";
 import { PaymentStatus as DbPaymentStatus, PaymentType as DbPaymentType } from "@/generated/prisma/client";
 
-function mapFeatureStatusToDb(status: PaymentStatus): DbPaymentStatus {
-  switch (status) {
-    case PaymentStatus.Success:
-      return "paid";
-    case PaymentStatus.Failed:
-    case PaymentStatus.Expired:
-    case PaymentStatus.Canceled:
-      return "failed";
-    case PaymentStatus.Refunded:
-      return "refunded";
-    case PaymentStatus.Pending:
-    default:
-      return "pending";
-  }
-}
-
 function mapDbStatusToFeature(status: DbPaymentStatus): PaymentStatus {
-  switch (status) {
-    case "paid":
-      return PaymentStatus.Success;
-    case "failed":
-      return PaymentStatus.Failed;
-    case "refunded":
-      return PaymentStatus.Refunded;
-    case "pending":
-    default:
-      return PaymentStatus.Pending;
-  }
+  return status as PaymentStatus;
 }
 
 function mapReservationPaymentType(type: ReservationPaymentType): DbPaymentType {
@@ -53,17 +27,27 @@ function mapReservationPaymentType(type: ReservationPaymentType): DbPaymentType 
   }
 }
 
+function mapDbPaymentTypeToReservation(type: DbPaymentType): ReservationPaymentType {
+  switch (type) {
+    case "full":
+      return ReservationPaymentType.Full;
+    case "deposit":
+    default:
+      return ReservationPaymentType.Deposit;
+  }
+}
+
 function toPaymentRecord(entity: {
   id: string;
   midtransOrderId: string | null;
   status: DbPaymentStatus;
-  paymentMethod: string | null;
+  type: DbPaymentType;
   amount: number;
 }): PaymentRecord {
   return {
     orderId: entity.midtransOrderId ?? entity.id,
     status: mapDbStatusToFeature(entity.status),
-    type: mapMidtransPaymentType(entity.paymentMethod ?? undefined),
+    type: mapDbPaymentTypeToReservation(entity.type),
     amount: entity.amount,
   };
 }
@@ -116,7 +100,7 @@ export async function listPayments(query: PaymentListQuery) {
   const limit = query.limit ?? 20;
   const skip = (page - 1) * limit;
 
-  const dbStatus = query.status ? mapFeatureStatusToDb(query.status) : undefined;
+  const dbStatus = query.status ?? undefined;
   const result = await paymentRepository.listPayments({
     skip,
     take: limit,
@@ -136,10 +120,7 @@ export async function updatePaymentStatus(
   orderId: string,
   status: PaymentStatus
 ): Promise<PaymentRecord> {
-  const updated = await paymentRepository.updateStatusByOrderId(
-    orderId,
-    mapFeatureStatusToDb(status)
-  );
+  const updated = await paymentRepository.updateStatusByOrderId(orderId, status);
 
   if (!updated) {
     throw new Error("Payment not found");
@@ -152,7 +133,25 @@ export async function refundPayment(
   orderId: string,
   amount?: number
 ): Promise<PaymentRecord> {
-  const updated = await paymentRepository.refundByOrderId(orderId);
+  const payment = await paymentRepository.findByOrderId(orderId);
+
+  if (!payment) {
+    throw new Error("Payment not found");
+  }
+
+  const midtransOrderId = payment.midtransOrderId ?? payment.id;
+  const core = getMidtransCore();
+  const refundPayload: Record<string, unknown> = {
+    reason: "Refund by admin",
+  };
+
+  if (typeof amount === "number" && Number.isFinite(amount) && amount > 0) {
+    refundPayload.amount = Math.round(amount);
+  }
+
+  await core.transaction.refund(midtransOrderId, refundPayload);
+
+  const updated = await paymentRepository.refundByOrderId(midtransOrderId);
 
   if (!updated) {
     throw new Error("Payment not found");
@@ -168,12 +167,11 @@ export async function handleMidtransWebhook(
   payload: MidtransWebhookPayload
 ): Promise<PaymentRecord> {
   const status = mapMidtransStatus(payload.transaction_status, payload.fraud_status);
-  const dbStatus = mapFeatureStatusToDb(status);
-  const paidAt = dbStatus === "paid" ? new Date() : null;
+  const paidAt = status === "paid" ? new Date() : null;
 
   const updated = await paymentRepository.updateFromWebhook({
     orderId: payload.order_id,
-    status: dbStatus,
+    status,
     paymentMethod: payload.payment_type ?? null,
     midtransTxnId: payload.transaction_id ?? null,
     paidAt,

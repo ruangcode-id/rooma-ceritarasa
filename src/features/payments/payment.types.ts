@@ -1,9 +1,7 @@
 export enum PaymentStatus {
   Pending = "pending",
-  Success = "success",
+  Paid = "paid",
   Failed = "failed",
-  Expired = "expired",
-  Canceled = "canceled",
   Refunded = "refunded",
 }
 
@@ -60,7 +58,7 @@ export type PaymentListQuery = {
 export type PaymentRecord = {
   orderId: string;
   status: PaymentStatus;
-  type: PaymentType;
+  type: ReservationPaymentType;
   amount?: number;
   raw?: Record<string, unknown>;
 };

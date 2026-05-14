@@ -4,6 +4,24 @@ import { prisma } from "@/infrastructure/database/prisma";
 import { Prisma, PaymentStatus, PaymentType } from "@/generated/prisma/client";
 import type { PaymentEntity } from "@/domain/payment/types";
 
+const UUID_REGEX =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isUuid(value: string) {
+	return UUID_REGEX.test(value);
+}
+
+const STATUS_PRIORITY: Record<PaymentStatus, number> = {
+	refunded: 4,
+	paid: 3,
+	failed: 2,
+	pending: 1,
+};
+
+function shouldUpgradeStatus(current: PaymentStatus, next: PaymentStatus) {
+	return STATUS_PRIORITY[next] >= STATUS_PRIORITY[current];
+}
+
 function toPaymentEntity(row: {
 	id: string;
 	reservationId: string;
@@ -69,15 +87,20 @@ export const paymentRepository = {
 		}
 
 		if (orderId) {
-			where.OR = [
+			const orFilters: Prisma.PaymentWhereInput[] = [
 				{
 					midtransOrderId: {
 						contains: orderId,
 						mode: "insensitive",
 					},
 				},
-				{ id: orderId },
 			];
+
+			if (isUuid(orderId)) {
+				orFilters.push({ id: orderId });
+			}
+
+			where.OR = orFilters;
 		}
 
 		const [rows, total] = await Promise.all([
@@ -97,31 +120,50 @@ export const paymentRepository = {
 	},
 
 	findByOrderId: async (orderId: string) => {
+		const where: Prisma.PaymentWhereInput = {
+			midtransOrderId: orderId,
+		};
+
+		if (isUuid(orderId)) {
+			where.OR = [{ midtransOrderId: orderId }, { id: orderId }];
+		}
+
 		const payment = await prisma.payment.findFirst({
-			where: {
-				OR: [{ midtransOrderId: orderId }, { id: orderId }],
-			},
+			where,
 		});
 
 		return payment ? toPaymentEntity(payment) : null;
 	},
 
 	updateStatusByOrderId: async (orderId: string, status: PaymentStatus) => {
+		const where: Prisma.PaymentWhereInput = {
+			midtransOrderId: orderId,
+		};
+
+		if (isUuid(orderId)) {
+			where.OR = [{ midtransOrderId: orderId }, { id: orderId }];
+		}
+
 		const payment = await prisma.payment.findFirst({
-			where: {
-				OR: [{ midtransOrderId: orderId }, { id: orderId }],
-			},
+			where,
 		});
 
 		if (!payment) return null;
 
-		const shouldSetPaidAt = status === "paid" && !payment.paidAt;
+		if (!shouldUpgradeStatus(payment.status, status)) {
+			return toPaymentEntity(payment);
+		}
+
+		const shouldSetPaidAt =
+			status === "paid" && payment.status !== "paid" && !payment.paidAt;
+		const shouldClearPaidAt = status !== "paid" && !payment.paidAt;
 
 		const updated = await prisma.payment.update({
 			where: { id: payment.id },
 			data: {
 				status,
 				...(shouldSetPaidAt ? { paidAt: new Date() } : {}),
+				...(shouldClearPaidAt ? { paidAt: null } : {}),
 			},
 		});
 
@@ -129,10 +171,16 @@ export const paymentRepository = {
 	},
 
 	refundByOrderId: async (orderId: string) => {
+		const where: Prisma.PaymentWhereInput = {
+			midtransOrderId: orderId,
+		};
+
+		if (isUuid(orderId)) {
+			where.OR = [{ midtransOrderId: orderId }, { id: orderId }];
+		}
+
 		const payment = await prisma.payment.findFirst({
-			where: {
-				OR: [{ midtransOrderId: orderId }, { id: orderId }],
-			},
+			where,
 		});
 
 		if (!payment) return null;
@@ -154,13 +202,31 @@ export const paymentRepository = {
 		midtransTxnId?: string | null;
 		paidAt?: Date | null;
 	}) => {
+		const where: Prisma.PaymentWhereInput = {
+			midtransOrderId: args.orderId,
+		};
+
+		if (isUuid(args.orderId)) {
+			where.OR = [{ midtransOrderId: args.orderId }, { id: args.orderId }];
+		}
+
 		const payment = await prisma.payment.findFirst({
-			where: {
-				OR: [{ midtransOrderId: args.orderId }, { id: args.orderId }],
-			},
+			where,
 		});
 
 		if (!payment) return null;
+
+		if (args.status === "pending" && payment.status !== "pending") {
+			return toPaymentEntity(payment);
+		}
+
+		if (!shouldUpgradeStatus(payment.status, args.status)) {
+			return toPaymentEntity(payment);
+		}
+
+		const shouldSetPaidAt =
+			args.status === "paid" && payment.status !== "paid" && !payment.paidAt;
+		const shouldClearPaidAt = args.status !== "paid" && !payment.paidAt;
 
 		const updated = await prisma.payment.update({
 			where: { id: payment.id },
@@ -168,7 +234,11 @@ export const paymentRepository = {
 				status: args.status,
 				midtransTxnId: args.midtransTxnId ?? payment.midtransTxnId,
 				paymentMethod: args.paymentMethod ?? payment.paymentMethod,
-				paidAt: args.paidAt ?? payment.paidAt,
+				paidAt: shouldSetPaidAt
+					? new Date()
+					: shouldClearPaidAt
+						? null
+						: payment.paidAt,
 			},
 		});
 
