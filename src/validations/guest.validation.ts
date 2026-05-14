@@ -11,6 +11,16 @@ export const GUEST_TAGS = [
 
 export const guestTagSchema = z.enum(GUEST_TAGS);
 
+/** Nama tamu: minimal 2 karakter, tanpa angka (huruf, spasi, tanda baca umum diperbolehkan). */
+export const guestNameSchema = z
+  .string()
+  .trim()
+  .min(2, { message: "Nama tamu minimal 2 karakter." })
+  .max(100)
+  .refine((s) => !/\d/.test(s), {
+    message: "Nama tamu tidak boleh mengandung angka.",
+  });
+
 const optionalIsoDate = z
   .union([z.literal(""), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)])
   .optional()
@@ -27,7 +37,7 @@ export const guestPhoneSchema = z
   .transform(normalizeIndonesianPhone);
 
 export const createGuestSchema = z.object({
-  name: z.string().trim().min(2).max(100),
+  name: guestNameSchema,
   phone: guestPhoneSchema,
   email: z
     .union([z.literal(""), z.string().trim().email()])
@@ -44,7 +54,7 @@ export type CreateGuestInput = z.infer<typeof createGuestSchema>;
 
 export const patchGuestSchema = z
   .object({
-    name: z.string().trim().min(2).max(100).optional(),
+    name: guestNameSchema.optional(),
     phone: guestPhoneSchema.optional(),
     email: z
       .union([z.literal(""), z.string().trim().email()])
