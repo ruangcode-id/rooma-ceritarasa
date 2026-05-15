@@ -150,8 +150,10 @@ export async function refundPayment(
   const core = getMidtransCore();
   const midtransStatus = await core.transaction.status(midtransOrderId);
   const transactionStatus = String(midtransStatus?.transaction_status ?? "");
+  const fraudStatus = String(midtransStatus?.fraud_status ?? "");
   const isRefundEligible =
-    transactionStatus === "settlement" || transactionStatus === "capture";
+    transactionStatus === "settlement" ||
+    (transactionStatus === "capture" && fraudStatus === "accept");
 
   if (!isRefundEligible) {
     throw new Error(
@@ -166,7 +168,11 @@ export async function refundPayment(
     refundPayload.amount = Math.round(amount);
   }
 
-  await core.transaction.refund(midtransOrderId, refundPayload);
+  try {
+    await core.transaction.refund(midtransOrderId, refundPayload);
+  } catch (error) {
+    throw new Error("Refund request rejected by Midtrans Sandbox");
+  }
 
   const updated = await paymentRepository.refundByOrderId(midtransOrderId);
 
