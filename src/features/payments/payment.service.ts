@@ -1,4 +1,5 @@
 import { getMidtransCore, getMidtransSnap } from "@/lib/midtrans";
+import { z } from "zod";
 import {
   CreatePaymentInput,
   CreatePaymentResult,
@@ -57,6 +58,12 @@ export async function createPayment(
 ): Promise<CreatePaymentResult> {
   const orderId = input.orderId ?? generateOrderId();
   const amount = Math.round(input.amount);
+
+  try {
+    z.string().uuid().parse(input.reservationId);
+  } catch {
+    throw new Error("Invalid reservationId");
+  }
 
   if (!Number.isFinite(amount) || amount <= 0) {
     throw new Error("Invalid amount");
