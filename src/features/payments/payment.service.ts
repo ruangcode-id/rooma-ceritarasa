@@ -148,6 +148,16 @@ export async function refundPayment(
 
   const midtransOrderId = payment.midtransOrderId ?? payment.id;
   const core = getMidtransCore();
+  const midtransStatus = await core.transaction.status(midtransOrderId);
+  const transactionStatus = String(midtransStatus?.transaction_status ?? "");
+  const isRefundEligible =
+    transactionStatus === "settlement" || transactionStatus === "capture";
+
+  if (!isRefundEligible) {
+    throw new Error(
+      `Transaction is not eligible for refund. Current Midtrans status: ${transactionStatus || "unknown"}`
+    );
+  }
   const refundPayload: Record<string, unknown> = {
     reason: "Refund by admin",
   };
