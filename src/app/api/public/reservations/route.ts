@@ -19,14 +19,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!body.guestName.trim()) {
+    const guestName = body.guestName.trim();
+    const guestPhone = body.guestPhone.trim();
+
+    if (!guestName) {
       return NextResponse.json(
         { success: false, error: "Guest name is required" },
         { status: 400 }
       );
     }
 
-    if (!/^\d{8,15}$/.test(body.guestPhone)) {
+    if (!/^\d{8,15}$/.test(guestPhone)) {
       return NextResponse.json(
         { success: false, error: "Invalid phone number" },
         { status: 400 }
@@ -34,19 +37,40 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await createPublicReservation({
-      guestName: body.guestName.trim(),
-      guestPhone: body.guestPhone.trim(),
-      guestEmail: body.guestEmail,
+      guestName,
+      guestPhone,
+      guestEmail:
+        typeof body.guestEmail === "string" && body.guestEmail.trim()
+          ? body.guestEmail.trim()
+          : undefined,
       sessionId: body.sessionId,
       date: body.date,
       partySize: body.partySize,
-      specialRequest: body.specialRequest,
+      specialRequest:
+        typeof body.specialRequest === "string" && body.specialRequest.trim()
+          ? body.specialRequest.trim()
+          : undefined,
     });
 
-    return NextResponse.json({ success: true, data: result }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: result,
+      },
+      { status: 201 }
+    );
   } catch (error: unknown) {
     console.error("Error creating reservation:", error);
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+
+    const message =
+      error instanceof Error ? error.message : "Internal Server Error";
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: message,
+      },
+      { status: 500 }
+    );
   }
 }

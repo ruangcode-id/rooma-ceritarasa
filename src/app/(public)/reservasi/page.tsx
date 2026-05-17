@@ -3,7 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const TEST_SESSION_ID = "21d72603-76c5-423b-a4f5-58246455cdbe";
+const RESTAURANT_SESSIONS = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    label: "15:00 - 17:00",
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    label: "17:30 - 19:30",
+  },
+  {
+    id: "21d72603-76c5-423b-a4f5-58246455cdbe",
+    label: "20:00 - 22:00",
+  },
+];
 
 export default function ReservationFormPage() {
   const router = useRouter();
@@ -132,11 +145,13 @@ export default function ReservationFormPage() {
                 className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm"
                 name="sessionId"
                 required
-                defaultValue={TEST_SESSION_ID}
+                defaultValue={RESTAURANT_SESSIONS[0].id}
               >
-                <option value={TEST_SESSION_ID}>
-                  Dinner 18:00 - 20:00
-                </option>
+                {RESTAURANT_SESSIONS.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.label}
+                  </option>
+                ))}
               </select>
             </label>
 
