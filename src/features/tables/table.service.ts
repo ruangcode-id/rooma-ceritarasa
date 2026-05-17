@@ -1,5 +1,5 @@
 import { prisma } from "@/infrastructure/database/prisma";
-import { ReservationStatus, TableStatus } from "@/generated/prisma/client";
+import { Prisma, ReservationStatus, TableStatus } from "@/generated/prisma/client";
 
 const startOfUTCDate = (date: Date) => {
   return new Date(
@@ -12,7 +12,6 @@ const parseDateOnlyUTC = (date: Date | string) => {
     if (Number.isNaN(date.getTime())) {
       throw new Error("Invalid date");
     }
-
     return startOfUTCDate(date);
   }
 
@@ -39,6 +38,16 @@ const TABLE_BLOCK_STATUSES = [
   ReservationStatus.confirmed,
   ReservationStatus.checked_in,
 ];
+
+export type BookableTable = {
+  id: string;
+  tableNumber: string;
+  capacity: number;
+  posX: number | null;
+  posY: number | null;
+  status: TableStatus;
+  isActive: boolean;
+};
 
 export const getSessionAvailability = async (
   sessionId: string,
@@ -112,6 +121,139 @@ export const validateCapacity = async (
   return availability;
 };
 
+/**
+ * Meja dianggap "terblokir" oleh reservasi jika:
+ * - Statusnya `confirmed` atau `checked_in` (sudah pasti dipakai), ATAU
+ * - Statusnya `pending` DAN `expiresAt` belum lewat (dalam window 15 menit).
+ * Reservasi `pending` yang sudah expired TIDAK lagi memblokir meja.
+ */
+const unblockedTableWhere = (
+  sessionId: string,
+  normalizedDate: Date,
+): Prisma.TableWhereInput => ({
+  isActive: true,
+  status: {
+    notIn: [TableStatus.MAINTENANCE, TableStatus.OCCUPIED, TableStatus.RESERVED],
+  },
+  reservationTables: {
+    none: {
+      reservation: {
+        sessionId,
+        date: normalizedDate,
+        OR: [
+          { status: { in: CAPACITY_STATUSES } },
+          { status: ReservationStatus.pending, expiresAt: { gt: new Date() } },
+        ],
+      },
+    },
+  },
+});
+
+/**
+ * Validasi bahwa meja spesifik yang dipilih guest tersedia untuk sesi + tanggal tertentu.
+ * Melempar Error jika meja tidak aktif, tidak ditemukan, atau sedang dipesan/dalam window pembayaran.
+ */
+export const checkTableAvailability = async (
+  tableId: string,
+  sessionId: string,
+  date: Date | string,
+): Promise<void> => {
+  const normalizedDate = parseDateOnlyUTC(date);
+  const now = new Date();
+
+  const table = await prisma.table.findFirst({
+    where: {
+      id: tableId,
+      isActive: true,
+      status: {
+        notIn: [
+          TableStatus.MAINTENANCE,
+          TableStatus.OCCUPIED,
+          TableStatus.RESERVED,
+        ],
+      },
+    },
+  });
+
+  if (!table) {
+    throw new Error("Meja tidak ditemukan atau tidak tersedia untuk reservasi.");
+  }
+
+  const blocking = await prisma.reservationTable.findFirst({
+    where: {
+      tableId,
+      reservation: {
+        sessionId,
+        date: normalizedDate,
+        OR: [
+          { status: { in: CAPACITY_STATUSES } },
+          { status: ReservationStatus.pending, expiresAt: { gt: now } },
+        ],
+      },
+    },
+  });
+
+  if (blocking) {
+    throw new Error(
+      "Meja yang dipilih sudah dipesan atau sedang dalam proses pembayaran. Silakan pilih meja lain."
+    );
+  }
+};
+
+/**
+ * Kembalikan semua meja aktif beserta flag `isAvailable` untuk sesi + tanggal tertentu.
+ * Digunakan oleh public endpoint agar guest bisa melihat denah dan memilih meja yang kosong.
+ */
+export const getPublicTableAvailability = async (
+  sessionId: string,
+  date: Date | string,
+): Promise<Array<BookableTable & { isAvailable: boolean }>> => {
+  const normalizedDate = parseDateOnlyUTC(date);
+  const now = new Date();
+
+  const allTables = await prisma.table.findMany({
+    where: { isActive: true },
+    orderBy: [{ tableNumber: "asc" }],
+    select: {
+      id: true,
+      tableNumber: true,
+      capacity: true,
+      posX: true,
+      posY: true,
+      status: true,
+      isActive: true,
+      reservationTables: {
+        where: {
+          reservation: {
+            sessionId,
+            date: normalizedDate,
+            OR: [
+              { status: { in: CAPACITY_STATUSES } },
+              { status: ReservationStatus.pending, expiresAt: { gt: now } },
+            ],
+          },
+        },
+        take: 1,
+      },
+    },
+  });
+
+  return allTables.map((t) => ({
+    id: t.id,
+    tableNumber: t.tableNumber,
+    capacity: t.capacity,
+    posX: t.posX,
+    posY: t.posY,
+    status: t.status,
+    isActive: t.isActive,
+    isAvailable:
+      t.status !== TableStatus.MAINTENANCE &&
+      t.status !== TableStatus.OCCUPIED &&
+      t.status !== TableStatus.RESERVED &&
+      t.reservationTables.length === 0,
+  }));
+};
+
 export const getAvailableTables = async (
   sessionId: string,
   date: Date | string,
@@ -125,36 +267,14 @@ export const getAvailableTables = async (
 
   const tables = await prisma.table.findMany({
     where: {
-      isActive: true,
+      ...unblockedTableWhere(sessionId, normalizedDate),
       capacity: {
         gte: capacity,
       },
-      status: {
-        notIn: [
-          TableStatus.MAINTENANCE,
-          TableStatus.OCCUPIED,
-          TableStatus.RESERVED,
-        ],
-      },
-      reservationTables: {
-        none: {
-          reservation: {
-            sessionId,
-            date: normalizedDate,
-            status: {
-              in: TABLE_BLOCK_STATUSES,
-            },
-          },
-        },
-      },
     },
     orderBy: [
-      {
-        capacity: "asc",
-      },
-      {
-        tableNumber: "asc",
-      },
+      { capacity: "asc" },
+      { tableNumber: "asc" },
     ],
     select: {
       id: true,
@@ -170,11 +290,11 @@ export const getAvailableTables = async (
   return tables;
 };
 
-export const autoAssignTable = async (
+export const autoAssignTables = async (
   sessionId: string,
   date: Date | string,
   guestCount: number
-) => {
+): Promise<BookableTable[]> => {
   await validateCapacity(sessionId, date, guestCount);
 
   const availableTables = await getAvailableTables(
@@ -187,5 +307,15 @@ export const autoAssignTable = async (
     throw new Error("No available table for the requested guest count");
   }
 
-  return availableTables[0];
+  return [availableTables[0]];
+};
+
+/** @deprecated */
+export const autoAssignTable = async (
+  sessionId: string,
+  date: Date | string,
+  guestCount: number
+) => {
+  const tables = await autoAssignTables(sessionId, date, guestCount);
+  return tables[0];
 };
