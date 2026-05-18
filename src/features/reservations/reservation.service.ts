@@ -40,13 +40,18 @@ export async function createPublicReservation(
       });
     }
 
+    const reservationStatus =
+      input.partySize <= 2
+        ? ReservationStatus.confirmed
+        : ReservationStatus.pending;
+
     const reservation = await tx.reservation.create({
       data: {
         guestId: guest.id,
         sessionId: input.sessionId,
         date: new Date(input.date),
         partySize: input.partySize,
-        status: ReservationStatus.pending,
+        status: reservationStatus,
         specialRequest: input.specialRequest ?? null,
       },
     });

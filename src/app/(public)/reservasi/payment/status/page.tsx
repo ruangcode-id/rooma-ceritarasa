@@ -3,9 +3,10 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { ReservationPaymentType } from "@/features/payments/payment.types";
 
 type PaymentStatusType = "pending" | "paid" | "failed" | "refunded";
-type PaymentType = "deposit" | "full";
+type PaymentType = ReservationPaymentType;
 
 interface PaymentData {
   orderId: string;
@@ -196,7 +197,7 @@ function PaymentStatusContent() {
                 </p>
                 <p className="mt-2 text-lg font-semibold capitalize">
                   {paymentType === "deposit"
-                    ? "Deposit 30%"
+                    ? "Deposit Reservasi"
                     : "Full Payment"}
                 </p>
               </div>

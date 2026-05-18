@@ -1,27 +1,33 @@
+import { ReservationPaymentType } from "@/features/payments/payment.types";
+
 export type CreatePaymentRequest = {
   reservationId: string;
-  paymentType: "deposit" | "full";
-  amount: number;
-  customer?: {
-    name?: string;
-    email?: string;
-    phone?: string;
-  };
-  items?: {
-    id?: string;
-    name: string;
-    price: number;
-    quantity: number;
-  }[];
+  paymentType: ReservationPaymentType;
+};
+
+export type DepositPolicy = {
+  noDepositMaxGuests: number;
+  depositForThreeToFourGuests: number;
+  depositForFivePlusGuests: number;
+  minimumOrderForTenPlusGuests: number;
 };
 
 export type CreatePaymentResponse = {
-  orderId: string;
-  token: string;
-  redirectUrl: string;
+  paymentRequired: boolean;
+  reservationId: string;
+  partySize: number;
+  amount: number;
+  minimumOrder: number | null;
+  depositPolicy: DepositPolicy;
+  message?: string;
+  orderId?: string;
+  token?: string;
+  redirectUrl?: string;
 };
 
-export async function createPayment(request: CreatePaymentRequest): Promise<CreatePaymentResponse> {
+export async function createPayment(
+  request: CreatePaymentRequest
+): Promise<CreatePaymentResponse> {
   const response = await fetch("/api/public/payments", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -40,7 +46,7 @@ export async function createPayment(request: CreatePaymentRequest): Promise<Crea
 export type PaymentStatusResponse = {
   orderId: string;
   status: "pending" | "paid" | "failed" | "refunded";
-  type: "deposit" | "full";
+  type: ReservationPaymentType;
   amount?: number;
 };
 

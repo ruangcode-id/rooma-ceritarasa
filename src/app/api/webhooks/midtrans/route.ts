@@ -32,6 +32,10 @@ function mapMidtransStatusToPaymentStatus(
     return PaymentStatus.paid;
   }
 
+  if (transactionStatus === "paid") {
+    return PaymentStatus.paid;
+  }
+
   if (transactionStatus === "pending") {
     return PaymentStatus.pending;
   }
@@ -55,8 +59,25 @@ function mapMidtransStatusToPaymentStatus(
   return PaymentStatus.pending;
 }
 
-function shouldConfirmReservation(paymentStatus: PaymentStatus) {
-  return paymentStatus === PaymentStatus.paid;
+function shouldConfirmReservation(
+  paymentStatus: PaymentStatus,
+  payload: MidtransWebhookPayload
+) {
+  const transactionStatus = payload.transaction_status?.toLowerCase();
+
+  if (!transactionStatus) {
+    return paymentStatus === PaymentStatus.paid;
+  }
+
+  if (transactionStatus === "settlement" || transactionStatus === "paid") {
+    return true;
+  }
+
+  if (transactionStatus === "capture") {
+    return payload.fraud_status !== "challenge";
+  }
+
+  return false;
 }
 
 function getPaidAt(
@@ -134,7 +155,7 @@ export async function POST(req: NextRequest) {
 
       let updatedReservation = null;
 
-      if (shouldConfirmReservation(paymentStatus)) {
+      if (shouldConfirmReservation(paymentStatus, payload)) {
         updatedReservation = await tx.reservation.update({
           where: {
             id: payment.reservationId,

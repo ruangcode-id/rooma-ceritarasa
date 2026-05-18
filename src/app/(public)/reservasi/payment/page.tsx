@@ -1,13 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { createPayment } from "@/lib/api/payment";
-
-const DEPOSIT_AMOUNT = 150000;
-const FULL_AMOUNT = 500000;
-
-type PaymentType = "deposit" | "full";
+import { createPayment, type CreatePaymentResponse } from "@/lib/api/payment";
+import { ReservationPaymentType } from "@/features/payments/payment.types";
 
 type SnapResult = {
   order_id?: string;
@@ -36,6 +32,15 @@ function formatRupiah(amount: number) {
   return `Rp ${amount.toLocaleString("id-ID")}`;
 }
 
+function getMidtransSnapUrl() {
+  const isProduction =
+    process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === "true";
+
+  return isProduction
+    ? "https://app.midtrans.com/snap/snap.js"
+    : "https://app.sandbox.midtrans.com/snap/snap.js";
+}
+
 function PaymentStepContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -44,61 +49,78 @@ function PaymentStepContent() {
     return searchParams.get("reservationId") ?? "";
   }, [searchParams]);
 
-  const [selectedType, setSelectedType] = useState<PaymentType>("deposit");
+  const [paymentResult, setPaymentResult] =
+    useState<CreatePaymentResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [snapLoaded, setSnapLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  useEffect(() => {
+  async function ensureSnapReady() {
     if (window.snap) {
       setSnapLoaded(true);
-      return;
+      return true;
     }
 
     const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY;
 
     if (!clientKey) {
       setError("Midtrans client key belum tersedia di .env.local.");
-      return;
+      return false;
     }
 
+    const snapUrl = getMidtransSnapUrl();
+
     const existingScript = document.querySelector<HTMLScriptElement>(
-      'script[src="https://app.sandbox.midtrans.com/snap/snap.js"]'
+      `script[src="${snapUrl}"]`
     );
 
     if (existingScript) {
       if (window.snap) {
         setSnapLoaded(true);
-      } else {
-        existingScript.addEventListener("load", () => setSnapLoaded(true));
-        existingScript.addEventListener("error", () =>
-          setError("Gagal memuat halaman pembayaran Midtrans.")
-        );
+        return true;
       }
 
-      return;
+      return new Promise<boolean>((resolve) => {
+        const handleLoad = () => {
+          setSnapLoaded(true);
+          existingScript.removeEventListener("load", handleLoad);
+          existingScript.removeEventListener("error", handleError);
+          resolve(true);
+        };
+
+        const handleError = () => {
+          setError("Gagal memuat halaman pembayaran Midtrans.");
+          existingScript.removeEventListener("load", handleLoad);
+          existingScript.removeEventListener("error", handleError);
+          resolve(false);
+        };
+
+        existingScript.addEventListener("load", handleLoad);
+        existingScript.addEventListener("error", handleError);
+      });
     }
 
-    const script = document.createElement("script");
-    script.src = "https://app.sandbox.midtrans.com/snap/snap.js";
-    script.setAttribute("data-client-key", clientKey);
-    script.async = true;
+    return new Promise<boolean>((resolve) => {
+      const script = document.createElement("script");
 
-    script.onload = () => {
-      setSnapLoaded(true);
-    };
+      script.src = snapUrl;
+      script.setAttribute("data-client-key", clientKey);
+      script.async = true;
 
-    script.onerror = () => {
-      setError("Gagal memuat halaman pembayaran Midtrans.");
-    };
+      script.onload = () => {
+        setSnapLoaded(true);
+        resolve(true);
+      };
 
-    document.body.appendChild(script);
+      script.onerror = () => {
+        setError("Gagal memuat halaman pembayaran Midtrans.");
+        resolve(false);
+      };
 
-    return () => {
-      script.onload = null;
-      script.onerror = null;
-    };
-  }, []);
+      document.body.appendChild(script);
+    });
+  }
 
   async function handleContinue() {
     if (!reservationId) {
@@ -108,41 +130,31 @@ function PaymentStepContent() {
 
     setIsLoading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
-      const amount =
-        selectedType === "deposit" ? DEPOSIT_AMOUNT : FULL_AMOUNT;
-
-      const guestName =
-        typeof window !== "undefined"
-          ? localStorage.getItem("guestName") ?? "Guest"
-          : "Guest";
-
       const result = await createPayment({
         reservationId,
-        paymentType: selectedType,
-        amount,
-        customer: {
-          name: guestName,
-        },
-        items: [
-          {
-            id: selectedType,
-            name:
-              selectedType === "deposit"
-                ? "Deposit Reservasi 30%"
-                : "Full Payment Reservasi",
-            price: amount,
-            quantity: 1,
-          },
-        ],
+        paymentType: ReservationPaymentType.Deposit,
       });
 
-      if (!result?.token || !result?.orderId) {
+      setPaymentResult(result);
+
+      if (!result.paymentRequired) {
+        setSuccessMessage(
+          result.message ??
+            "Reservasi berhasil dibuat tanpa deposit. Reservasi sudah dikonfirmasi."
+        );
+        return;
+      }
+
+      if (!result.token || !result.orderId) {
         throw new Error("Token pembayaran tidak ditemukan dari server.");
       }
 
-      if (!window.snap) {
+      const snapReady = await ensureSnapReady();
+
+      if (!snapReady || !window.snap) {
         if (result.redirectUrl) {
           window.location.href = result.redirectUrl;
           return;
@@ -182,8 +194,10 @@ function PaymentStepContent() {
     }
   }
 
-  const selectedAmount =
-    selectedType === "deposit" ? DEPOSIT_AMOUNT : FULL_AMOUNT;
+  const selectedAmount = paymentResult?.amount ?? null;
+  const depositPolicy = paymentResult?.depositPolicy ?? null;
+  const minimumOrder = paymentResult?.minimumOrder ?? null;
+  const paymentRequired = paymentResult?.paymentRequired ?? null;
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
@@ -192,9 +206,9 @@ function PaymentStepContent() {
           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
             Pembayaran
           </p>
-          <h1 className="text-3xl font-semibold">Pilih Pembayaran</h1>
+          <h1 className="text-3xl font-semibold">Pembayaran Reservasi</h1>
           <p className="text-sm text-slate-600">
-            Pilih jenis pembayaran untuk reservasi ini.
+            Sistem akan menghitung kebutuhan deposit berdasarkan jumlah tamu.
           </p>
         </header>
 
@@ -211,6 +225,12 @@ function PaymentStepContent() {
             </div>
           )}
 
+          {successMessage && (
+            <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">
+              {successMessage}
+            </div>
+          )}
+
           {reservationId && (
             <div className="rounded-xl bg-slate-50 p-4 text-xs text-slate-600">
               ID Reservasi:{" "}
@@ -220,42 +240,61 @@ function PaymentStepContent() {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={() => setSelectedType("deposit")}
-            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition ${
-              selectedType === "deposit"
-                ? "border-slate-900 bg-slate-50"
-                : "border-slate-200 bg-white"
-            }`}
-          >
-            <span className="font-semibold">Deposit 30%</span>
-            <span className="text-slate-700">
-              {formatRupiah(DEPOSIT_AMOUNT)}
-            </span>
-          </button>
+          <div className="rounded-xl border border-slate-200 p-4 text-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+              Kebijakan Deposit
+            </p>
 
-          <button
-            type="button"
-            onClick={() => setSelectedType("full")}
-            className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm transition ${
-              selectedType === "full"
-                ? "border-slate-900 bg-slate-50"
-                : "border-slate-200 bg-white"
-            }`}
-          >
-            <span className="font-semibold">Full Payment</span>
-            <span className="text-slate-700">{formatRupiah(FULL_AMOUNT)}</span>
-          </button>
+            {depositPolicy ? (
+              <div className="mt-3 space-y-1 text-slate-600">
+                <p>
+                  1-{depositPolicy.noDepositMaxGuests} tamu: tanpa deposit.
+                </p>
+                <p>
+                  3-4 tamu: deposit{" "}
+                  {formatRupiah(depositPolicy.depositForThreeToFourGuests)}.
+                </p>
+                <p>
+                  5+ tamu: deposit{" "}
+                  {formatRupiah(depositPolicy.depositForFivePlusGuests)}.
+                </p>
+                <p>
+                  10+ tamu: minimum order{" "}
+                  {formatRupiah(depositPolicy.minimumOrderForTenPlusGuests)}.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-1 text-slate-600">
+                <p>1-2 tamu: tanpa deposit.</p>
+                <p>3-4 tamu: deposit Rp150.000.</p>
+                <p>5+ tamu: deposit Rp300.000.</p>
+                <p>10+ tamu: minimum order Rp1.000.000.</p>
+              </div>
+            )}
+          </div>
 
           <div className="rounded-xl border border-slate-200 p-4 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-slate-600">Total pembayaran</span>
               <span className="font-semibold">
-                {formatRupiah(selectedAmount)}
+                {selectedAmount !== null ? formatRupiah(selectedAmount) : "-"}
               </span>
             </div>
           </div>
+
+          {typeof minimumOrder === "number" && minimumOrder > 0 && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+              Minimum order untuk reservasi 10+ tamu sebesar{" "}
+              {formatRupiah(minimumOrder)}.
+            </div>
+          )}
+
+          {paymentRequired === false && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+              Reservasi ini tidak membutuhkan pembayaran deposit. Status
+              reservasi sudah dikonfirmasi.
+            </div>
+          )}
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <a
@@ -265,18 +304,27 @@ function PaymentStepContent() {
               Kembali
             </a>
 
-            <button
-              type="button"
-              onClick={handleContinue}
-              disabled={isLoading || !snapLoaded || !reservationId}
-              className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoading
-                ? "Memproses..."
-                : !snapLoaded
-                  ? "Memuat Midtrans..."
-                  : "Lanjut ke Pembayaran"}
-            </button>
+            {paymentRequired === false ? (
+              <a
+                href="/reservasi"
+                className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white"
+              >
+                Buat Reservasi Baru
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={handleContinue}
+                disabled={isLoading || !reservationId}
+                className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isLoading
+                  ? "Memproses..."
+                  : snapLoaded
+                    ? "Lanjut ke Pembayaran"
+                    : "Cek Deposit & Lanjutkan"}
+              </button>
+            )}
           </div>
         </section>
       </div>

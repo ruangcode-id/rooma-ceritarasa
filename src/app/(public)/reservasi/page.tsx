@@ -18,6 +18,8 @@ const RESTAURANT_SESSIONS = [
   },
 ];
 
+const PARTY_SIZE_OPTIONS = [2, 3, 4, 5, 6, 8, 10, 12, 15];
+
 export default function ReservationFormPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -163,10 +165,11 @@ export default function ReservationFormPage() {
                 required
                 defaultValue="2"
               >
-                <option value="2">2 Orang</option>
-                <option value="4">4 Orang</option>
-                <option value="6">6 Orang</option>
-                <option value="8">8 Orang</option>
+                {PARTY_SIZE_OPTIONS.map((partySize) => (
+                  <option key={partySize} value={partySize}>
+                    {partySize} Orang
+                  </option>
+                ))}
               </select>
             </label>
           </div>
@@ -174,11 +177,23 @@ export default function ReservationFormPage() {
           <label className="text-sm">
             Permintaan Khusus
             <textarea
-              className="mt-2 min-h-[100px] w-full rounded-xl border border-slate-200 px-4 py-2 text-sm"
+              className="mt-2 min-h-25 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm"
               placeholder="Contoh: Meja dekat jendela"
               name="specialRequest"
             />
           </label>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+              Kebijakan Reservasi
+            </p>
+            <div className="mt-3 space-y-1">
+              <p>2 tamu: tanpa deposit.</p>
+              <p>3-4 tamu: deposit Rp 150.000.</p>
+              <p>5+ tamu: deposit Rp 300.000.</p>
+              <p>10+ tamu: minimum order Rp 1.000.000.</p>
+            </div>
+          </div>
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <p className="text-xs text-slate-500">
