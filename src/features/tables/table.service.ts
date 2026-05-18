@@ -319,3 +319,78 @@ export const autoAssignTable = async (
   const tables = await autoAssignTables(sessionId, date, guestCount);
   return tables[0];
 };
+
+/**
+ * Validasi ketersediaan beberapa meja sekaligus untuk Admin.
+ *
+ * @param tableIds           - Daftar meja yang ingin di-assign.
+ * @param sessionId          - Sesi reservasi.
+ * @param date               - Tanggal reservasi.
+ * @param excludeReservationId - ID reservasi yang sedang di-edit (meja miliknya sendiri tidak dianggap bentrok).
+ *
+ * Melempar Error jika ada meja yang tidak aktif, tidak ditemukan,
+ * atau sedang di-lock oleh reservasi LAIN pada sesi + tanggal yang sama.
+ */
+export const checkMultipleTablesAvailability = async (
+  tableIds: string[],
+  sessionId: string,
+  date: Date | string,
+  excludeReservationId: string,
+): Promise<void> => {
+  if (tableIds.length === 0) {
+    throw new Error("At least one table must be specified");
+  }
+
+  const normalizedDate = parseDateOnlyUTC(date);
+  const now = new Date();
+
+  // 1. Pastikan semua meja ada, aktif, dan tidak dalam status Maintenance/Occupied/Reserved
+  const activeTables = await prisma.table.findMany({
+    where: {
+      id: { in: tableIds },
+      isActive: true,
+      status: {
+        notIn: [
+          TableStatus.MAINTENANCE,
+          TableStatus.OCCUPIED,
+          TableStatus.RESERVED,
+        ],
+      },
+    },
+    select: { id: true, tableNumber: true },
+  });
+
+  if (activeTables.length !== tableIds.length) {
+    const foundIds = activeTables.map((t) => t.id);
+    const invalidIds = tableIds.filter((id) => !foundIds.includes(id));
+    throw new Error(
+      `Beberapa meja tidak ditemukan atau tidak tersedia: ${invalidIds.join(", ")}`,
+    );
+  }
+
+  // 2. Cek apakah ada meja yang di-lock oleh reservasi LAIN (bukan diri sendiri)
+  const conflicting = await prisma.reservationTable.findFirst({
+    where: {
+      tableId: { in: tableIds },
+      reservation: {
+        id: { not: excludeReservationId }, // Kecualikan reservasi yang sedang di-edit
+        sessionId,
+        date: normalizedDate,
+        OR: [
+          { status: { in: [ReservationStatus.confirmed, ReservationStatus.checked_in] } },
+          { status: ReservationStatus.pending, expiresAt: { gt: now } },
+        ],
+      },
+    },
+    include: {
+      table: { select: { tableNumber: true } },
+    },
+  });
+
+  if (conflicting) {
+    throw new Error(
+      `Meja ${conflicting.table.tableNumber} sudah dipesan oleh tamu lain pada sesi dan tanggal ini.`,
+    );
+  }
+};
+
