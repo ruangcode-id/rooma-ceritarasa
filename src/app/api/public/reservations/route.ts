@@ -22,11 +22,16 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "";
 
-    if (
+    const isClientError =
       message.includes("tidak tersedia untuk reservasi") ||
       message.includes("Meja tidak ditemukan") ||
-      message.includes("Meja yang dipilih sudah dipesan")
-    ) {
+      message.includes("Meja yang dipilih sudah dipesan") ||
+      message.includes("sudah dipesan atau sedang dalam proses pembayaran") ||
+      message.includes("tidak mencukupi untuk jumlah tamu") ||
+      message.includes("tidak ditemukan atau tidak tersedia") ||
+      message.includes("Minimal satu meja harus dipilih");
+
+    if (isClientError) {
       return jsonError(message, 400);
     }
 
@@ -34,3 +39,4 @@ export async function POST(request: Request) {
     return jsonError("Internal Server Error", 500);
   }
 }
+

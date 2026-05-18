@@ -6,7 +6,9 @@ export const publicReservationSchema = z.object({
   guestPhone: guestPhoneSchema,
   guestEmail: z.union([z.literal(""), z.string().trim().email()]).optional().transform((v) => (v === "" ? undefined : v)),
   sessionId: z.string().uuid(),
-  tableId: z.string().uuid({ message: "tableId harus berupa UUID yang valid." }),
+  tableIds: z
+    .array(z.string().uuid({ message: "Setiap tableId harus berupa UUID yang valid." }))
+    .min(1, "Minimal pilih satu meja."),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
   partySize: z.coerce.number().int().positive(),
   specialRequest: z.string().trim().max(1000).optional(),
