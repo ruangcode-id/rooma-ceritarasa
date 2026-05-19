@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { ReservationStatus } from "@/generated/prisma/client";
 import { PublicReservationInput } from "@/validations/reservation.validation";
 import { BlockedDateRepository } from "@/infrastructure/repositories/blocked-date.repository";
-import { checkTableAvailability, checkMultipleTablesAvailability } from "@/features/tables/table.service";
+import { checkMultipleTablesAvailability } from "@/features/tables/table.service";
 import {
   createReservationTransaction,
   getAdminReservations,
@@ -25,21 +25,33 @@ const parseDateOnlyUTC = (dateStr: string) => {
 
 export const PublicReservationUseCase = {
   createReservationAction: async (input: PublicReservationInput) => {
-    // 1. Cek Blokir Tanggal (langsung ke repository, tanpa requireRole)
+    // 1. Cek Blokir Tanggal
     const dateObj = parseDateOnlyUTC(input.date);
     const isBlocked = await BlockedDateRepository.isDateBlocked(dateObj);
     if (isBlocked) {
       throw new Error(`Tanggal ${input.date} tidak tersedia untuk reservasi.`);
     }
 
-    // 2. Validasi meja yang dipilih guest tersedia di sesi ini
-    await checkTableAvailability(input.tableId, input.sessionId, input.date);
+    // 2. Validasi semua meja yang dipilih tersedia di sesi ini (tidak bentrok reservasi lain)
+    await checkMultipleTablesAvailability(input.tableIds, input.sessionId, input.date);
 
-    // 3. Generate cancel_token & hitung expiry pembayaran
+    // 3. Validasi kapasitas gabungan meja >= jumlah tamu (Opsi 1 — Blokir ketat)
+    const selectedTables = await prisma.table.findMany({
+      where: { id: { in: input.tableIds } },
+      select: { capacity: true, tableNumber: true },
+    });
+    const totalCapacity = selectedTables.reduce((sum, t) => sum + t.capacity, 0);
+    if (totalCapacity < input.partySize) {
+      throw new Error(
+        `Kapasitas total meja yang dipilih (${totalCapacity} orang) tidak mencukupi untuk jumlah tamu (${input.partySize} orang). Silakan pilih meja tambahan.`,
+      );
+    }
+
+    // 4. Generate cancel_token & hitung expiry pembayaran
     const cancelToken = crypto.randomBytes(16).toString("hex");
     const expiresAt = new Date(Date.now() + PAYMENT_EXPIRY_MS);
 
-    // 4. Simpan ke DB
+    // 5. Simpan ke DB
     const reservation = await createReservationTransaction(
       {
         name: input.guestName,
@@ -55,10 +67,10 @@ export const PublicReservationUseCase = {
         cancelToken,
         expiresAt,
       },
-      [input.tableId],
+      input.tableIds,
     );
 
-    // 5. Emit Event
+    // 6. Emit Event
     appEvents.emit(EVENTS.RESERVATION_CREATED, {
       reservationId: reservation.id,
       status: reservation.status,

@@ -321,24 +321,23 @@ export const autoAssignTable = async (
 };
 
 /**
- * Validasi ketersediaan beberapa meja sekaligus untuk Admin.
+ * Validasi ketersediaan beberapa meja sekaligus.
+ * Digunakan oleh Public Reservation (tanpa excludeReservationId)
+ * dan Admin Table Assignment (dengan excludeReservationId untuk menghindari bentrok dengan diri sendiri).
  *
- * @param tableIds           - Daftar meja yang ingin di-assign.
- * @param sessionId          - Sesi reservasi.
- * @param date               - Tanggal reservasi.
- * @param excludeReservationId - ID reservasi yang sedang di-edit (meja miliknya sendiri tidak dianggap bentrok).
- *
- * Melempar Error jika ada meja yang tidak aktif, tidak ditemukan,
- * atau sedang di-lock oleh reservasi LAIN pada sesi + tanggal yang sama.
+ * @param tableIds             - Daftar UUID meja yang dipilih.
+ * @param sessionId            - Sesi reservasi.
+ * @param date                 - Tanggal reservasi.
+ * @param excludeReservationId - (Opsional) ID reservasi yang sedang diedit; meja miliknya tidak dianggap konflik.
  */
 export const checkMultipleTablesAvailability = async (
   tableIds: string[],
   sessionId: string,
   date: Date | string,
-  excludeReservationId: string,
+  excludeReservationId?: string,
 ): Promise<void> => {
   if (tableIds.length === 0) {
-    throw new Error("At least one table must be specified");
+    throw new Error("Minimal satu meja harus dipilih.");
   }
 
   const normalizedDate = parseDateOnlyUTC(date);
@@ -368,12 +367,13 @@ export const checkMultipleTablesAvailability = async (
     );
   }
 
-  // 2. Cek apakah ada meja yang di-lock oleh reservasi LAIN (bukan diri sendiri)
+  // 2. Cek apakah ada meja yang sudah di-lock oleh reservasi aktif lain
   const conflicting = await prisma.reservationTable.findFirst({
     where: {
       tableId: { in: tableIds },
       reservation: {
-        id: { not: excludeReservationId }, // Kecualikan reservasi yang sedang di-edit
+        // Jika ada excludeReservationId, kecualikan reservasi tersebut dari pengecekan bentrok
+        ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}),
         sessionId,
         date: normalizedDate,
         OR: [
@@ -389,8 +389,7 @@ export const checkMultipleTablesAvailability = async (
 
   if (conflicting) {
     throw new Error(
-      `Meja ${conflicting.table.tableNumber} sudah dipesan oleh tamu lain pada sesi dan tanggal ini.`,
+      `Meja ${conflicting.table.tableNumber} sudah dipesan atau sedang dalam proses pembayaran. Silakan pilih meja lain.`,
     );
   }
 };
-
