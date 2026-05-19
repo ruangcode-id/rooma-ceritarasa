@@ -20,39 +20,31 @@ function mapMidtransStatusToPaymentStatus(
   transactionStatus?: string,
   fraudStatus?: string
 ): PaymentStatus {
-  if (transactionStatus === "capture") {
-    if (fraudStatus === "challenge") {
-      return PaymentStatus.pending;
-    }
+  const status = transactionStatus?.toLowerCase();
+  const fraud = fraudStatus?.toLowerCase();
 
+  if (status === "capture") {
+    return fraud === "challenge" ? PaymentStatus.pending : PaymentStatus.paid;
+  }
+
+  if (status === "settlement" || status === "paid") {
     return PaymentStatus.paid;
   }
 
-  if (transactionStatus === "settlement") {
-    return PaymentStatus.paid;
-  }
-
-  if (transactionStatus === "paid") {
-    return PaymentStatus.paid;
-  }
-
-  if (transactionStatus === "pending") {
+  if (status === "pending") {
     return PaymentStatus.pending;
   }
 
   if (
-    transactionStatus === "deny" ||
-    transactionStatus === "cancel" ||
-    transactionStatus === "expire" ||
-    transactionStatus === "failure"
+    status === "deny" ||
+    status === "cancel" ||
+    status === "expire" ||
+    status === "failure"
   ) {
     return PaymentStatus.failed;
   }
 
-  if (
-    transactionStatus === "refund" ||
-    transactionStatus === "partial_refund"
-  ) {
+  if (status === "refund" || status === "partial_refund") {
     return PaymentStatus.refunded;
   }
 
@@ -63,27 +55,25 @@ function shouldConfirmReservation(
   paymentStatus: PaymentStatus,
   payload: MidtransWebhookPayload
 ) {
-  const transactionStatus = payload.transaction_status?.toLowerCase();
+  const status = payload.transaction_status?.toLowerCase();
+  const fraud = payload.fraud_status?.toLowerCase();
 
-  if (!transactionStatus) {
-    return paymentStatus === PaymentStatus.paid;
-  }
-
-  if (transactionStatus === "settlement" || transactionStatus === "paid") {
+  if (status === "settlement" || status === "paid") {
     return true;
   }
 
-  if (transactionStatus === "capture") {
-    return payload.fraud_status !== "challenge";
+  if (status === "capture") {
+    return fraud !== "challenge" && paymentStatus === PaymentStatus.paid;
   }
 
   return false;
 }
 
-function getPaidAt(
-  paymentStatus: PaymentStatus,
-  payload: MidtransWebhookPayload
-) {
+function shouldCancelPendingReservation(paymentStatus: PaymentStatus) {
+  return paymentStatus === PaymentStatus.failed;
+}
+
+function getPaidAt(paymentStatus: PaymentStatus, payload: MidtransWebhookPayload) {
   if (paymentStatus !== PaymentStatus.paid) {
     return null;
   }
@@ -137,6 +127,9 @@ export async function POST(req: NextRequest) {
         where: {
           midtransOrderId: orderId,
         },
+        include: {
+          reservation: true,
+        },
       });
 
       if (!payment) {
@@ -153,17 +146,45 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      let updatedReservation = null;
+      let reservationStatus: ReservationStatus | "unchanged" = "unchanged";
 
       if (shouldConfirmReservation(paymentStatus, payload)) {
-        updatedReservation = await tx.reservation.update({
+        const updatedReservation = await tx.reservation.update({
           where: {
             id: payment.reservationId,
           },
           data: {
             status: ReservationStatus.confirmed,
+            expiresAt: null,
           },
         });
+
+        reservationStatus = updatedReservation.status;
+      }
+
+      if (
+        shouldCancelPendingReservation(paymentStatus) &&
+        payment.reservation.status === ReservationStatus.pending
+      ) {
+        const paidPayment = await tx.payment.findFirst({
+          where: {
+            reservationId: payment.reservationId,
+            status: PaymentStatus.paid,
+          },
+        });
+
+        if (!paidPayment) {
+          const updatedReservation = await tx.reservation.update({
+            where: {
+              id: payment.reservationId,
+            },
+            data: {
+              status: ReservationStatus.cancelled,
+            },
+          });
+
+          reservationStatus = updatedReservation.status;
+        }
       }
 
       return {
@@ -171,9 +192,7 @@ export async function POST(req: NextRequest) {
         paymentId: updatedPayment.id,
         paymentStatus: updatedPayment.status,
         reservationId: payment.reservationId,
-        reservationStatus:
-          updatedReservation?.status ??
-          "unchanged",
+        reservationStatus,
       };
     });
 
