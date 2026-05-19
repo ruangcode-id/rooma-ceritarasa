@@ -393,4 +393,3 @@ export const checkMultipleTablesAvailability = async (
     );
   }
 };
-
