@@ -19,6 +19,7 @@ export type CreateReservationInput = {
   guestPhone: string;
   guestEmail?: string;
   sessionId: string;
+  tableIds: string[];
   date: string;
   partySize: number;
   specialRequest?: string;

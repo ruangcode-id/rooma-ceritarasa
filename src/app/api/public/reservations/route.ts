@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       guestPhone: parsed.data.guestPhone,
       guestEmail: parsed.data.guestEmail,
       sessionId: parsed.data.sessionId,
+      tableIds: parsed.data.tableIds,
       date: parsed.data.date,
       partySize: parsed.data.partySize,
       specialRequest: parsed.data.specialRequest,

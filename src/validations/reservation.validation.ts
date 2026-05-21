@@ -23,10 +23,13 @@ export const publicReservationSchema = z.object({
 
   sessionId: z.string().uuid("Session ID harus berupa UUID yang valid."),
 
-  tableId: z
-    .string()
-    .uuid("Table ID harus berupa UUID yang valid.")
-    .optional(),
+  tableIds: z
+    .array(
+      z.string().uuid({
+        message: "Setiap tableId harus berupa UUID yang valid.",
+      })
+    )
+    .min(1, "Minimal pilih satu meja."),
 
   date: z
     .string()

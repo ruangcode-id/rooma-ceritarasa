@@ -56,7 +56,9 @@ function PaymentStatusContent() {
 
   const [isMounted, setIsMounted] = useState(false);
   const [status, setStatus] = useState<PaymentStatusType>("pending");
-  const [paymentType, setPaymentType] = useState<PaymentType>("deposit");
+  const [paymentType, setPaymentType] = useState<PaymentType>(
+    "deposit" as PaymentType
+  );
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
   const [reservationId, setReservationId] = useState("");
