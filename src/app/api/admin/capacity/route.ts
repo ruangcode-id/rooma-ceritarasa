@@ -46,10 +46,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        availability: {
-          ...availability,
-          date: availability.date.toISOString().slice(0, 10),
-        },
+        availability,
         capacityOk,
         assignedTables,
         assignedTable: assignedTables[0] ?? null,

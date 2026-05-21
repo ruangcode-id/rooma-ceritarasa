@@ -1,5 +1,5 @@
 import { prisma } from "@/infrastructure/database/prisma";
-import { ReservationStatus } from "@/generated/prisma/client";
+import { ReservationStatus, type Reservation } from "@/generated/prisma/client";
 
 export type GuestInput = {
   name: string;
@@ -64,5 +64,63 @@ export async function createReservationTransaction(
     });
 
     return reservation;
+  });
+}
+
+const CANCELLABLE: ReservationStatus[] = [
+  ReservationStatus.pending,
+  ReservationStatus.confirmed,
+];
+
+export async function cancelReservationByToken(
+  cancelToken: string,
+): Promise<{ reservationId: string } | null> {
+  const found = await prisma.reservation.findUnique({
+    where: { cancelToken },
+    select: { id: true, status: true },
+  });
+  if (!found) return null;
+  if (!CANCELLABLE.includes(found.status)) {
+    throw new Error("Reservation cannot be cancelled in its current status");
+  }
+  await prisma.reservation.update({
+    where: { id: found.id },
+    data: { status: ReservationStatus.cancelled },
+  });
+  return { reservationId: found.id };
+}
+
+/** Lookup reservasi: UUID → id; selain itu → cancel_token */
+export async function findReservationByLookup(
+  lookup: string,
+): Promise<(Reservation & { guest: { name: string } }) | null> {
+  const trimmed = lookup.trim();
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (uuidRegex.test(trimmed)) {
+    return prisma.reservation.findFirst({
+      where: { id: trimmed },
+      include: { guest: { select: { name: true } } },
+    });
+  }
+
+  return prisma.reservation.findFirst({
+    where: { cancelToken: trimmed },
+    include: { guest: { select: { name: true } } },
+  });
+}
+
+export async function findReservationByIdForAdmin(id: string) {
+  return prisma.reservation.findUnique({
+    where: { id },
+    include: {
+      guest: { select: { id: true, name: true, phone: true } },
+      session: { select: { id: true, name: true } },
+      checkIn: true,
+      reservationTables: {
+        include: { table: { select: { id: true, tableNumber: true } } },
+      },
+    },
   });
 }

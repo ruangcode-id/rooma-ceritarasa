@@ -1,3 +1,4 @@
+import "@/infrastructure/notifications/init";
 import { jsonError, jsonSuccess, jsonValidationError } from "@/lib/api-envelope";
 import { publicReservationSchema } from "@/validations/reservation.validation";
 import { PublicReservationUseCase } from "@/application/use-cases/reservation/reservation.usecase";

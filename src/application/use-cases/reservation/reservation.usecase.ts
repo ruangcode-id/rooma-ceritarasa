@@ -3,8 +3,12 @@ import { ReservationStatus } from "@/generated/prisma/client";
 import { PublicReservationInput } from "@/validations/reservation.validation";
 import { BlockedDateRepository } from "@/infrastructure/repositories/blocked-date.repository";
 import { checkTableAvailability } from "@/features/tables/table.service";
-import { createReservationTransaction } from "@/infrastructure/repositories/reservation.repository";
+import {
+  cancelReservationByToken,
+  createReservationTransaction,
+} from "@/infrastructure/repositories/reservation.repository";
 import { appEvents, EVENTS } from "@/lib/events";
+import type { CancelReservationInput } from "@/validations/reservation.validation";
 
 /** Durasi jendela pembayaran dalam milidetik (15 menit). */
 const PAYMENT_EXPIRY_MS = 15 * 60 * 1000;
@@ -62,4 +66,22 @@ export const PublicReservationUseCase = {
       expiresAt: expiresAt.toISOString(),
     };
   },
+
+  cancelReservationAction: async (input: CancelReservationInput) => {
+    const out = await cancelReservationByToken(input.cancelToken.trim());
+    if (!out) {
+      return { ok: false as const };
+    }
+
+    appEvents.emit(EVENTS.RESERVATION_CANCELLED, {
+      reservationId: out.reservationId,
+    });
+
+    return { ok: true as const, reservationId: out.reservationId };
+  },
 };
+
+/** Alias kontrak sprint — Dev B memakai reservationId dari hasil create. */
+export async function createReservation(input: PublicReservationInput) {
+  return PublicReservationUseCase.createReservationAction(input);
+}

@@ -4,7 +4,10 @@ import { guestNameSchema, guestPhoneSchema } from "./guest.validation";
 export const publicReservationSchema = z.object({
   guestName: guestNameSchema,
   guestPhone: guestPhoneSchema,
-  guestEmail: z.union([z.literal(""), z.string().trim().email()]).optional().transform((v) => (v === "" ? undefined : v)),
+  guestEmail: z
+    .union([z.literal(""), z.string().trim().email()])
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
   sessionId: z.string().uuid(),
   tableId: z.string().uuid({ message: "tableId harus berupa UUID yang valid." }),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal harus YYYY-MM-DD"),
