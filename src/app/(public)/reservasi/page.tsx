@@ -18,7 +18,14 @@ const RESTAURANT_SESSIONS = [
   },
 ];
 
-const PARTY_SIZE_OPTIONS = [2, 3, 4, 5, 6, 8, 10, 12, 15];
+const RESTAURANT_TABLES = [
+  {
+    id: "76214d69-549f-4103-858d-be099cac84f0",
+    label: "T01 - Kapasitas 6",
+  },
+];
+
+const PARTY_SIZE_OPTIONS = [2, 3, 4, 5, 6];
 
 export default function ReservationFormPage() {
   const router = useRouter();
@@ -36,6 +43,8 @@ export default function ReservationFormPage() {
     const partySizeValue = formData.get("partySize") as string;
     const partySize = Number.parseInt(partySizeValue, 10);
 
+    const tableIds = formData.getAll("tableIds").map(String);
+
     try {
       const response = await fetch("/api/public/reservations", {
         method: "POST",
@@ -47,6 +56,7 @@ export default function ReservationFormPage() {
           guestPhone: formData.get("phone"),
           guestEmail: formData.get("email") || undefined,
           sessionId: formData.get("sessionId"),
+          tableIds,
           date: formData.get("date"),
           partySize: Number.isNaN(partySize) ? 2 : partySize,
           specialRequest: formData.get("specialRequest") || undefined,
@@ -63,6 +73,7 @@ export default function ReservationFormPage() {
 
       localStorage.setItem("reservationId", reservationId);
       localStorage.setItem("guestName", formData.get("name") as string);
+      localStorage.setItem("partySize", String(partySize));
 
       router.push(`/reservasi/payment?reservationId=${reservationId}`);
     } catch (err) {
@@ -163,7 +174,7 @@ export default function ReservationFormPage() {
                 className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm"
                 name="partySize"
                 required
-                defaultValue="2"
+                defaultValue="3"
               >
                 {PARTY_SIZE_OPTIONS.map((partySize) => (
                   <option key={partySize} value={partySize}>
@@ -173,6 +184,27 @@ export default function ReservationFormPage() {
               </select>
             </label>
           </div>
+
+          <fieldset className="rounded-xl border border-slate-200 p-4">
+            <legend className="px-2 text-sm font-medium">Pilih Meja</legend>
+
+            <div className="mt-2 space-y-2">
+              {RESTAURANT_TABLES.map((table) => (
+                <label
+                  key={table.id}
+                  className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    name="tableIds"
+                    value={table.id}
+                    defaultChecked
+                  />
+                  <span>{table.label}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
 
           <label className="text-sm">
             Permintaan Khusus
