@@ -181,7 +181,7 @@ export default function AdminReservationsPage() {
 
         <section className="overflow-hidden rounded-2xl border border-slate-200">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px] text-left text-sm">
+            <table className="w-full min-w-275 text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-[0.15em] text-slate-500">
                 <tr>
                   <th className="px-4 py-3">Guest</th>
@@ -284,7 +284,7 @@ export default function AdminReservationsPage() {
                       </td>
 
                       <td className="px-4 py-4">
-                        <p className="max-w-[220px] text-xs text-slate-500">
+                        <p className="max-w-55 text-xs text-slate-500">
                           {reservation.specialRequest ?? "-"}
                         </p>
                       </td>

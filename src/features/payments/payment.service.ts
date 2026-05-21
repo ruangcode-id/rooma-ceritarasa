@@ -11,7 +11,11 @@ import {
 } from "./payment.types";
 import { generateOrderId, mapMidtransStatus } from "./payment.utils";
 import { paymentRepository } from "@/infrastructure/repositories/payment.repository";
-import { PaymentStatus as DbPaymentStatus, PaymentType as DbPaymentType } from "@/generated/prisma/client";
+import { prisma } from "@/infrastructure/database/prisma";
+import {
+  PaymentStatus as DbPaymentStatus,
+  PaymentType as DbPaymentType,
+} from "@/generated/prisma/client";
 
 function mapDbStatusToFeature(status: DbPaymentStatus): PaymentStatus {
   return status as PaymentStatus;
@@ -28,7 +32,9 @@ function mapReservationPaymentType(type: ReservationPaymentType): DbPaymentType 
   }
 }
 
-function mapDbPaymentTypeToReservation(type: DbPaymentType): ReservationPaymentType {
+function mapDbPaymentTypeToReservation(
+  type: DbPaymentType
+): ReservationPaymentType {
   switch (type) {
     case "full":
       return ReservationPaymentType.Full;
@@ -80,6 +86,7 @@ export async function createPayment(
   });
 
   let transaction;
+
   try {
     transaction = await snap.createTransaction({
       transaction_details: {
@@ -107,17 +114,68 @@ export async function listPayments(query: PaymentListQuery) {
   const limit = query.limit ?? 20;
   const skip = (page - 1) * limit;
 
-  const dbStatus = query.status ?? undefined;
-  const result = await paymentRepository.listPayments({
-    skip,
-    take: limit,
-    status: dbStatus,
-    orderId: query.orderId,
-  });
+  const where = {
+    ...(query.status ? { status: query.status as DbPaymentStatus } : {}),
+    ...(query.orderId
+      ? {
+          midtransOrderId: {
+            contains: query.orderId,
+            mode: "insensitive" as const,
+          },
+        }
+      : {}),
+  };
+
+  const [rows, total] = await Promise.all([
+    prisma.payment.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: "desc",
+      },
+      include: {
+        reservation: {
+          include: {
+            guest: true,
+            session: true,
+          },
+        },
+      },
+    }),
+    prisma.payment.count({
+      where,
+    }),
+  ]);
 
   return {
-    data: result.rows.map(toPaymentRecord),
-    total: result.total,
+    data: rows.map((payment) => ({
+      orderId: payment.midtransOrderId ?? payment.id,
+      status: mapDbStatusToFeature(payment.status),
+      type: mapDbPaymentTypeToReservation(payment.type),
+      amount: Number(payment.amount),
+      paidAt: payment.paidAt,
+      createdAt: payment.createdAt,
+      reservation: {
+        id: payment.reservation.id,
+        date: payment.reservation.date,
+        partySize: payment.reservation.partySize,
+        status: payment.reservation.status,
+        guest: {
+          id: payment.reservation.guest.id,
+          name: payment.reservation.guest.name,
+          phone: payment.reservation.guest.phone,
+          email: payment.reservation.guest.email,
+        },
+        session: {
+          id: payment.reservation.session.id,
+          name: payment.reservation.session.name,
+          startTime: payment.reservation.session.startTime,
+          endTime: payment.reservation.session.endTime,
+        },
+      },
+    })),
+    total,
     page,
     limit,
   };
@@ -151,15 +209,19 @@ export async function refundPayment(
   const midtransStatus = await core.transaction.status(midtransOrderId);
   const transactionStatus = String(midtransStatus?.transaction_status ?? "");
   const fraudStatus = String(midtransStatus?.fraud_status ?? "");
+
   const isRefundEligible =
     transactionStatus === "settlement" ||
     (transactionStatus === "capture" && fraudStatus === "accept");
 
   if (!isRefundEligible) {
     throw new Error(
-      `Transaction is not eligible for refund. Current Midtrans status: ${transactionStatus || "unknown"}`
+      `Transaction is not eligible for refund. Current Midtrans status: ${
+        transactionStatus || "unknown"
+      }`
     );
   }
+
   const refundPayload: Record<string, unknown> = {
     reason: "Refund by admin",
   };
@@ -189,7 +251,11 @@ export async function refundPayment(
 export async function handleMidtransWebhook(
   payload: MidtransWebhookPayload
 ): Promise<PaymentRecord> {
-  const status = mapMidtransStatus(payload.transaction_status, payload.fraud_status);
+  const status = mapMidtransStatus(
+    payload.transaction_status,
+    payload.fraud_status
+  );
+
   const paidAt = status === "paid" ? new Date() : null;
 
   const updated = await paymentRepository.updateFromWebhook({
