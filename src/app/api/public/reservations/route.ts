@@ -42,12 +42,21 @@ export async function POST(req: NextRequest) {
     const message =
       error instanceof Error ? error.message : "Internal Server Error";
 
+    const isClientError =
+      message.includes("tidak tersedia untuk reservasi") ||
+      message.includes("Meja tidak ditemukan") ||
+      message.includes("Meja yang dipilih sudah dipesan") ||
+      message.includes("sudah dipesan atau sedang dalam proses pembayaran") ||
+      message.includes("tidak mencukupi untuk jumlah tamu") ||
+      message.includes("tidak ditemukan atau tidak tersedia") ||
+      message.includes("Minimal satu meja harus dipilih");
+
     return NextResponse.json(
       {
         success: false,
-        error: message,
+        error: isClientError ? message : "Internal Server Error",
       },
-      { status: 500 }
+      { status: isClientError ? 400 : 500 }
     );
   }
 }

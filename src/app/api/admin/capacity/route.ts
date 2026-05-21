@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       data: {
         availability: {
           ...availability,
-          date: availability.date.toISOString().slice(0, 10),
+          date: availability.date,
         },
         capacityOk,
         assignedTables,
