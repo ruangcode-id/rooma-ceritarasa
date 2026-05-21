@@ -319,3 +319,77 @@ export const autoAssignTable = async (
   const tables = await autoAssignTables(sessionId, date, guestCount);
   return tables[0];
 };
+
+/**
+ * Validasi ketersediaan beberapa meja sekaligus.
+ * Digunakan oleh Public Reservation (tanpa excludeReservationId)
+ * dan Admin Table Assignment (dengan excludeReservationId untuk menghindari bentrok dengan diri sendiri).
+ *
+ * @param tableIds             - Daftar UUID meja yang dipilih.
+ * @param sessionId            - Sesi reservasi.
+ * @param date                 - Tanggal reservasi.
+ * @param excludeReservationId - (Opsional) ID reservasi yang sedang diedit; meja miliknya tidak dianggap konflik.
+ */
+export const checkMultipleTablesAvailability = async (
+  tableIds: string[],
+  sessionId: string,
+  date: Date | string,
+  excludeReservationId?: string,
+): Promise<void> => {
+  if (tableIds.length === 0) {
+    throw new Error("Minimal satu meja harus dipilih.");
+  }
+
+  const normalizedDate = parseDateOnlyUTC(date);
+  const now = new Date();
+
+  // 1. Pastikan semua meja ada, aktif, dan tidak dalam status Maintenance/Occupied/Reserved
+  const activeTables = await prisma.table.findMany({
+    where: {
+      id: { in: tableIds },
+      isActive: true,
+      status: {
+        notIn: [
+          TableStatus.MAINTENANCE,
+          TableStatus.OCCUPIED,
+          TableStatus.RESERVED,
+        ],
+      },
+    },
+    select: { id: true, tableNumber: true },
+  });
+
+  if (activeTables.length !== tableIds.length) {
+    const foundIds = activeTables.map((t) => t.id);
+    const invalidIds = tableIds.filter((id) => !foundIds.includes(id));
+    throw new Error(
+      `Beberapa meja tidak ditemukan atau tidak tersedia: ${invalidIds.join(", ")}`,
+    );
+  }
+
+  // 2. Cek apakah ada meja yang sudah di-lock oleh reservasi aktif lain
+  const conflicting = await prisma.reservationTable.findFirst({
+    where: {
+      tableId: { in: tableIds },
+      reservation: {
+        // Jika ada excludeReservationId, kecualikan reservasi tersebut dari pengecekan bentrok
+        ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}),
+        sessionId,
+        date: normalizedDate,
+        OR: [
+          { status: { in: [ReservationStatus.confirmed, ReservationStatus.checked_in] } },
+          { status: ReservationStatus.pending, expiresAt: { gt: now } },
+        ],
+      },
+    },
+    include: {
+      table: { select: { tableNumber: true } },
+    },
+  });
+
+  if (conflicting) {
+    throw new Error(
+      `Meja ${conflicting.table.tableNumber} sudah dipesan atau sedang dalam proses pembayaran. Silakan pilih meja lain.`,
+    );
+  }
+};
