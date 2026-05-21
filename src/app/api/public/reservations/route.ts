@@ -1,26 +1,47 @@
-import { jsonError, jsonSuccess, jsonValidationError } from "@/lib/api-envelope";
+import { NextRequest, NextResponse } from "next/server";
+import { createPublicReservation } from "@/features/reservations/reservation.service";
 import { publicReservationSchema } from "@/validations/reservation.validation";
-import { PublicReservationUseCase } from "@/application/use-cases/reservation/reservation.usecase";
 
-export async function POST(request: Request) {
+export async function POST(req: NextRequest) {
   try {
-    let json;
-    try {
-      json = await request.json();
-    } catch {
-      return jsonError("Body harus berupa JSON.", 400);
-    }
+    const body = await req.json().catch(() => null);
 
-    const parsed = publicReservationSchema.safeParse(json);
+    const parsed = publicReservationSchema.safeParse(body);
+
     if (!parsed.success) {
-      return jsonValidationError(parsed.error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Validation Error",
+          details: parsed.error.flatten(),
+        },
+        { status: 400 }
+      );
     }
 
-    const result = await PublicReservationUseCase.createReservationAction(parsed.data);
+    const result = await createPublicReservation({
+      guestName: parsed.data.guestName,
+      guestPhone: parsed.data.guestPhone,
+      guestEmail: parsed.data.guestEmail,
+      sessionId: parsed.data.sessionId,
+      tableIds: parsed.data.tableIds,
+      date: parsed.data.date,
+      partySize: parsed.data.partySize,
+      specialRequest: parsed.data.specialRequest,
+    });
 
-    return jsonSuccess(result, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: result,
+      },
+      { status: 201 }
+    );
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "";
+    console.error("Error creating reservation:", error);
+
+    const message =
+      error instanceof Error ? error.message : "Internal Server Error";
 
     const isClientError =
       message.includes("tidak tersedia untuk reservasi") ||
@@ -31,12 +52,12 @@ export async function POST(request: Request) {
       message.includes("tidak ditemukan atau tidak tersedia") ||
       message.includes("Minimal satu meja harus dipilih");
 
-    if (isClientError) {
-      return jsonError(message, 400);
-    }
-
-    console.error("Public Reservation Error:", error);
-    return jsonError("Internal Server Error", 500);
+    return NextResponse.json(
+      {
+        success: false,
+        error: isClientError ? message : "Internal Server Error",
+      },
+      { status: isClientError ? 400 : 500 }
+    );
   }
 }
-

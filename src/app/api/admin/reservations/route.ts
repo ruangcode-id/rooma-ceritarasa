@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
     await requireRole(["admin", "owner"]);
 
     const { searchParams } = req.nextUrl;
+
     const result = await AdminReservationUseCase.listReservationsAction({
       date: searchParams.get("date") ?? undefined,
       status: searchParams.get("status") ?? undefined,
@@ -28,19 +29,41 @@ export async function GET(req: NextRequest) {
       limit: searchParams.get("limit") ?? undefined,
     });
 
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json({
+      success: true,
+      ...result,
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "";
 
     if (message.includes("Unauthorized") || message.includes("Forbidden")) {
-      return NextResponse.json({ success: false, error: message }, { status: 401 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: message,
+        },
+        { status: 401 }
+      );
     }
 
     if (message.includes("Invalid date") || message.includes("Invalid status")) {
-      return NextResponse.json({ success: false, error: message }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: message,
+        },
+        { status: 400 }
+      );
     }
 
     console.error("/api/admin/reservations GET error:", error);
-    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Internal Server Error",
+      },
+      { status: 500 }
+    );
   }
 }
