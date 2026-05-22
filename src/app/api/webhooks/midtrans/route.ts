@@ -136,15 +136,35 @@ export async function POST(req: NextRequest) {
         throw new Error(`Payment not found for order ID: ${orderId}`);
       }
 
+      const updateData = {
+        status: paymentStatus,
+        ...(paymentStatus === PaymentStatus.paid ? { paidAt } : {}),
+      };
+
+      if (paymentStatus === PaymentStatus.refunded) {
+        console.info("[midtrans-webhook] refund BEFORE", {
+          paymentId: payment.id,
+          orderId,
+          status: payment.status,
+          paidAt: payment.paidAt,
+        });
+        console.info("[midtrans-webhook] refund UPDATE", updateData);
+      }
+
       const updatedPayment = await tx.payment.update({
         where: {
           id: payment.id,
         },
-        data: {
-          status: paymentStatus,
-          paidAt,
-        },
+        data: updateData,
       });
+
+      if (paymentStatus === PaymentStatus.refunded) {
+        console.info("[midtrans-webhook] refund AFTER", {
+          paymentId: updatedPayment.id,
+          status: updatedPayment.status,
+          paidAt: updatedPayment.paidAt,
+        });
+      }
 
       let reservationStatus: ReservationStatus | "unchanged" = "unchanged";
 

@@ -236,6 +236,11 @@ export async function refundPayment(
     throw new Error("Refund request rejected by Midtrans Sandbox");
   }
 
+  console.info("[refund] Midtrans refund requested", {
+    orderId: midtransOrderId,
+    amount,
+  });
+
   const updated = await paymentRepository.refundByOrderId(midtransOrderId);
 
   if (!updated) {
