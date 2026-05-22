@@ -185,11 +185,31 @@ export const paymentRepository = {
 
 		if (!payment) return null;
 
+		const updateData: Prisma.PaymentUpdateInput = {
+			status: "refunded",
+		};
+
+		if (payment.paidAt) {
+			updateData.paidAt = payment.paidAt;
+		}
+
+		console.info("[refund] BEFORE", {
+			paymentId: payment.id,
+			orderId,
+			status: payment.status,
+			paidAt: payment.paidAt,
+		});
+		console.info("[refund] UPDATE", updateData);
+
 		const updated = await prisma.payment.update({
 			where: { id: payment.id },
-			data: {
-				status: "refunded",
-			},
+			data: updateData,
+		});
+
+		console.info("[refund] AFTER", {
+			paymentId: updated.id,
+			status: updated.status,
+			paidAt: updated.paidAt,
 		});
 
 		return toPaymentEntity(updated);
