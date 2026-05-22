@@ -46,8 +46,10 @@ export async function POST(req: NextRequest) {
     const isClientError =
       message.includes("tidak tersedia untuk reservasi") ||
       message.includes("Meja tidak ditemukan") ||
+      message.includes("Beberapa meja") ||
       message.includes("Meja yang dipilih sudah dipesan") ||
       message.includes("sudah dipesan atau sedang dalam proses pembayaran") ||
+      message.includes("Kapasitas total meja") ||
       message.includes("tidak mencukupi untuk jumlah tamu") ||
       message.includes("tidak ditemukan atau tidak tersedia") ||
       message.includes("Minimal satu meja harus dipilih");
