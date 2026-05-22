@@ -1,36 +1,252 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const RESTAURANT_SESSIONS = [
-  {
-    id: "11111111-1111-4111-8111-111111111111",
-    label: "15:00 - 17:00",
-  },
-  {
-    id: "22222222-2222-4222-8222-222222222222",
-    label: "17:30 - 19:30",
-  },
-  {
-    id: "21d72603-76c5-423b-a4f5-58246455cdbe",
-    label: "20:00 - 22:00",
-  },
-];
+type ApiResponse<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error?: string;
+    };
 
-const RESTAURANT_TABLES = [
-  {
-    id: "76214d69-549f-4103-858d-be099cac84f0",
-    label: "T01 - Kapasitas 6",
-  },
-];
+type RestaurantSession = {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  maxCapacity: number;
+  availableSlots: number;
+};
 
-const PARTY_SIZE_OPTIONS = [2, 3, 4, 5, 6];
+type RestaurantTable = {
+  id: string;
+  tableNumber: string;
+  capacity: number;
+  status: string;
+  isAvailable: boolean;
+};
+
+function formatTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value.slice(0, 5);
+  }
+
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+
+  return `${hours}:${minutes}`;
+}
+
+function getTodayDate() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const date = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${date}`;
+}
+
+function getSessionLabel(session: RestaurantSession) {
+  return `${session.name} (${formatTime(session.startTime)} - ${formatTime(
+    session.endTime
+  )})`;
+}
+
+function getBestDefaultTableId(tables: RestaurantTable[], partySize: number) {
+  const availableTables = tables
+    .filter((table) => table.isAvailable)
+    .sort((firstTable, secondTable) => {
+      if (firstTable.capacity !== secondTable.capacity) {
+        return firstTable.capacity - secondTable.capacity;
+      }
+
+      return firstTable.tableNumber.localeCompare(secondTable.tableNumber);
+    });
+
+  return (
+    availableTables.find((table) => table.capacity >= partySize)?.id ??
+    availableTables[0]?.id ??
+    ""
+  );
+}
 
 export default function ReservationFormPage() {
   const router = useRouter();
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [selectedTableIds, setSelectedTableIds] = useState<string[]>([]);
+  const [partySize, setPartySize] = useState(2);
+  const [sessions, setSessions] = useState<RestaurantSession[]>([]);
+  const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSessionLoading, setIsSessionLoading] = useState(false);
+  const [isTableLoading, setIsTableLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const selectedSession = useMemo(() => {
+    return sessions.find((session) => session.id === selectedSessionId) ?? null;
+  }, [selectedSessionId, sessions]);
+
+  const maxPartySize = Math.max(1, selectedSession?.availableSlots ?? 2);
+  const reservationPartySize = Math.min(partySize, maxPartySize);
+
+  const partySizeOptions = useMemo(() => {
+    return Array.from({ length: maxPartySize }, (_, index) => index + 1);
+  }, [maxPartySize]);
+
+  const selectedCapacity = useMemo(() => {
+    return tables
+      .filter((table) => selectedTableIds.includes(table.id))
+      .reduce((total, table) => total + table.capacity, 0);
+  }, [selectedTableIds, tables]);
+
+  useEffect(() => {
+    if (!selectedDate) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadSessions() {
+      setIsSessionLoading(true);
+      setError(null);
+      setTables([]);
+      setSelectedTableIds([]);
+
+      try {
+        const response = await fetch(
+          `/api/public/sessions?date=${encodeURIComponent(selectedDate)}`,
+          {
+            signal: controller.signal,
+          }
+        );
+        const data = (await response.json()) as ApiResponse<
+          RestaurantSession[]
+        >;
+
+        if (!response.ok) {
+          throw new Error(
+            "error" in data
+              ? data.error ?? "Gagal mengambil sesi reservasi"
+              : "Gagal mengambil sesi reservasi"
+          );
+        }
+
+        if (!data.success) {
+          throw new Error(data.error ?? "Gagal mengambil sesi reservasi");
+        }
+
+        setSessions(data.data);
+        setSelectedSessionId(data.data[0]?.id ?? "");
+      } catch (err) {
+        if (controller.signal.aborted) return;
+
+        setSessions([]);
+        setSelectedSessionId("");
+        setError(
+          err instanceof Error ? err.message : "Gagal mengambil sesi reservasi"
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSessionLoading(false);
+        }
+      }
+    }
+
+    loadSessions();
+
+    return () => controller.abort();
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (!selectedDate || !selectedSessionId) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadTables() {
+      setIsTableLoading(true);
+      setError(null);
+
+      try {
+        const params = new URLSearchParams({
+          date: selectedDate,
+          sessionId: selectedSessionId,
+        });
+        const response = await fetch(`/api/public/tables?${params}`, {
+          signal: controller.signal,
+        });
+        const data = (await response.json()) as ApiResponse<RestaurantTable[]>;
+
+        if (!response.ok) {
+          throw new Error(
+            "error" in data
+              ? data.error ?? "Gagal mengambil data meja"
+              : "Gagal mengambil data meja"
+          );
+        }
+
+        if (!data.success) {
+          throw new Error(data.error ?? "Gagal mengambil data meja");
+        }
+
+        const defaultTableId = getBestDefaultTableId(
+          data.data,
+          reservationPartySize
+        );
+
+        setTables(data.data);
+        setSelectedTableIds(defaultTableId ? [defaultTableId] : []);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+
+        setTables([]);
+        setSelectedTableIds([]);
+        setError(err instanceof Error ? err.message : "Gagal mengambil data meja");
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsTableLoading(false);
+        }
+      }
+    }
+
+    loadTables();
+
+    return () => controller.abort();
+  }, [reservationPartySize, selectedDate, selectedSessionId]);
+
+  function handleDateChange(date: string) {
+    setSelectedDate(date);
+    setSelectedSessionId("");
+    setSelectedTableIds([]);
+    setSessions([]);
+    setTables([]);
+  }
+
+  function handleSessionChange(sessionId: string) {
+    setSelectedSessionId(sessionId);
+    setSelectedTableIds([]);
+    setTables([]);
+  }
+
+  function toggleTable(tableId: string, isChecked: boolean) {
+    setSelectedTableIds((currentTableIds) => {
+      if (isChecked) {
+        return currentTableIds.includes(tableId)
+          ? currentTableIds
+          : [...currentTableIds, tableId];
+      }
+
+      return currentTableIds.filter((currentTableId) => currentTableId !== tableId);
+    });
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,10 +256,25 @@ export default function ReservationFormPage() {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
-    const partySizeValue = formData.get("partySize") as string;
-    const partySize = Number.parseInt(partySizeValue, 10);
+    if (!selectedDate || !selectedSessionId) {
+      setError("Pilih tanggal dan sesi reservasi terlebih dahulu.");
+      setIsLoading(false);
+      return;
+    }
 
-    const tableIds = formData.getAll("tableIds").map(String);
+    if (selectedTableIds.length === 0) {
+      setError("Minimal pilih satu meja yang tersedia.");
+      setIsLoading(false);
+      return;
+    }
+
+    if (selectedCapacity < reservationPartySize) {
+      setError(
+        `Kapasitas meja yang dipilih (${selectedCapacity} orang) belum cukup untuk ${reservationPartySize} tamu.`
+      );
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/public/reservations", {
@@ -55,10 +286,10 @@ export default function ReservationFormPage() {
           guestName: formData.get("name"),
           guestPhone: formData.get("phone"),
           guestEmail: formData.get("email") || undefined,
-          sessionId: formData.get("sessionId"),
-          tableIds,
-          date: formData.get("date"),
-          partySize: Number.isNaN(partySize) ? 2 : partySize,
+          sessionId: selectedSessionId,
+          tableIds: selectedTableIds,
+          date: selectedDate,
+          partySize: reservationPartySize,
           specialRequest: formData.get("specialRequest") || undefined,
         }),
       });
@@ -73,7 +304,7 @@ export default function ReservationFormPage() {
 
       localStorage.setItem("reservationId", reservationId);
       localStorage.setItem("guestName", formData.get("name") as string);
-      localStorage.setItem("partySize", String(partySize));
+      localStorage.setItem("partySize", String(reservationPartySize));
 
       router.push(`/reservasi/payment?reservationId=${reservationId}`);
     } catch (err) {
@@ -148,6 +379,9 @@ export default function ReservationFormPage() {
                 type="date"
                 className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm"
                 name="date"
+                min={getTodayDate()}
+                value={selectedDate}
+                onChange={(event) => handleDateChange(event.target.value)}
                 required
               />
             </label>
@@ -155,14 +389,23 @@ export default function ReservationFormPage() {
             <label className="text-sm">
               Sesi
               <select
-                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm"
+                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm disabled:bg-slate-50"
                 name="sessionId"
                 required
-                defaultValue={RESTAURANT_SESSIONS[0].id}
+                value={selectedSessionId}
+                onChange={(event) => handleSessionChange(event.target.value)}
+                disabled={!selectedDate || isSessionLoading || sessions.length === 0}
               >
-                {RESTAURANT_SESSIONS.map((session) => (
+                <option value="">
+                  {isSessionLoading
+                    ? "Memuat sesi..."
+                    : selectedDate
+                      ? "Pilih sesi"
+                      : "Pilih tanggal dulu"}
+                </option>
+                {sessions.map((session) => (
                   <option key={session.id} value={session.id}>
-                    {session.label}
+                    {getSessionLabel(session)} · {session.availableSlots} slot
                   </option>
                 ))}
               </select>
@@ -171,14 +414,16 @@ export default function ReservationFormPage() {
             <label className="text-sm">
               Jumlah Tamu
               <select
-                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm"
+                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-2 text-sm disabled:bg-slate-50"
                 name="partySize"
                 required
-                defaultValue="3"
+                value={reservationPartySize}
+                onChange={(event) => setPartySize(Number(event.target.value))}
+                disabled={!selectedSession}
               >
-                {PARTY_SIZE_OPTIONS.map((partySize) => (
-                  <option key={partySize} value={partySize}>
-                    {partySize} Orang
+                {partySizeOptions.map((currentPartySize) => (
+                  <option key={currentPartySize} value={currentPartySize}>
+                    {currentPartySize} Orang
                   </option>
                 ))}
               </select>
@@ -189,21 +434,56 @@ export default function ReservationFormPage() {
             <legend className="px-2 text-sm font-medium">Pilih Meja</legend>
 
             <div className="mt-2 space-y-2">
-              {RESTAURANT_TABLES.map((table) => (
-                <label
-                  key={table.id}
-                  className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    name="tableIds"
-                    value={table.id}
-                    defaultChecked
-                  />
-                  <span>{table.label}</span>
-                </label>
-              ))}
+              {!selectedDate ? (
+                <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  Pilih tanggal terlebih dahulu untuk melihat meja dari database.
+                </p>
+              ) : isTableLoading ? (
+                <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  Memuat data meja...
+                </p>
+              ) : tables.length === 0 ? (
+                <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                  Tidak ada meja tersedia untuk tanggal dan sesi ini.
+                </p>
+              ) : (
+                tables.map((table) => (
+                  <label
+                    key={table.id}
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
+                      table.isAvailable
+                        ? "border-slate-200"
+                        : "border-slate-100 bg-slate-50 text-slate-400"
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        name="tableIds"
+                        value={table.id}
+                        checked={selectedTableIds.includes(table.id)}
+                        disabled={!table.isAvailable}
+                        onChange={(event) =>
+                          toggleTable(table.id, event.target.checked)
+                        }
+                      />
+                      <span>
+                        {table.tableNumber} - Kapasitas {table.capacity}
+                      </span>
+                    </span>
+                    <span className="text-xs">
+                      {table.isAvailable ? "Tersedia" : "Tidak tersedia"}
+                    </span>
+                  </label>
+                ))
+              )}
             </div>
+
+            {selectedTableIds.length > 0 && (
+              <p className="mt-3 text-xs text-slate-500">
+                Kapasitas meja dipilih: {selectedCapacity} orang.
+              </p>
+            )}
           </fieldset>
 
           <label className="text-sm">
@@ -234,7 +514,14 @@ export default function ReservationFormPage() {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={
+                isLoading ||
+                isSessionLoading ||
+                isTableLoading ||
+                !selectedDate ||
+                !selectedSessionId ||
+                selectedTableIds.length === 0
+              }
               className="inline-flex items-center justify-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
             >
               {isLoading ? "Memproses..." : "Lanjut ke Pembayaran"}

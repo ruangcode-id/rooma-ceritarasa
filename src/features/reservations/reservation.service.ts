@@ -10,11 +10,6 @@ const RESERVATION_PENDING_EXPIRY_MINUTES = 15;
 
 type TransactionClient = Prisma.TransactionClient;
 
-type TableOption = {
-  id: string;
-  capacity: number;
-};
-
 export type CreateReservationInput = {
   guestName: string;
   guestPhone: string;
@@ -60,49 +55,6 @@ async function expireOldPendingReservations(tx: TransactionClient) {
       status: ReservationStatus.cancelled,
     },
   });
-}
-
-function findBestTableCombination(
-  tables: TableOption[],
-  partySize: number
-): TableOption[] {
-  const combinations: TableOption[][] = [];
-
-  function backtrack(
-    startIndex: number,
-    selectedTables: TableOption[],
-    selectedCapacity: number
-  ) {
-    if (selectedCapacity >= partySize) {
-      combinations.push([...selectedTables]);
-      return;
-    }
-
-    for (let index = startIndex; index < tables.length; index += 1) {
-      const table = tables[index];
-
-      backtrack(
-        index + 1,
-        [...selectedTables, table],
-        selectedCapacity + table.capacity
-      );
-    }
-  }
-
-  backtrack(0, [], 0);
-
-  const sortedCombinations = combinations.sort((a, b) => {
-    const capacityA = a.reduce((total, table) => total + table.capacity, 0);
-    const capacityB = b.reduce((total, table) => total + table.capacity, 0);
-
-    if (capacityA !== capacityB) {
-      return capacityA - capacityB;
-    }
-
-    return a.length - b.length;
-  });
-
-  return sortedCombinations[0] ?? [];
 }
 
 export async function createPublicReservation(
@@ -202,33 +154,60 @@ export async function createPublicReservation(
       )
     );
 
-    const availableTables = await tx.table.findMany({
+    const selectedTableIds = Array.from(new Set(input.tableIds));
+
+    if (selectedTableIds.length === 0) {
+      throw new Error("Minimal satu meja harus dipilih.");
+    }
+
+    const unavailableTableIds = selectedTableIds.filter((tableId) =>
+      usedTableIds.includes(tableId)
+    );
+
+    if (unavailableTableIds.length > 0) {
+      throw new Error(
+        "Meja yang dipilih sudah dipesan atau sedang dalam proses pembayaran. Silakan pilih meja lain."
+      );
+    }
+
+    const selectedTables = await tx.table.findMany({
       where: {
+        id: {
+          in: selectedTableIds,
+        },
         isActive: true,
         status: {
-          not: TableStatus.MAINTENANCE,
-        },
-        id: {
-          notIn: usedTableIds,
+          notIn: [
+            TableStatus.MAINTENANCE,
+            TableStatus.OCCUPIED,
+            TableStatus.RESERVED,
+          ],
         },
       },
       select: {
         id: true,
         capacity: true,
+        tableNumber: true,
       },
       orderBy: {
         capacity: "asc",
       },
     });
 
-    const selectedTables = findBestTableCombination(
-      availableTables,
-      input.partySize
+    if (selectedTables.length !== selectedTableIds.length) {
+      throw new Error(
+        "Beberapa meja tidak ditemukan atau tidak tersedia untuk reservasi."
+      );
+    }
+
+    const selectedCapacity = selectedTables.reduce(
+      (total, table) => total + table.capacity,
+      0
     );
 
-    if (selectedTables.length === 0) {
+    if (selectedCapacity < input.partySize) {
       throw new Error(
-        "Meja tidak tersedia untuk jumlah tamu dan session yang dipilih."
+        `Kapasitas total meja yang dipilih (${selectedCapacity} orang) tidak mencukupi untuk jumlah tamu (${input.partySize} orang). Silakan pilih meja tambahan.`
       );
     }
 
