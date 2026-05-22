@@ -270,6 +270,16 @@ export async function handleMidtransWebhook(
     throw new Error("Payment not found");
   }
 
+  if (status === "paid") {
+    const { notifyStaffPaymentConfirmed } = await import(
+      "@/infrastructure/payment/payment-confirmed.notify"
+    );
+    await notifyStaffPaymentConfirmed({
+      reservationId: updated.reservationId,
+      detail: `Pembayaran ${updated.type} dikonfirmasi`,
+    });
+  }
+
   return {
     ...toPaymentRecord(updated),
     amount: Number(payload.gross_amount),

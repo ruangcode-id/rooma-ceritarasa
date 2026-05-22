@@ -4,6 +4,7 @@ import {
   ReservationStatus,
   TableStatus,
 } from "@/generated/prisma/client";
+import { appEvents, EVENTS } from "@/lib/events";
 
 const RESERVATION_PENDING_EXPIRY_MINUTES = 15;
 
@@ -264,6 +265,12 @@ export async function createPublicReservation(
       tableIds: selectedTables.map((table) => table.id),
       expiresAt: reservation.expiresAt,
     };
+  });
+
+  appEvents.emit(EVENTS.RESERVATION_CREATED, {
+    reservationId: result.reservationId,
+    status: result.status,
+    guestId: result.guestId,
   });
 
   return result;

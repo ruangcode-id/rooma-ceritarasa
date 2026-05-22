@@ -1,5 +1,5 @@
 import { prisma } from "@/infrastructure/database/prisma";
-import { ReservationStatus, Prisma } from "@/generated/prisma/client";
+import { ReservationStatus, Prisma, type Reservation } from "@/generated/prisma/client";
 
 export type GuestInput = {
   name: string;
@@ -14,7 +14,6 @@ export type ReservationInput = {
   specialRequest?: string;
   status: ReservationStatus;
   cancelToken: string;
-  /** Batas waktu pembayaran — set ke now + 15 menit saat create. */
   expiresAt: Date;
 };
 
@@ -67,6 +66,64 @@ export async function createReservationTransaction(
   });
 }
 
+const CANCELLABLE: ReservationStatus[] = [
+  ReservationStatus.pending,
+  ReservationStatus.confirmed,
+];
+
+export async function cancelReservationByToken(
+  cancelToken: string,
+): Promise<{ reservationId: string } | null> {
+  const found = await prisma.reservation.findUnique({
+    where: { cancelToken },
+    select: { id: true, status: true },
+  });
+  if (!found) return null;
+  if (!CANCELLABLE.includes(found.status)) {
+    throw new Error("Reservation cannot be cancelled in its current status");
+  }
+  await prisma.reservation.update({
+    where: { id: found.id },
+    data: { status: ReservationStatus.cancelled },
+  });
+  return { reservationId: found.id };
+}
+
+/** Lookup reservasi: UUID → id; selain itu → cancel_token (check-in Dev C). */
+export async function findReservationByLookup(
+  lookup: string,
+): Promise<(Reservation & { guest: { name: string } }) | null> {
+  const trimmed = lookup.trim();
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (uuidRegex.test(trimmed)) {
+    return prisma.reservation.findFirst({
+      where: { id: trimmed },
+      include: { guest: { select: { name: true } } },
+    });
+  }
+
+  return prisma.reservation.findFirst({
+    where: { cancelToken: trimmed },
+    include: { guest: { select: { name: true } } },
+  });
+}
+
+export async function findReservationByIdForAdmin(id: string) {
+  return prisma.reservation.findUnique({
+    where: { id },
+    include: {
+      guest: { select: { id: true, name: true, phone: true } },
+      session: { select: { id: true, name: true } },
+      checkIn: true,
+      reservationTables: {
+        include: { table: { select: { id: true, tableNumber: true } } },
+      },
+    },
+  });
+}
+
 export type AdminReservationFilters = {
   date?: Date;
   status?: ReservationStatus;
@@ -102,17 +159,14 @@ export async function getAdminReservations(filters: AdminReservationFilters) {
       where,
       skip,
       take: limit,
-      orderBy: [
-        { date: "desc" },
-        { createdAt: "desc" },
-      ],
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       include: {
         guest: { select: { id: true, name: true, phone: true } },
         session: { select: { id: true, name: true, startTime: true, endTime: true } },
         reservationTables: {
           include: {
-            table: { select: { id: true, tableNumber: true, capacity: true } }
-          }
+            table: { select: { id: true, tableNumber: true, capacity: true } },
+          },
         },
       },
     }),
@@ -133,13 +187,10 @@ export async function updateReservationStatus(id: string, status: ReservationSta
   return prisma.reservation.update({
     where: { id },
     data: { status },
-    include: { guest: { select: { id: true } } }
+    include: { guest: { select: { id: true } } },
   });
 }
 
-/**
- * Ambil satu reservasi beserta relasi tabel-nya (untuk kebutuhan validasi di Admin use case).
- */
 export async function getReservationById(id: string) {
   return prisma.reservation.findUnique({
     where: { id },
@@ -149,11 +200,6 @@ export async function getReservationById(id: string) {
   });
 }
 
-/**
- * Ganti semua meja yang terhubung ke reservasi secara atomik di dalam satu transaksi.
- * Langkah: hapus relasi lama → buat relasi baru.
- * Dipanggil setelah validasi kapasitas dan ketersediaan meja berhasil dilakukan di Use Case.
- */
 export async function updateReservationTablesTransaction(
   reservationId: string,
   tableIds: string[],
@@ -163,14 +209,10 @@ export async function updateReservationTablesTransaction(
   }
 
   return prisma.$transaction(async (tx) => {
-    // 1. Hapus semua relasi meja lama
     await tx.reservationTable.deleteMany({ where: { reservationId } });
-
-    // 2. Buat relasi meja baru
     await tx.reservationTable.createMany({
       data: tableIds.map((tableId) => ({ reservationId, tableId })),
     });
-
     return tx.reservation.findUnique({
       where: { id: reservationId },
       include: {
@@ -181,4 +223,3 @@ export async function updateReservationTablesTransaction(
     });
   });
 }
-

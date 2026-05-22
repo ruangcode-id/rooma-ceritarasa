@@ -1,3 +1,4 @@
+import "@/infrastructure/notifications/init";
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicReservation } from "@/features/reservations/reservation.service";
 import { publicReservationSchema } from "@/validations/reservation.validation";
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
           error: "Validation Error",
           details: parsed.error.flatten(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
         success: true,
         data: result,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error: unknown) {
     console.error("Error creating reservation:", error);
@@ -50,14 +51,16 @@ export async function POST(req: NextRequest) {
       message.includes("sudah dipesan atau sedang dalam proses pembayaran") ||
       message.includes("tidak mencukupi untuk jumlah tamu") ||
       message.includes("tidak ditemukan atau tidak tersedia") ||
-      message.includes("Minimal satu meja harus dipilih");
+      message.includes("Minimal satu meja harus dipilih") ||
+      message.includes("Session tidak ditemukan") ||
+      message.includes("Meja tidak tersedia");
 
     return NextResponse.json(
       {
         success: false,
         error: isClientError ? message : "Internal Server Error",
       },
-      { status: isClientError ? 400 : 500 }
+      { status: isClientError ? 400 : 500 },
     );
   }
 }
