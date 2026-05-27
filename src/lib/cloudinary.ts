@@ -1,83 +1,94 @@
-/**
- * Shared Cloudinary upload utility.
- * Digunakan oleh Dev A (PDF penawaran event) dan Dev B (galeri foto, CV lamaran).
- *
- * Env vars yang dibutuhkan:
- *   CLOUDINARY_CLOUD_NAME
- *   CLOUDINARY_API_KEY
- *   CLOUDINARY_API_SECRET
- */
+import { v2 as cloudinary, type UploadApiOptions, type UploadApiResponse } from "cloudinary";
 
-import { v2 as cloudinary } from "cloudinary";
+export type CloudinaryResourceType = "image" | "video" | "raw" | "auto";
 
-// Pastikan env vars tersedia
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  secure: true,
-});
-
-export type CloudinaryFolder = "events/offers" | "gallery" | "careers/cv";
-export type CloudinaryResourceType = "image" | "raw";
-
-export interface UploadToCloudinaryOptions {
-  folder: CloudinaryFolder;
-  resourceType: CloudinaryResourceType;
-  /** Opsional: public_id kustom (tanpa ekstensi) */
+export type UploadToCloudinaryOptions = Omit<
+  UploadApiOptions,
+  "public_id" | "resource_type"
+> & {
+  resourceType?: CloudinaryResourceType;
   publicId?: string;
-}
+};
 
-export interface CloudinaryUploadResult {
-  url: string;
+type CloudinaryUploadInput = Buffer | string;
+
+export type CloudinaryUploadResult = UploadApiResponse & {
   secureUrl: string;
   publicId: string;
+};
+
+function assertCloudinaryConfig() {
+  const missing = [
+    "CLOUDINARY_CLOUD_NAME",
+    "CLOUDINARY_API_KEY",
+    "CLOUDINARY_API_SECRET",
+  ].filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    throw new Error(`Missing Cloudinary env: ${missing.join(", ")}`);
+  }
 }
 
-/**
- * Upload file ke Cloudinary.
- *
- * @param file - Buffer, base64 data URI, atau URL remote
- * @param options - folder tujuan dan resource type (image | raw untuk PDF)
- * @returns CloudinaryUploadResult berisi url dan publicId
- *
- * @example
- * // Upload PDF penawaran event
- * const result = await uploadToCloudinary(pdfBuffer, {
- *   folder: 'events/offers',
- *   resourceType: 'raw',
- * });
- *
- * @example
- * // Upload gambar galeri
- * const result = await uploadToCloudinary(imageBuffer, {
- *   folder: 'gallery',
- *   resourceType: 'image',
- * });
- */
-export async function uploadToCloudinary(
-  file: Buffer | string,
-  options: UploadToCloudinaryOptions,
-): Promise<CloudinaryUploadResult> {
-  // Cloudinary SDK hanya menerima string (path, URL, base64 data URI).
-  // Konversi Buffer ke base64 data URI agar kompatibel.
-  let uploadSource: string;
-  if (file instanceof Buffer) {
-    uploadSource = `data:application/octet-stream;base64,${file.toString("base64")}`;
-  } else {
-    // file is string in this branch (Buffer | string narrowed to string)
-    uploadSource = file as string;
+function configureCloudinary() {
+  assertCloudinaryConfig();
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true,
+  });
+}
+
+function getBufferDataUriMimeType(resourceType: CloudinaryResourceType) {
+  if (resourceType === "raw") return "application/octet-stream";
+  if (resourceType === "video") return "video/mp4";
+  return "image/png";
+}
+
+function normalizeUploadInput(
+  file: CloudinaryUploadInput,
+  resourceType: CloudinaryResourceType,
+) {
+  if (Buffer.isBuffer(file)) {
+    return `data:${getBufferDataUriMimeType(resourceType)};base64,${file.toString(
+      "base64",
+    )}`;
   }
 
-  const result = await cloudinary.uploader.upload(uploadSource, {
-    folder: options.folder,
-    resource_type: options.resourceType,
-    ...(options.publicId ? { public_id: options.publicId } : {}),
+  return file;
+}
+
+export async function uploadToCloudinary(
+  file: CloudinaryUploadInput,
+  options: UploadToCloudinaryOptions = {},
+): Promise<CloudinaryUploadResult> {
+  configureCloudinary();
+
+  const {
+    resourceType = "image",
+    publicId,
+    ...uploadOptions
+  } = options;
+  const uploadInput = normalizeUploadInput(file, resourceType);
+  const result = await cloudinary.uploader.upload(uploadInput, {
+    resource_type: resourceType,
+    ...(publicId ? { public_id: publicId } : {}),
+    ...uploadOptions,
   });
 
   return {
-    url: result.url,
+    ...result,
     secureUrl: result.secure_url,
     publicId: result.public_id,
   };
+}
+
+export async function deleteFromCloudinary(
+  publicId: string,
+  resourceType: CloudinaryResourceType = "image",
+) {
+  configureCloudinary();
+  return cloudinary.uploader.destroy(publicId, {
+    resource_type: resourceType,
+  });
 }
