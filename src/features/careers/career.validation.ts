@@ -88,3 +88,49 @@ export const updateCareerJobSchema = z.object({
 });
 
 export type UpdateCareerJobInput = z.infer<typeof updateCareerJobSchema>;
+
+export const careerApplicationStatusSchema = z.enum([
+  "NEW",
+  "REVIEWED",
+  "ACCEPTED",
+  "REJECTED",
+]);
+
+export const applyCareerSchema = z.object({
+  applicantName: z.string().trim().min(1, "applicantName wajib diisi.").max(100),
+  applicantEmail: z
+    .string()
+    .trim()
+    .min(1, "applicantEmail wajib diisi.")
+    .email("applicantEmail harus berupa email valid.")
+    .max(150),
+  applicantPhone: z
+    .string()
+    .trim()
+    .min(1, "applicantPhone wajib diisi.")
+    .max(20),
+  coverLetter: z.preprocess(
+    normalizeOptionalString,
+    z.string().max(5000).optional(),
+  ),
+});
+
+export type ApplyCareerInput = z.infer<typeof applyCareerSchema>;
+
+export const adminCareerApplicationListQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(10),
+  jobId: z.preprocess(
+    normalizeOptionalString,
+    z.string().uuid("jobId harus berupa UUID yang valid.").optional(),
+  ),
+  status: careerApplicationStatusSchema.optional(),
+  search: z.preprocess(
+    normalizeOptionalString,
+    z.string().max(150).optional(),
+  ),
+});
+
+export type AdminCareerApplicationListQuery = z.infer<
+  typeof adminCareerApplicationListQuerySchema
+>;
