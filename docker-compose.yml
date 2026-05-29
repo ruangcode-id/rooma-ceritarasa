@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: rooma-postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: rooma_db
+      POSTGRES_USER: rooma_user
+      POSTGRES_PASSWORD: Rooma_RasaEnak221372
+    volumes:
+      - rooma_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rooma_user -d rooma_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  rooma_pgdata:
