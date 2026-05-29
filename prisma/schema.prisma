@@ -189,12 +189,19 @@ model RestaurantSetting {
   phone                String?  @db.VarChar(20)
   email                String?  @db.VarChar(150)
   whatsappNumber       String?  @map("whatsapp_number") @db.VarChar(20)
+  logoUrl              String?  @map("logo_url") @db.Text
+  tagline              String?  @db.VarChar(255)
+  socialLinks          Json?    @map("social_links")
+  operatingHours       Json?    @map("operating_hours")
+  maxGuestsPerDay      Int?     @map("max_guests_per_day")
   depositPercent       Decimal? @map("deposit_percent") @db.Decimal(5, 2)
   cancellationPolicy   String?  @map("cancellation_policy") @db.Text
   seoTitle             String?  @map("seo_title") @db.VarChar(200)
   seoDescription       String?  @map("seo_description") @db.Text
   confirmationTemplate String?  @map("confirmation_template") @db.Text
   reminderTemplate     String?  @map("reminder_template") @db.Text
+  waTemplates          Json?    @map("wa_templates")
+  emailTemplates       Json?    @map("email_templates")
   updatedAt            DateTime @updatedAt @map("updated_at")
   updatedBy            String?  @map("updated_by") @db.Uuid
 
