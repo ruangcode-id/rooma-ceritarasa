@@ -1,90 +1,36 @@
-# Rooma Ceritarasa
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Next.js + Prisma project for Rooma Ceritarasa.
+## Getting Started
 
-## Prerequisites
-
-- Node.js 20+
-- npm
-- Docker + Docker Compose plugin (`docker compose`)
-
-## Local Setup
-
-1. Install dependencies:
-
-```bash
-npm install
-```
-
-2. Create environment file:
-
-```bash
-cp .env.example .env
-```
-
-Note: the dev Docker compose maps Postgres to `localhost:5433`.
-
-3. Start PostgreSQL container:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-```
-
-4. Run Prisma migration:
-
-```bash
-npx prisma migrate dev --name init
-```
-
-5. Generate Prisma client:
-
-```bash
-npx prisma generate
-```
-
-6. Start Next.js development server:
+First, run the development server:
 
 ```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Docker Commands
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-- Start DB:
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
-```
+## Learn More
 
-- Stop DB:
+To learn more about Next.js, take a look at the following resources:
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml down
-```
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-- Stop DB and remove volume (reset local database):
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml down -v
-```
+## Deploy on Vercel
 
-## Troubleshooting
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-- Docker permission denied (`/var/run/docker.sock`):
-  - Use `sudo` temporarily, or
-  - Add user to docker group:
-
-```bash
-sudo usermod -aG docker $USER
-newgrp docker
-```
-
-- Prisma error `P1000` (authentication failed):
-  - Ensure `.env` `DATABASE_URL` credentials match `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` in `docker-compose.yml`.
-
-## Notes
-
-- Do not commit `.env`.
-- Commit `.env.example` for team onboarding.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
