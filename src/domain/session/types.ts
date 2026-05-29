@@ -1,9 +1,8 @@
 export interface SessionEntity {
   id: string;
-  name: string;
+  label: string;
   startTime: Date;
   endTime: Date;
-  maxCapacity: number;
+  capacity: number;
   isActive: boolean;
-  dayOfWeek: number[];
 }
