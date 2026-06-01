@@ -1,8 +1,14 @@
 import { NextRequest } from "next/server";
 import { jsonError, jsonSuccess } from "@/lib/api-envelope";
 import { prisma } from "@/infrastructure/database/prisma";
-import { PaymentStatus, ReservationStatus } from "@/generated/prisma/client";
+import {
+  PaymentStatus,
+  ReservationStatus,
+  EventPaymentStatus,
+  EventRequestStatus,
+} from "@/generated/prisma/client";
 import { verifySignature } from "@/features/payments/payment.utils";
+import { eventNotificationService } from "@/infrastructure/services/notification.service";
 
 type MidtransWebhookPayload = {
   order_id?: string;
@@ -89,6 +95,97 @@ function getPaidAt(paymentStatus: PaymentStatus, payload: MidtransWebhookPayload
   return new Date();
 }
 
+function mapMidtransStatusToEventPaymentStatus(
+  transactionStatus?: string,
+  fraudStatus?: string
+): EventPaymentStatus {
+  const status = transactionStatus?.toLowerCase();
+  const fraud = fraudStatus?.toLowerCase();
+
+  if (status === "capture") {
+    return fraud === "challenge" ? EventPaymentStatus.pending : EventPaymentStatus.paid;
+  }
+  if (status === "settlement" || status === "paid") return EventPaymentStatus.paid;
+  if (status === "pending") return EventPaymentStatus.pending;
+  return EventPaymentStatus.failed;
+}
+
+async function handleEventPaymentWebhook(
+  orderId: string,
+  payload: MidtransWebhookPayload
+) {
+  const eventPaymentStatus = mapMidtransStatusToEventPaymentStatus(
+    payload.transaction_status,
+    payload.fraud_status
+  );
+
+  const paidAt =
+    eventPaymentStatus === EventPaymentStatus.paid
+      ? (payload.settlement_time
+          ? new Date(payload.settlement_time)
+          : payload.transaction_time
+          ? new Date(payload.transaction_time)
+          : new Date())
+      : null;
+
+  // Cari EventPayment berdasarkan paymentMethod yang disimpan sebagai "midtrans:<orderId>"
+  const eventPayment = await prisma.eventPayment.findFirst({
+    where: { paymentMethod: `midtrans:${orderId}` },
+    include: {
+      eventRequest: {
+        include: {
+          guest: { select: { name: true, phone: true, email: true } },
+        },
+      },
+    },
+  });
+
+  if (!eventPayment) {
+    return null; // Bukan event payment, skip
+  }
+
+  const updatedEventPayment = await prisma.eventPayment.update({
+    where: { id: eventPayment.id },
+    data: {
+      status: eventPaymentStatus,
+      ...(paidAt ? { paidAt } : {}),
+      paymentMethod: `midtrans:${orderId}`,
+    },
+  });
+
+  let eventRequestStatus: string = eventPayment.eventRequest.status;
+
+  // Jika DP terbayar, otomatis ubah status EventRequest jadi 'accepted'
+  if (eventPaymentStatus === EventPaymentStatus.paid) {
+    const updatedRequest = await prisma.eventRequest.update({
+      where: { id: eventPayment.eventRequestId },
+      data: { status: EventRequestStatus.accepted },
+    });
+    eventRequestStatus = updatedRequest.status;
+
+    // Trigger notifikasi event_accepted untuk Dev C (fire & forget)
+    eventNotificationService
+      .triggerEventNotification({
+        type: "event_accepted",
+        eventRequestId: eventPayment.eventRequestId,
+        picName: eventPayment.eventRequest.guest.name,
+        picPhone: eventPayment.eventRequest.guest.phone,
+        picEmail: eventPayment.eventRequest.guest.email ?? null,
+        eventDate: eventPayment.eventRequest.eventDate,
+      })
+      .catch((err) => console.error("[midtrans-webhook] event notification failed:", err));
+  }
+
+  return {
+    type: "event_payment",
+    orderId,
+    eventPaymentId: updatedEventPayment.id,
+    eventPaymentStatus: updatedEventPayment.status,
+    eventRequestId: eventPayment.eventRequestId,
+    eventRequestStatus,
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = (await req.json().catch(() => null)) as
@@ -115,6 +212,13 @@ export async function POST(req: NextRequest) {
       return jsonError("Midtrans order_id is required", 400);
     }
 
+    // ── Cek apakah ini EventPayment terlebih dahulu ────────────────────────────
+    const eventPaymentResult = await handleEventPaymentWebhook(orderId, payload);
+    if (eventPaymentResult !== null) {
+      return jsonSuccess(eventPaymentResult);
+    }
+
+    // ── Fallback: handle Reservation Payment (flow lama) ──────────────────────
     const paymentStatus = mapMidtransStatusToPaymentStatus(
       payload.transaction_status,
       payload.fraud_status
@@ -208,6 +312,7 @@ export async function POST(req: NextRequest) {
       }
 
       return {
+        type: "reservation_payment",
         orderId,
         paymentId: updatedPayment.id,
         paymentStatus: updatedPayment.status,
