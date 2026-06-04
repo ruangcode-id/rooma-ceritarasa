@@ -1,7 +1,11 @@
-import { Resend } from "resend";
+import { getCareerAdminEmail } from "@/config/env";
+import {
+  sendTransactionalEmail,
+  RESEND_CONFIG_WARNING,
+} from "@/infrastructure/email/resend";
+import { sendEmailFromTemplate } from "@/infrastructure/notifications/guest-notification.service";
 
-const EMAIL_CONFIG_WARNING =
-  "Email tidak dikirim karena konfigurasi Resend belum lengkap.";
+export { RESEND_CONFIG_WARNING as EMAIL_CONFIG_WARNING };
 
 type CareerApplicationEmailPayload = {
   id: string;
@@ -19,18 +23,6 @@ type CareerApplicationEmailPayload = {
 type EmailSendResult =
   | { sent: true }
   | { sent: false; warning: string };
-
-function getEmailConfig() {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
-  const adminEmail = process.env.CAREER_ADMIN_EMAIL;
-
-  if (!apiKey || !fromEmail || !adminEmail) {
-    return null;
-  }
-
-  return { apiKey, fromEmail, adminEmail };
-}
 
 function escapeHtml(value: string) {
   return value
@@ -53,52 +45,30 @@ function textOrDash(value: string | null) {
   return value && value.trim().length > 0 ? value : "-";
 }
 
-async function sendEmail(params: {
-  to: string;
-  subject: string;
-  html: string;
-}): Promise<EmailSendResult> {
-  const config = getEmailConfig();
-
-  if (!config) {
-    console.warn(EMAIL_CONFIG_WARNING);
-    return { sent: false, warning: EMAIL_CONFIG_WARNING };
-  }
-
-  try {
-    const resend = new Resend(config.apiKey);
-    const result = await resend.emails.send({
-      from: config.fromEmail,
-      to: params.to,
-      subject: params.subject,
-      html: params.html,
-    });
-
-    if (result.error) {
-      console.warn("Resend email failed:", result.error.message);
-      return {
-        sent: false,
-        warning: "Email tidak terkirim karena terjadi kendala pada layanan email.",
-      };
-    }
-
-    return { sent: true };
-  } catch (error) {
-    console.warn("Resend email failed:", error);
-    return {
-      sent: false,
-      warning: "Email tidak terkirim karena terjadi kendala pada layanan email.",
-    };
-  }
-}
-
 export async function sendApplicationConfirmation(
   application: CareerApplicationEmailPayload,
-) {
+): Promise<EmailSendResult> {
+  const vars = {
+    nama: application.applicantName,
+    posisi: application.jobTitle,
+    email: application.applicantEmail,
+  };
+
+  const fromTemplate = await sendEmailFromTemplate(
+    application.applicantEmail,
+    "career_apply_konfirmasi",
+    `Lamaran diterima - ${application.jobTitle}`,
+    vars,
+  );
+
+  if (fromTemplate.sent) {
+    return fromTemplate;
+  }
+
   const applicantName = escapeHtml(application.applicantName);
   const jobTitle = escapeHtml(application.jobTitle);
 
-  return sendEmail({
+  return sendTransactionalEmail({
     to: application.applicantEmail,
     subject: `Lamaran diterima - ${application.jobTitle}`,
     html: `
@@ -112,16 +82,33 @@ export async function sendApplicationConfirmation(
 
 export async function notifyAdminNewApplication(
   application: CareerApplicationEmailPayload,
-) {
-  const config = getEmailConfig();
-
-  if (!config) {
-    console.warn(EMAIL_CONFIG_WARNING);
-    return { sent: false as const, warning: EMAIL_CONFIG_WARNING };
+): Promise<EmailSendResult> {
+  const adminEmail = getCareerAdminEmail();
+  if (!adminEmail) {
+    console.warn(RESEND_CONFIG_WARNING);
+    return { sent: false, warning: RESEND_CONFIG_WARNING };
   }
 
-  return sendEmail({
-    to: config.adminEmail,
+  const vars = {
+    nama: application.applicantName,
+    posisi: application.jobTitle,
+    email: application.applicantEmail,
+    telepon: application.applicantPhone,
+  };
+
+  const fromTemplate = await sendEmailFromTemplate(
+    adminEmail,
+    "career_admin_notif",
+    `Lamaran baru - ${application.jobTitle}`,
+    vars,
+  );
+
+  if (fromTemplate.sent) {
+    return fromTemplate;
+  }
+
+  return sendTransactionalEmail({
+    to: adminEmail,
     subject: `Lamaran baru - ${application.jobTitle}`,
     html: `
       <p>Ada lamaran baru untuk posisi <strong>${escapeHtml(application.jobTitle)}</strong>.</p>
@@ -138,5 +125,3 @@ export async function notifyAdminNewApplication(
     `,
   });
 }
-
-export { EMAIL_CONFIG_WARNING };

@@ -286,6 +286,7 @@ model Reservation {
   internalNotes  String?           @map("internal_notes") @db.Text
   cancelToken    String?           @unique @map("cancel_token") @db.VarChar(100)
   expiresAt      DateTime?         @map("expires_at")
+  reminderSentAt DateTime?         @map("reminder_sent_at")
   createdBy      String?           @map("created_by") @db.Uuid
   createdAt      DateTime          @default(now()) @map("created_at")
   updatedAt      DateTime          @updatedAt @map("updated_at")
@@ -362,6 +363,7 @@ model EventRequest {
   partySize   Int?               @map("party_size")
   description String?            @db.Text
   status      EventRequestStatus
+  reminderSentAt DateTime?       @map("reminder_sent_at")
   createdAt   DateTime           @default(now()) @map("created_at")
   updatedAt   DateTime           @updatedAt @map("updated_at")
 

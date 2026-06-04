@@ -9,6 +9,11 @@ import {
 } from "@/generated/prisma/client";
 import { verifySignature } from "@/features/payments/payment.utils";
 import { eventNotificationService } from "@/infrastructure/services/notification.service";
+import { notifyStaffPaymentConfirmed } from "@/infrastructure/payment/payment-confirmed.notify";
+import {
+  notifyGuestPaymentSuccess,
+  notifyGuestReservationConfirmed,
+} from "@/infrastructure/notifications/guest-notification.service";
 
 type MidtransWebhookPayload = {
   order_id?: string;
@@ -318,8 +323,28 @@ export async function POST(req: NextRequest) {
         paymentStatus: updatedPayment.status,
         reservationId: payment.reservationId,
         reservationStatus,
+        paymentAmount: updatedPayment.amount,
+        paymentType: updatedPayment.type,
       };
     });
+
+    if (
+      result.type === "reservation_payment" &&
+      result.reservationStatus === ReservationStatus.confirmed
+    ) {
+      const detail = `Pembayaran ${result.paymentType} Rp ${Number(result.paymentAmount).toLocaleString("id-ID")}`;
+      notifyStaffPaymentConfirmed({
+        reservationId: result.reservationId,
+        detail,
+      }).catch((err) => console.error("[midtrans-webhook] staff notify failed:", err));
+
+      notifyGuestPaymentSuccess(result.reservationId).catch((err) =>
+        console.error("[midtrans-webhook] guest payment notify failed:", err),
+      );
+      notifyGuestReservationConfirmed(result.reservationId).catch((err) =>
+        console.error("[midtrans-webhook] guest confirm notify failed:", err),
+      );
+    }
 
     return jsonSuccess(result);
   } catch (error: unknown) {
