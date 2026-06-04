@@ -1,6 +1,8 @@
 import { prisma } from "@/infrastructure/database/prisma";
 import { appEvents, EVENTS } from "@/lib/events";
 import { broadcastStaffNotification } from "@/infrastructure/notifications/broadcast-staff";
+import { notifyGuestReservationConfirmed } from "@/infrastructure/notifications/guest-notification.service";
+import { ReservationStatus } from "@/generated/prisma/client";
 
 type ReservationCreatedPayload = {
   reservationId: string;
@@ -24,14 +26,22 @@ export function registerNotificationEventHandlers(): void {
         where: { id: payload.guestId },
         select: { name: true },
       });
+
+      const isConfirmed = payload.status === ReservationStatus.confirmed;
       await broadcastStaffNotification({
         type: "new_reservation",
         title: "Reservasi baru",
         body: guest
-          ? `${guest.name} — menunggu pembayaran`
+          ? isConfirmed
+            ? `${guest.name} — confirmed`
+            : `${guest.name} — menunggu pembayaran`
           : `Reservasi ${payload.reservationId.slice(0, 8)}…`,
         relatedId: payload.reservationId,
       });
+
+      if (isConfirmed) {
+        await notifyGuestReservationConfirmed(payload.reservationId);
+      }
     } catch (error) {
       console.error("[notifications] reservasi_created:", error);
     }
