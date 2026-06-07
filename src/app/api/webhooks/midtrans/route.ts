@@ -12,7 +12,6 @@ import { eventNotificationService } from "@/infrastructure/services/notification
 import { notifyStaffPaymentConfirmed } from "@/infrastructure/payment/payment-confirmed.notify";
 import {
   notifyGuestPaymentSuccess,
-  notifyGuestReservationConfirmed,
 } from "@/infrastructure/notifications/guest-notification.service";
 
 type MidtransWebhookPayload = {
@@ -340,9 +339,6 @@ export async function POST(req: NextRequest) {
 
       notifyGuestPaymentSuccess(result.reservationId).catch((err) =>
         console.error("[midtrans-webhook] guest payment notify failed:", err),
-      );
-      notifyGuestReservationConfirmed(result.reservationId).catch((err) =>
-        console.error("[midtrans-webhook] guest confirm notify failed:", err),
       );
     }
 

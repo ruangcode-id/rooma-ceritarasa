@@ -18,6 +18,7 @@ import {
 import { appEvents, EVENTS } from "@/lib/events";
 import { prisma } from "@/infrastructure/database/prisma";
 import { createPublicReservation } from "@/features/reservations/reservation.service";
+import { notifyGuestReservationConfirmed } from "@/infrastructure/notifications/guest-notification.service";
 
 /** Durasi jendela pembayaran dalam milidetik (15 menit). */
 const PAYMENT_EXPIRY_MS = 15 * 60 * 1000;
@@ -186,12 +187,26 @@ export const AdminReservationUseCase = {
     }
 
     if (status) {
+      const existing = await getReservationById(reservationId);
+      if (!existing) {
+        throw new Error("Reservasi tidak ditemukan.");
+      }
+
       const updatedReservation = await updateReservationStatus(reservationId, status);
 
       if (status === ReservationStatus.cancelled) {
         appEvents.emit(EVENTS.RESERVATION_CANCELLED, {
           reservationId: updatedReservation.id,
         });
+      }
+
+      if (
+        status === ReservationStatus.confirmed &&
+        existing.status !== ReservationStatus.confirmed
+      ) {
+        notifyGuestReservationConfirmed(reservationId).catch((err) =>
+          console.error("[admin-reservation] guest notify failed:", err),
+        );
       }
 
       return { reservationId, updatedStatus: updatedReservation.status, tablesUpdated: !!tableIds };
