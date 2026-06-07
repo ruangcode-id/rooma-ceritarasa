@@ -47,7 +47,15 @@ export async function PATCH(
       );
     }
 
-    const json = await req.json();
+    let json;
+    try {
+      json = await req.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Body harus berupa JSON." },
+        { status: 400 }
+      );
+    }
     const parsed = patchBodySchema.parse(json);
 
     const result = await AdminReservationUseCase.updateReservationAction({

@@ -22,7 +22,12 @@ export async function POST(
     const admin = await requireRole(["admin", "owner"]);
     const { id } = await params;
 
-    const formData = await req.formData();
+    let formData;
+    try {
+      formData = await req.formData();
+    } catch {
+      return jsonError("Body harus berupa multipart/form-data.", 400);
+    }
 
     const pdfFile = formData.get("pdf");
     if (!pdfFile || !(pdfFile instanceof File)) {

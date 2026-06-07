@@ -55,7 +55,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Body harus berupa JSON." },
+        { status: 400 }
+      );
+    }
 
     const session = await SessionUseCase.createSessionAction(body);
 
