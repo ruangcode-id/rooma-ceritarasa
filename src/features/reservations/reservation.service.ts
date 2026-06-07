@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { prisma } from "@/infrastructure/database/prisma";
 import {
   Prisma,
@@ -27,6 +28,8 @@ export type CreateReservationResult = {
   status: string;
   tableIds: string[];
   expiresAt: Date | null;
+  /** Token untuk cancel publik & check-in lookup (QR). */
+  cancelToken: string;
 };
 
 function getReservationExpiry(partySize: number) {
@@ -217,6 +220,7 @@ export async function createPublicReservation(
         : ReservationStatus.pending;
 
     const expiresAt = getReservationExpiry(input.partySize);
+    const cancelToken = crypto.randomBytes(16).toString("hex");
 
     const reservation = await tx.reservation.create({
       data: {
@@ -227,6 +231,7 @@ export async function createPublicReservation(
         status: reservationStatus,
         specialRequest: input.specialRequest ?? null,
         expiresAt,
+        cancelToken,
       },
     });
 
@@ -243,6 +248,7 @@ export async function createPublicReservation(
       status: reservation.status,
       tableIds: selectedTables.map((table) => table.id),
       expiresAt: reservation.expiresAt,
+      cancelToken: reservation.cancelToken!,
     };
   });
 

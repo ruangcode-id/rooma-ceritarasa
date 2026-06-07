@@ -115,6 +115,7 @@ export async function createReservation(input: PublicReservationInput) {
     guestId: result.guestId,
     status: result.status,
     tableIds: result.tableIds,
+    cancelToken: result.cancelToken,
   };
 }
 
