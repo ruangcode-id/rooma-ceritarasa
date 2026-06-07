@@ -41,7 +41,7 @@ function formatTimeFromSession(startTime: Date): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "UTC",
+    timeZone: "Asia/Jakarta",
   }).format(startTime);
 }
 
@@ -151,7 +151,7 @@ export async function notifyGuestPaymentSuccess(reservationId: string) {
 
   await sendWaFromTemplate(
     reservation.guest.phone,
-    "reservasi_konfirmasi",
+    "payment_success",
     vars,
     "Pembayaran reservasi Anda berhasil. Reservasi {{tanggal}} pukul {{waktu}} dikonfirmasi.",
   );
@@ -285,14 +285,14 @@ export async function dispatchEventGuestNotification(
     case "event_cancelled":
       await sendWaFromTemplate(
         payload.picPhone,
-        "event_konfirmasi",
+        "event_cancelled",
         vars,
         "Halo {{nama}}, permintaan acara pada {{tanggal}} dibatalkan. Hubungi kami jika ada pertanyaan.",
       );
       if (payload.picEmail) {
         await sendEmailFromTemplate(
           payload.picEmail,
-          "event_konfirmasi",
+          "event_cancelled",
           "Pembatalan Acara — Rooma Cerita Rasa",
           vars,
           "<p>Halo {{nama}},</p><p>Permintaan acara pada {{tanggal}} telah dibatalkan.</p>",
