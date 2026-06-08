@@ -18,7 +18,7 @@ export default function HeroSection() {
     <div className="relative h-screen w-full overflow-hidden">
       <video
         className="absolute inset-0 h-full w-full object-cover scale-105"
-        src="/assets/hero.mov"
+        src="/assets/hero.mp4"
         autoPlay
         muted
         loop

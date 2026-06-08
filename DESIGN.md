@@ -29,11 +29,12 @@ Semua warna sudah di-define sebagai CSS custom properties di `src/app/globals.cs
 
 ### Penggunaan Warna
 
-- Background umum halaman publik: `bg-white`
+- Background umum halaman publik: `bg-white` atau `#fcfbf9` (off-white) untuk kesan bersih & lega (minimalist vibe).
 - Background admin/dark: `bg-bg-dark` atau `bg-[#fcfbf9]` + `.bg-texture`
 - Surface card pada dark: `.glass` utility class
 - Teks utama: `text-slate-900` (light) / `text-gray-100` (dark)
 - Teks sekunder/subtitle: `text-slate-500`, `text-gray-600`
+- **Aksen (Merah/Orange):** Gunakan **sangat minimalis** hanya untuk tombol CTA utama, badge aktif, atau hover state, agar desain tetap terasa elegan dan tidak mendominasi.
 - Aksen berbahaya/cancel: `text-red-500`, `bg-red-50`
 - Aksen warning/expiry: `text-amber-600`
 
@@ -92,8 +93,10 @@ Font ini memberikan karakter **editorial** yang khas. Gunakan konsisten di selur
 
 ### Section Spacing
 
-- Padding atas/bawah section: `py-24` (halaman publik), `py-10` (admin)
-- Margin bawah antar section: `mb-8` (header), `mb-6` (subsection)
+- **Negative Space (Penting):** Berikan ruang bernapas yang ekstra lega antar elemen untuk mencapai estetika *minimalist premium*.
+- Padding atas/bawah section publik: `py-32` (ekstra lega) atau minimal `py-24`.
+- Padding atas/bawah admin: `py-10`
+- Margin bawah antar elemen section: `mb-12` (jarak heading ke konten) atau `mb-8`.
 
 ---
 
@@ -224,13 +227,34 @@ className="translate-x-(--px) will-change-transform"
 
 ## Halaman Publik — Layout Standar
 
+Layout dipertahankan ringkas tanpa banyak section, berfokus pada ruang lapang (*negative space*).
+
 ```
-[ Navbar (jika ada) ]
+[ Navbar (transparent -> solid) ]
 [ Hero Section — full screen video ]
-[ Section dengan reveal animation ]
+[ Section Info — dengan reveal animation & padding besar (py-32) ]
 [ Gallery — horizontal scroll + parallax ]
 [ Footer — 3 kolom: Brand | Contact | Session Times ]
 ```
+
+---
+
+## Halaman Reservasi — Layout Booking (Sevenrooms Style)
+
+Fokus utama halaman ini adalah **fungsionalitas murni** tanpa distraksi.
+
+```
+[ Navbar (Solid / bersih) ]
+[ Background: bg-slate-50 atau bg-white polos ]
+[ Centered Card (max-w-3xl) — Menampung Wizard Booking ]
+  ├── Step 1: Pilih Jumlah Tamu & Tanggal (Kalender ringkas)
+  ├── Step 2: Pilih Jam (Grid ketersediaan sesi)
+  └── Step 3: Isi Data Diri & Konfirmasi (Form minimalis)
+[ Footer (Ringkas) ]
+```
+
+- **Clean UI:** Hindari gambar hero promo atau elemen grafis besar di halaman ini. Biarkan pengguna fokus menyelesaikan *booking*.
+- **Progressive Disclosure:** Tampilkan form secara bertahap (*step-by-step*) di dalam satu *card* agar pengguna tidak merasa kewalahan melihat form panjang.
 
 ---
 
