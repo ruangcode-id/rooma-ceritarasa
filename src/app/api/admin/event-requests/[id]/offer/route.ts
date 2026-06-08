@@ -22,7 +22,12 @@ export async function POST(
     const admin = await requireRole(["admin", "owner"]);
     const { id } = await params;
 
-    const formData = await req.formData();
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch (error) {
+      return jsonError("Payload request tidak valid atau kosong (diharapkan multipart/form-data).", 400);
+    }
 
     const pdfFile = formData.get("pdf");
     if (!pdfFile || !(pdfFile instanceof File)) {
