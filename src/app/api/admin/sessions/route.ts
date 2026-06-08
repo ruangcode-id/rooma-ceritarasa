@@ -55,7 +55,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: "Payload request tidak valid atau kosong." },
+        { status: 400 }
+      );
+    }
 
     const session = await SessionUseCase.createSessionAction(body);
 
