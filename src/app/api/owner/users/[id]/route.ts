@@ -35,7 +35,7 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: error.message }, { status: 403 });
     }
     if (error.name === "ZodError") {
-      return NextResponse.json({ success: false, error: "Validation Error", details: error.errors }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Validation Error", details: error.issues }, { status: 400 });
     }
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
@@ -49,7 +49,7 @@ export async function DELETE(
     const { id } = await params;
     await UserUseCase.deleteUserAction(id);
 
-    return NextResponse.json({ success: true, message: "User deleted successfully" });
+    return NextResponse.json({ success: true, message: "User deactivated successfully" });
   } catch (error: any) {
     if (error.message.includes("Unauthorized") || error.message.includes("Forbidden")) {
       return NextResponse.json({ success: false, error: error.message }, { status: 403 });
@@ -57,3 +57,5 @@ export async function DELETE(
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
 }
+
+

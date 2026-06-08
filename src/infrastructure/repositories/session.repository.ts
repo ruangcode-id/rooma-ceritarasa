@@ -1,14 +1,17 @@
 import { prisma } from "@/infrastructure/database/prisma";
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma, ReservationStatus } from "@/generated/prisma/client";
 
-type SessionWithAvailability = Prisma.SessionGetPayload<{}> & {
-  currentCapacity: number;
-  availableSlots: number;
-};
+type SessionWithAvailability =
+  Prisma.RestaurantSessionGetPayload<{}> & {
+    currentCapacity: number;
+    availableSlots: number;
+  };
+
+const CONFIRMED_STATUS = ReservationStatus.confirmed;
 
 export const SessionRepository = {
   /**
-   * Retrieves all sessions with optional filtering and pagination
+   * GET ALL SESSIONS
    */
   getSessions: async (args: {
     skip?: number;
@@ -17,28 +20,47 @@ export const SessionRepository = {
     date?: Date;
     weekday?: number;
   }): Promise<{ sessions: SessionWithAvailability[]; total: number }> => {
-    const { skip = 0, take = 20, isActive, date, weekday } = args;
+    const {
+      skip = 0,
+      take = 20,
+      isActive,
+      date,
+      weekday,
+    } = args;
 
-    const where: Prisma.SessionWhereInput = {};
-    if (isActive !== undefined) where.isActive = isActive;
-    if (weekday !== undefined) where.dayOfWeek = { has: weekday };
+    const where: Prisma.RestaurantSessionWhereInput = {};
+
+    if (isActive !== undefined) {
+      where.isActive = isActive;
+    }
+
+    if (weekday !== undefined) {
+      where.dayOfWeek = {
+        has: weekday,
+      };
+    }
 
     const [sessions, total] = await Promise.all([
-      prisma.session.findMany({
+      prisma.restaurantSession.findMany({
         where,
         skip,
         take,
-        orderBy: { startTime: "asc" },
+        orderBy: {
+          startTime: "asc",
+        },
       }),
-      prisma.session.count({ where }),
+
+      prisma.restaurantSession.count({
+        where,
+      }),
     ]);
 
     if (!date || sessions.length === 0) {
       return {
-        sessions: sessions.map((s) => ({
-          ...s,
+        sessions: sessions.map((session) => ({
+          ...session,
           currentCapacity: 0,
-          availableSlots: s.maxCapacity,
+          availableSlots: session.maxCapacity,
         })),
         total,
       };
@@ -46,45 +68,72 @@ export const SessionRepository = {
 
     const reservationCounts = await prisma.reservation.groupBy({
       by: ["sessionId"],
+
       where: {
         date,
-        status: "confirmed",
-        sessionId: { in: sessions.map((s) => s.id) },
+        status: CONFIRMED_STATUS,
+
+        sessionId: {
+          in: sessions.map((session) => session.id),
+        },
       },
-      _count: { _all: true },
+
+      _count: {
+        _all: true,
+      },
     });
 
     const countBySessionId = new Map<string, number>(
-      reservationCounts.map((r) => [r.sessionId, r._count._all])
+      reservationCounts.map((reservation) => [
+        reservation.sessionId,
+        reservation._count._all,
+      ])
     );
 
     return {
-      sessions: sessions.map((s) => {
-        const currentCapacity = countBySessionId.get(s.id) ?? 0;
+      sessions: sessions.map((session) => {
+        const currentCapacity =
+          countBySessionId.get(session.id) ?? 0;
+
         return {
-          ...s,
+          ...session,
           currentCapacity,
-          availableSlots: Math.max(0, s.maxCapacity - currentCapacity),
+          availableSlots: Math.max(
+            0,
+            session.maxCapacity - currentCapacity
+          ),
         };
       }),
+
       total,
     };
   },
 
   /**
-   * Retrieves a single session by ID
+   * GET SESSION BY ID
    */
   getSessionById: async (id: string) => {
-    return prisma.session.findUnique({
-      where: { id },
+    return prisma.restaurantSession.findUnique({
+      where: {
+        id,
+      },
     });
   },
 
   /**
-   * Retrieves a single session by ID with availability for a given date
+   * GET SESSION WITH AVAILABILITY
    */
-  getSessionByIdWithAvailability: async (id: string, date?: Date): Promise<SessionWithAvailability | null> => {
-    const session = await prisma.session.findUnique({ where: { id } });
+  getSessionByIdWithAvailability: async (
+    id: string,
+    date?: Date
+  ): Promise<SessionWithAvailability | null> => {
+    const session =
+      await prisma.restaurantSession.findUnique({
+        where: {
+          id,
+        },
+      });
+
     if (!session) return null;
 
     if (!date) {
@@ -95,59 +144,75 @@ export const SessionRepository = {
       };
     }
 
-    const currentCapacity = await prisma.reservation.count({
-      where: {
-        sessionId: id,
-        date,
-        status: "confirmed",
-      },
-    });
+    const currentCapacity =
+      await prisma.reservation.count({
+        where: {
+          sessionId: id,
+          date,
+          status: CONFIRMED_STATUS,
+        },
+      });
 
     return {
       ...session,
       currentCapacity,
-      availableSlots: Math.max(0, session.maxCapacity - currentCapacity),
+
+      availableSlots: Math.max(
+        0,
+        session.maxCapacity - currentCapacity
+      ),
     };
   },
 
   /**
-   * Creates a new session
+   * CREATE SESSION
    */
-  createSession: async (data: Prisma.SessionCreateInput) => {
-    return prisma.session.create({
+  createSession: async (
+    data: Prisma.RestaurantSessionCreateInput
+  ) => {
+    return prisma.restaurantSession.create({
       data,
     });
   },
 
   /**
-   * Updates an existing session
+   * UPDATE SESSION
    */
-  updateSession: async (id: string, data: Prisma.SessionUpdateInput) => {
-    return prisma.session.update({
-      where: { id },
+  updateSession: async (
+    id: string,
+    data: Prisma.RestaurantSessionUpdateInput
+  ) => {
+    return prisma.restaurantSession.update({
+      where: {
+        id,
+      },
+
       data,
     });
   },
 
   /**
-   * Checks if a session has any confirmed reservations
+   * CHECK ACTIVE RESERVATIONS
    */
   hasActiveReservations: async (id: string) => {
     const count = await prisma.reservation.count({
       where: {
         sessionId: id,
-        status: "confirmed",
-      }
+        status: CONFIRMED_STATUS,
+      },
     });
+
     return count > 0;
   },
 
   /**
-   * Hard deletes a session
+   * DELETE SESSION
    */
   deleteSession: async (id: string) => {
-    return prisma.session.delete({
-      where: { id },
+    return prisma.restaurantSession.delete({
+      where: {
+        id,
+      },
     });
   },
 };

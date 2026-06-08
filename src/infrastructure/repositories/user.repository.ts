@@ -79,14 +79,13 @@ export const UserRepository = {
   },
 
   /**
-   * Hard deletes a user from the database
+   * Deactivates a user (soft delete) to avoid breaking FK relations
    */
   deleteUser: async (id: string) => {
-    return prisma.user.delete({
+    return prisma.user.update({
       where: { id },
-      select: {
-        id: true,
-      },
+      data: { isActive: false },
+      select: { id: true, isActive: true },
     });
   },
 };
