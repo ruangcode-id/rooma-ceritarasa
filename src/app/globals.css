@@ -8,6 +8,12 @@
   --color-dark: #1d3557;
   --color-light: #f8f9fa;
   --color-bg-dark: #0f172a;
+  --color-essence-ivory: #f7f4ef;
+  --color-essence-paper: #fffefa;
+  --color-essence-ink: #1f201d;
+  --color-essence-muted: #756f64;
+  --color-essence-line: #ded8cc;
+  --color-essence-gold: #846313;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -72,4 +78,14 @@ body {
 .reveal.active {
   opacity: 1;
   transform: translateY(0);
+}
+
+.font-essence-serif {
+  font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+.font-essence-label {
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }

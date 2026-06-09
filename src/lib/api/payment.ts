@@ -25,6 +25,16 @@ export type CreatePaymentResponse = {
   redirectUrl?: string;
 };
 
+type ApiEnvelope<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error?: string;
+    };
+
 export async function createPayment(
   request: CreatePaymentRequest
 ): Promise<CreatePaymentResponse> {
@@ -47,16 +57,22 @@ export type PaymentStatusResponse = {
   orderId: string;
   status: "pending" | "paid" | "failed" | "refunded";
   type: ReservationPaymentType;
-  amount?: number;
+  amount?: number | string;
 };
 
 export async function getPaymentStatus(orderId: string): Promise<PaymentStatusResponse> {
-  const response = await fetch(`/api/public/payments/${orderId}/status`);
+  const response = await fetch(
+    `/api/public/payments/${encodeURIComponent(orderId)}/status`
+  );
+  const data = (await response.json()) as ApiEnvelope<PaymentStatusResponse>;
+
+  if (!data.success) {
+    throw new Error(data.error ?? "Failed to fetch payment status");
+  }
 
   if (!response.ok) {
     throw new Error("Failed to fetch payment status");
   }
 
-  const data = await response.json();
   return data.data;
 }
