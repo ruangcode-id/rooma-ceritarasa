@@ -241,7 +241,7 @@ export default function AdminReservationsPage() {
                       <td className="px-4 py-4">{reservation.partySize}</td>
 
                       <td className="px-4 py-4">
-                        {reservation.tables.length > 0
+                        {reservation.tables && reservation.tables.length > 0
                           ? reservation.tables
                               .map(
                                 (table) =>
