@@ -154,6 +154,7 @@ export async function listPayments(query: PaymentListQuery) {
       status: mapDbStatusToFeature(payment.status),
       type: mapDbPaymentTypeToReservation(payment.type),
       amount: Number(payment.amount),
+      paymentMethod: payment.paymentMethod,
       paidAt: payment.paidAt,
       createdAt: payment.createdAt,
       reservation: {
@@ -172,6 +173,7 @@ export async function listPayments(query: PaymentListQuery) {
           name: payment.reservation.session.name,
           startTime: payment.reservation.session.startTime,
           endTime: payment.reservation.session.endTime,
+          maxCapacity: payment.reservation.session.maxCapacity,
         },
       },
     })),
@@ -232,7 +234,7 @@ export async function refundPayment(
 
   try {
     await core.transaction.refund(midtransOrderId, refundPayload);
-  } catch (error) {
+  } catch {
     throw new Error("Refund request rejected by Midtrans Sandbox");
   }
 

@@ -6,6 +6,7 @@ import {
   Bell,
   CheckCircle,
   Clock,
+  ChartLineUp,
   Layout,
   SlidersHorizontal,
   SquaresFour,
@@ -18,6 +19,7 @@ import {
   ControlsPanel,
   DataPanel,
   FormsPanel,
+  OwnerAnalyticsPanel,
   PlaygroundHeader,
   PublicPanel,
   type PlaygroundTab,
@@ -25,7 +27,7 @@ import {
 import { StatusBadge, type StatusBadgeOption } from "@/components/ui/StatusBadge";
 import type { DataTableColumn } from "@/components/tables";
 
-type TabId = "controls" | "forms" | "data" | "public";
+type TabId = "owner" | "controls" | "forms" | "data" | "public";
 type StatusId = "confirmed" | "pending" | "cancelled" | "checked_in";
 type ReservationRow = {
   id: string;
@@ -38,6 +40,7 @@ type ReservationRow = {
 };
 
 const tabs: Array<PlaygroundTab<TabId>> = [
+  { id: "owner", label: "Owner", Icon: ChartLineUp },
   { id: "controls", label: "Controls", Icon: SlidersHorizontal },
   { id: "forms", label: "Forms", Icon: Stack },
   { id: "data", label: "Data", Icon: SquaresFour },
@@ -244,7 +247,7 @@ const reservationColumns: Array<DataTableColumn<ReservationRow>> = [
 ];
 
 export default function ComponentPlayground() {
-  const [activeTab, setActiveTab] = useState<TabId>("controls");
+  const [activeTab, setActiveTab] = useState<TabId>("owner");
   const [activeStatus, setActiveStatus] = useState<StatusId>("confirmed");
   const [quantity, setQuantity] = useState(4);
   const [modalOpen, setModalOpen] = useState(false);
@@ -259,6 +262,7 @@ export default function ComponentPlayground() {
         />
 
         <div className="flex-1 py-8">
+          {activeTab === "owner" ? <OwnerAnalyticsPanel /> : null}
           {activeTab === "controls" ? (
             <ControlsPanel
               activeStatus={activeStatus}
