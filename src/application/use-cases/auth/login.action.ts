@@ -2,6 +2,7 @@
 
 import { signIn } from "@/auth";
 import { prisma } from "@/infrastructure/database/prisma";
+import { Prisma } from "@/generated/prisma/client";
 import { AuthError } from "next-auth";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -27,10 +28,26 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
 
   const { email, password } = parsed.data;
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { role: true, isActive: true },
-  });
+  let user: { role: "admin" | "owner"; isActive: boolean } | null;
+
+  try {
+    user = await prisma.user.findUnique({
+      where: { email },
+      select: { role: true, isActive: true },
+    });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "ECONNREFUSED"
+    ) {
+      return {
+        error:
+          "Database belum bisa diakses. Pastikan PostgreSQL/Docker sedang berjalan.",
+      };
+    }
+
+    throw error;
+  }
 
   if (!user?.isActive) {
     return { error: "Akun tidak aktif atau tidak ditemukan." };
