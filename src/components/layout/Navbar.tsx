@@ -1,38 +1,59 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { List, X } from "@phosphor-icons/react";
 
 export default function Navbar() {
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [scrollTimer, setScrollTimer] = useState<NodeJS.Timeout | null>(null);
+
+
+  // Pastikan navbar disembunyikan saat pertama kali masuk ke halaman Home
+  // Ini memperbaiki bug di mana isVisible "tersangkut" menjadi true dari halaman sebelumnya
+  useEffect(() => {
+    if (pathname === "/") {
+      setIsVisible(false);
+    }
+  }, [pathname]);
+
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    if (!isHome) return; // Only apply auto-hide logic on Home page
 
     const resetTimer = () => {
       setIsVisible(true);
-      if (timer) clearTimeout(timer);
+      if (timerRef.current) clearTimeout(timerRef.current);
       
-      timer = setTimeout(() => {
+      timerRef.current = setTimeout(() => {
         if (!isOpen) {
           setIsVisible(false);
         }
       }, 2500);
     };
 
-    // Navbar awalnya disembunyikan (isVisible false).
-    // Tidak usah panggil resetTimer() di sini agar tidak langsung muncul saat diload.
-
     window.addEventListener("scroll", resetTimer);
+
+    // Jika menu baru saja ditutup (isOpen == false), mulai timer
+    // supaya navbar otomatis bersembunyi.
+    if (!isOpen) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        setIsVisible(false);
+      }, 2500);
+    }
+
     return () => {
       window.removeEventListener("scroll", resetTimer);
-      if (timer) clearTimeout(timer);
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [isOpen]);
+  }, [isOpen, isHome]);
 
   // Efek untuk disable scroll di body HANYA untuk ukuran mobile saat menu fullscreen terbuka
   useEffect(() => {
@@ -55,54 +76,95 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className={`fixed left-0 top-0 z-50 w-full bg-white transition-transform duration-500 ease-in-out ${
-          isVisible ? "translate-y-0" : "-translate-y-full"
+        className={`fixed left-0 top-0 z-50 w-full bg-white transition-transform duration-500 ease-in-out border-b border-gray-100 ${
+          isHome
+            ? isVisible ? "translate-y-0" : "-translate-y-full" // Home behavior
+            : "translate-y-0" // Inner page behavior (always visible)
         }`}
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative">
           <div className="flex h-20 items-center justify-between">
-            {/* KIRI: Kosong sengaja (asimetris minimalis) */}
-            <div className="w-1/3"></div>
+            {isHome ? (
+              <>
+                {/* KIRI: Kosong sengaja (asimetris minimalis) */}
+                <div className="w-1/3 lg:w-1/4"></div>
 
-            {/* TENGAH: Logo */}
-            <div className="flex w-1/3 justify-center">
-              <Link href="/" className="flex items-center justify-center">
-                <Image 
-                  src="/assets/logo_no_background.png" 
-                  alt="Rooma Ceritarasa Logo" 
-                  width={140} 
-                  height={45} 
-                  className="object-contain"
-                  style={{ width: "auto", height: "auto" }}
-                  priority
-                />
-              </Link>
-            </div>
+                {/* TENGAH: Logo */}
+                <div className="flex w-1/3 lg:w-2/4 justify-center">
+                  <Link href="/" className="flex items-center justify-center">
+                    <Image 
+                      src="/assets/logo_no_background.png" 
+                      alt="Rooma Ceritarasa Logo" 
+                      width={140} 
+                      height={45} 
+                      className="object-contain"
+                      style={{ width: "auto", height: "auto" }}
+                      priority
+                    />
+                  </Link>
+                </div>
 
-            {/* KANAN: Hamburger Menu */}
-            <div className="flex w-1/3 justify-end">
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="text-slate-900 hover:text-primary transition-colors focus:outline-none"
-                aria-label="Toggle menu"
-              >
-                {isOpen ? (
-                  // Di desktop, tampilkan tombol List tetap ada saat dropdown terbuka, atau ganti X?
-                  // Kita ganti ke X agar konsisten sebagai tombol tutup. Tapi di mobile X ada di dalam overlay.
-                  // Lebih baik kita gunakan X khusus untuk desktop dropdown state di sini.
-                  <X size={28} weight="regular" className="hidden lg:block text-slate-900" />
-                ) : null}
-                <List size={28} weight="regular" className={isOpen ? "lg:hidden" : ""} />
-              </button>
-            </div>
+                {/* KANAN: Hamburger Menu */}
+                <div className="flex w-1/3 lg:w-1/4 justify-end">
+                  <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="text-slate-900 hover:text-primary transition-colors focus:outline-none"
+                    aria-label="Toggle menu"
+                  >
+                    {isOpen ? (
+                      <X size={28} weight="regular" className="hidden lg:block text-slate-900" />
+                    ) : null}
+                    <List size={28} weight="regular" className={isOpen ? "lg:hidden" : ""} />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* LOGO DI KIRI UNTUK INNER PAGE */}
+                <div className="flex items-center">
+                  <Link href="/" className="flex items-center">
+                    <Image 
+                      src="/assets/logo_no_background.png" 
+                      alt="Rooma Ceritarasa Logo" 
+                      width={120} 
+                      height={40} 
+                      className="object-contain"
+                      style={{ width: "auto", height: "auto" }}
+                      priority
+                    />
+                  </Link>
+                </div>
+
+                {/* NAVIGASI DI TENGAH/KANAN UNTUK DESKTOP */}
+                <div className="hidden lg:flex space-x-8 font-sans text-xs tracking-widest font-semibold uppercase text-slate-700">
+                  <Link href="/" className="hover:text-primary transition-colors py-2">Home</Link>
+                  <Link href="/reservasi" className="hover:text-primary transition-colors py-2">Reservation</Link>
+                  <Link href="/gallery" className="hover:text-primary transition-colors py-2">Gallery</Link>
+                  <Link href="/event" className="hover:text-primary transition-colors py-2">Events</Link>
+                  <Link href="/career" className="hover:text-primary transition-colors py-2">Careers</Link>
+                </div>
+
+                {/* HAMBURGER KHUSUS MOBILE */}
+                <div className="flex lg:hidden justify-end">
+                  <button
+                    onClick={() => setIsOpen(!isOpen)}
+                    className="text-slate-900 hover:text-primary transition-colors focus:outline-none"
+                    aria-label="Toggle menu"
+                  >
+                    <List size={28} weight="regular" />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* DROPDOWN MENU (HANYA MUNCUL DI DESKTOP >= lg) */}
-          <div
-            className={`absolute right-4 top-20 mt-2 w-56 rounded-2xl border border-slate-100 bg-white p-3 shadow-2xl transition-all duration-300 hidden lg:block ${
-              isOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-4 pointer-events-none"
-            }`}
-          >
+          {/* DROPDOWN MENU (HANYA MUNCUL DI DESKTOP >= lg, DAN HANYA UNTUK HOME PAGE) */}
+          {isHome && (
+            <div
+              className={`absolute right-4 top-20 mt-2 w-56 rounded-2xl border border-slate-100 bg-white p-3 shadow-2xl transition-all duration-300 hidden lg:block ${
+                isOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-4 pointer-events-none"
+              }`}
+            >
             <div className="flex flex-col space-y-1 font-sans text-sm tracking-widest font-semibold uppercase text-slate-700">
               <Link href="/" onClick={() => setIsOpen(false)} className="rounded-xl px-4 py-3 hover:bg-slate-50 hover:text-primary transition-colors">
                 Home
@@ -120,7 +182,8 @@ export default function Navbar() {
                 Careers
               </Link>
             </div>
-          </div>
+            </div>
+          )}
         </div>
       </nav>
 
