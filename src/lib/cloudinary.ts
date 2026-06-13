@@ -17,12 +17,16 @@ export type CloudinaryUploadResult = UploadApiResponse & {
   publicId: string;
 };
 
+function getEnvVar(key: string) {
+  return process.env[key] || process.env[`NEXT_PUBLIC_${key}`];
+}
+
 function assertCloudinaryConfig() {
   const missing = [
     "CLOUDINARY_CLOUD_NAME",
     "CLOUDINARY_API_KEY",
     "CLOUDINARY_API_SECRET",
-  ].filter((key) => !process.env[key]);
+  ].filter((key) => !getEnvVar(key));
 
   if (missing.length > 0) {
     throw new Error(`Missing Cloudinary env: ${missing.join(", ")}`);
@@ -32,9 +36,9 @@ function assertCloudinaryConfig() {
 function configureCloudinary() {
   assertCloudinaryConfig();
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: getEnvVar("CLOUDINARY_CLOUD_NAME"),
+    api_key: getEnvVar("CLOUDINARY_API_KEY"),
+    api_secret: getEnvVar("CLOUDINARY_API_SECRET"),
     secure: true,
   });
 }
