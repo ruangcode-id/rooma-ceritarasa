@@ -52,7 +52,7 @@ function SocialLink({ href, label, Icon }: { href: string; label: string; Icon: 
 
 export default function Footer() {
   return (
-    <footer className="bg-[#fcfbf9] bg-texture text-gray-800 pt-20 pb-10 px-6 flex flex-col overflow-hidden">
+    <footer className="relative z-10 bg-[#fcfbf9] bg-texture text-gray-800 pt-20 pb-10 px-6 flex flex-col overflow-hidden">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 w-full">
 
         {/* ── Brand ── */}
