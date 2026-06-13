@@ -358,7 +358,7 @@ export function GuestCrmClient() {
     <div className="space-y-8">
       <section>
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-          Dev B Guest CRM
+          Guest Management
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">
           Guest CRM
