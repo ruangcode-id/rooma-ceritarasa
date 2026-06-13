@@ -133,7 +133,7 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
         {/* User Profile & Sign Out Unified */}
         <div className="flex items-center justify-between rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
           <div className="flex items-center min-w-0">
-            <div className="h-9 w-9 flex-shrink-0 rounded-full bg-rose-800 flex items-center justify-center text-white font-medium text-sm">
+            <div className="h-9 w-9 shrink-0 rounded-full bg-rose-800 flex items-center justify-center text-white font-medium text-sm">
               SA
             </div>
             <div className="ml-3 min-w-0">
@@ -143,7 +143,7 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
           </div>
           <button 
             title="Sign Out"
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-rose-200/70 hover:bg-[#4a1019] hover:text-white transition-all duration-200"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-200/70 hover:bg-[#4a1019] hover:text-white transition-all duration-200"
           >
             <SignOut size={20} />
           </button>
