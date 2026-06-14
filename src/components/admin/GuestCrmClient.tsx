@@ -125,6 +125,22 @@ function formatDate(value: string) {
   return dateFormatter.format(new Date(value));
 }
 
+function getTagClass(tag: GuestTag) {
+  switch (tag) {
+    case "VIP":
+      return "bg-primary/10 text-primary";
+    case "ALLERGY":
+      return "bg-amber-100 text-amber-700";
+    case "BIRTHDAY":
+      return "bg-secondary/20 text-slate-700";
+    case "BLACKLIST":
+      return "bg-red-50 text-red-600";
+    case "REGULAR":
+    default:
+      return "bg-slate-100 text-slate-600";
+  }
+}
+
 async function readJson<T>(response: Response): Promise<T> {
   const payload = (await response.json()) as T;
   return payload;
@@ -408,10 +424,10 @@ export function GuestCrmClient() {
         </section>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                   Guests
@@ -420,13 +436,18 @@ export function GuestCrmClient() {
                   Guest List
                 </h2>
               </div>
-              <span className="grid size-10 place-items-center rounded-xl bg-slate-100 text-slate-700">
-                <UsersThree size={18} />
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                  {guests.length} shown
+                </span>
+                <span className="grid size-10 place-items-center rounded-xl bg-slate-100 text-slate-700">
+                  <UsersThree size={18} />
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="max-h-[680px] overflow-y-auto p-3">
+          <div className="max-h-[420px] overflow-y-auto p-2 sm:max-h-[520px] xl:max-h-[680px]">
             {loadingGuests ? (
               <p className="px-2 py-8 text-center text-sm text-slate-500">
                 Memuat data tamu...
@@ -451,31 +472,38 @@ export function GuestCrmClient() {
                     setSelectedGuestId(guest.id);
                     void loadGuestDetail(guest.id);
                   }}
-                  className={`mb-2 w-full rounded-xl border p-4 text-left transition ${
+                  className={`group mb-1 w-full rounded-xl border px-3 py-3 text-left transition-all duration-300 ${
                     selected
-                      ? "border-primary bg-primary/5"
-                      : "border-slate-100 bg-white hover:border-primary/30"
+                      ? "border-primary/40 bg-primary/5 shadow-sm"
+                      : "border-transparent bg-white hover:border-slate-200 hover:bg-slate-50"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="break-words font-semibold text-slate-950">
+                      <p className="break-words text-base font-semibold text-slate-950">
                         {guest.name}
                       </p>
                       <p className="mt-1 break-all text-sm text-slate-500">
                         {guest.phone}
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                      {guest.totalVisits} visits
-                    </span>
+                    <div className="shrink-0 text-right">
+                      <p className="text-lg font-semibold leading-none text-slate-950">
+                        {guest.totalVisits}
+                      </p>
+                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                        Visits
+                      </p>
+                    </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {guest.tags.length > 0 ? (
                       guest.tags.map((tag) => (
                         <span
                           key={tag}
-                          className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600"
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getTagClass(
+                            tag
+                          )}`}
                         >
                           {tag}
                         </span>
@@ -490,47 +518,69 @@ export function GuestCrmClient() {
           </div>
         </section>
 
-        <section className="space-y-6">
-          <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="min-w-0 space-y-6">
+          <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             {!selectedGuest ? (
-              <div className="py-16 text-center text-sm text-slate-500">
+              <div className="grid min-h-72 place-items-center text-center text-sm text-slate-500">
                 Pilih tamu untuk melihat detail CRM.
               </div>
             ) : (
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex min-w-0 items-start gap-4">
-                  <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-slate-100 text-slate-700">
-                    <UserCircle size={24} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                      Guest Profile
-                    </p>
-                    <h2 className="mt-2 break-words text-2xl font-semibold text-slate-950">
-                      {selectedGuest.name}
-                    </h2>
-                    <p className="mt-2 break-all text-sm text-slate-600">
-                      {selectedGuest.phone}
-                      {selectedGuest.email ? ` / ${selectedGuest.email}` : ""}
-                    </p>
+              <div className="space-y-6">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="flex min-w-0 items-start gap-4">
+                    <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-slate-100 text-slate-700">
+                      <UserCircle size={24} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                        Guest Profile
+                      </p>
+                      <h2 className="mt-2 break-words text-2xl font-semibold text-slate-950">
+                        {selectedGuest.name}
+                      </h2>
+                      <p className="mt-2 break-all text-sm leading-6 text-slate-600">
+                        {selectedGuest.phone}
+                        {selectedGuest.email ? ` / ${selectedGuest.email}` : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    {selectedGuest.tags.length > 0 ? (
+                      selectedGuest.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getTagClass(
+                            tag
+                          )}`}
+                        >
+                          {tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                        No labels
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                  <div className="rounded-xl bg-slate-50 p-3">
+
+                <div className="grid divide-y divide-slate-100 border-y border-slate-100 text-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                  <div className="py-4 sm:px-4 sm:first:pl-0">
                     <p className="text-slate-500">Visits</p>
-                    <p className="mt-1 font-semibold text-slate-950">
+                    <p className="mt-1 text-xl font-semibold text-slate-950">
                       {selectedGuest.totalVisits}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
+                  <div className="py-4 sm:px-4">
                     <p className="text-slate-500">VIP</p>
-                    <p className="mt-1 font-semibold text-slate-950">
+                    <p className="mt-1 text-xl font-semibold text-slate-950">
                       {selectedGuest.isVip ? "Yes" : "No"}
                     </p>
                   </div>
-                  <div className="rounded-xl bg-slate-50 p-3">
+                  <div className="py-4 sm:px-4 sm:last:pr-0">
                     <p className="text-slate-500">Since</p>
-                    <p className="mt-1 font-semibold text-slate-950">
+                    <p className="mt-1 text-xl font-semibold text-slate-950">
                       {formatDate(selectedGuest.createdAt)}
                     </p>
                   </div>
@@ -540,12 +590,17 @@ export function GuestCrmClient() {
           </article>
 
           {selectedGuest ? (
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Tag size={18} className="text-primary" weight="fill" />
-                <h2 className="text-xl font-semibold text-slate-950">
-                  Labels
-                </h2>
+            <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <Tag size={18} className="text-primary" weight="fill" />
+                  <h2 className="text-xl font-semibold text-slate-950">
+                    Labels
+                  </h2>
+                </div>
+                <p className="text-sm text-slate-500">
+                  {tagOptions.length} labels available
+                </p>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {tagOptions.map((tag) => {
@@ -571,12 +626,21 @@ export function GuestCrmClient() {
           ) : null}
 
           {selectedGuest ? (
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-2">
-                <NotePencil size={18} className="text-primary" weight="fill" />
-                <h2 className="text-xl font-semibold text-slate-950">
-                  Internal Notes
-                </h2>
+            <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <NotePencil
+                    size={18}
+                    className="text-primary"
+                    weight="fill"
+                  />
+                  <h2 className="text-xl font-semibold text-slate-950">
+                    Internal Notes
+                  </h2>
+                </div>
+                <p className="text-sm text-slate-500">
+                  {guestDetail?.guestNotes.length ?? 0} notes
+                </p>
               </div>
               <form onSubmit={handleAddNote} className="mt-4">
                 <label>
@@ -601,20 +665,19 @@ export function GuestCrmClient() {
                 </div>
               </form>
 
-              <div className="mt-5 space-y-3">
+              <div className="mt-5 divide-y divide-slate-100 border-t border-slate-100">
                 {loadingDetail ? (
-                  <p className="text-sm text-slate-500">Memuat detail...</p>
+                  <p className="py-4 text-sm text-slate-500">
+                    Memuat detail...
+                  </p>
                 ) : null}
                 {guestDetail?.guestNotes.length === 0 ? (
-                  <p className="text-sm text-slate-500">
+                  <p className="py-4 text-sm text-slate-500">
                     Belum ada internal notes.
                   </p>
                 ) : null}
                 {guestDetail?.guestNotes.map((note) => (
-                  <article
-                    key={note.id}
-                    className="rounded-xl border border-slate-100 bg-slate-50 p-4"
-                  >
+                  <article key={note.id} className="py-4">
                     <p className="text-sm leading-6 text-slate-700">
                       {note.content}
                     </p>
@@ -628,7 +691,7 @@ export function GuestCrmClient() {
           ) : null}
 
           {selectedGuest ? (
-            <article>
+            <article className="min-w-0">
               <div className="mb-5">
                 <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
                   Visit History
