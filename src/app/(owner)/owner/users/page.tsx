@@ -1,14 +1,11 @@
-export default function Page() {
-  return (
-    <div className="max-w-4xl mx-auto py-12 px-6">
-      <div className="mb-8">
-        <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded mb-4 inline-block">Dev A</span>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Owner: Manage Admins</h1>
-        <p className="text-slate-500">Owner exclusive features</p>
-      </div>
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 min-h-[300px] flex items-center justify-center">
-        <p className="text-slate-400">Placeholder UI Component</p>
-      </div>
-    </div>
-  );
+import { Metadata } from "next";
+import OwnerUsersClient from "@/components/owner/OwnerUsersClient";
+
+export const metadata: Metadata = {
+  title: "Manajemen Staf | Rooma Ceritarasa Owner",
+  description: "Manajemen akun staf dan admin",
+};
+
+export default function OwnerUsersPage() {
+  return <OwnerUsersClient />;
 }
