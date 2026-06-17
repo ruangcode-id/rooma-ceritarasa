@@ -10,24 +10,7 @@ import {
 
 const LOGO_H = 'h-24 md:h-28';
 
-const SESSIONS = [
-  { time: '15.00 - 17.00', label: 'Session one' },
-  { time: '17.30 - 19.30', label: 'Session two' },
-  { time: '20.00 - 22.00', label: 'Session three' },
-];
-
-const SOCIAL_LINKS = [
-  {
-    href: 'https://www.instagram.com/rooma.ceritarasa/',
-    label: 'Instagram',
-    Icon: InstagramLogo,
-  },
-  {
-    href: 'https://tr.ee/x_mE3wmVJZ',
-    label: 'WhatsApp',
-    Icon: WhatsappLogo,
-  },
-];
+// Removed hardcoded SESSIONS and SOCIAL_LINKS
 
 function SocialLink({ href, label, Icon }: { href: string; label: string; Icon: any }) {
   return (
@@ -50,7 +33,20 @@ function SocialLink({ href, label, Icon }: { href: string; label: string; Icon: 
   );
 }
 
-export default function Footer() {
+export default function Footer({ settings, sessions }: { settings?: any; sessions?: any[] }) {
+  // Construct dynamic social links based on settings
+  const dynamicSocialLinks = [];
+  if (settings?.socialLinks?.instagram) {
+    dynamicSocialLinks.push({ href: settings.socialLinks.instagram, label: 'Instagram', Icon: InstagramLogo });
+  }
+  if (settings?.whatsappNumber) {
+    // Generate a basic WA link if only number is provided, or use actual tree link if you prefer. 
+    // Here we'll just format it to standard wa.me link
+    const waLink = `https://wa.me/${settings.whatsappNumber.replace(/[^0-9]/g, '')}`;
+    dynamicSocialLinks.push({ href: waLink, label: 'WhatsApp', Icon: WhatsappLogo });
+  }
+
+  const tagline = settings?.tagline || "Refined Comfort Dish, Intimate Casual Dining";
   return (
     <footer className="relative z-10 bg-[#fcfbf9] bg-texture text-gray-800 pt-20 pb-10 px-6 flex flex-col overflow-hidden">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 w-full">
@@ -62,13 +58,12 @@ export default function Footer() {
             alt="Rooma Ceritarasa"
             className={`${LOGO_H} w-auto object-contain mb-4 drop-shadow-sm`}
           />
-          <p className="text-gray-600 font-light leading-relaxed space-y-1">
-            <span className="block">Refined Comfort Dish, Intimate Casual Dining</span>
-            <span className="block">3PM - 10 PM</span>
-            <span className="block">Closed On Mondays</span>
+          <p className="text-gray-600 font-light leading-relaxed space-y-1 whitespace-pre-line">
+            <span className="block">{tagline}</span>
+            <span className="block mt-2">Closed On Mondays</span>
           </p>
           <div className="flex space-x-4 mt-6">
-            {SOCIAL_LINKS.map((link) => (
+            {dynamicSocialLinks.map((link) => (
               <SocialLink key={link.label} {...link} />
             ))}
           </div>
@@ -86,10 +81,8 @@ export default function Footer() {
                 weight="fill"
                 className="text-primary mr-2 mt-0.5 shrink-0 transition-transform group-hover:scale-110"
               />
-              <span>
-                Jl. Lawu No.2, Kotabaru, Kec. Gondokusuman,
-                <br />
-                Kota Yogyakarta, DI Yogyakarta 55224
+              <span className="whitespace-pre-line">
+                {settings?.address || "Jl. Lawu No.2, Kotabaru, Kec. Gondokusuman,\nKota Yogyakarta, DI Yogyakarta 55224"}
               </span>
             </li>
             <li className="flex items-center group">
@@ -98,7 +91,7 @@ export default function Footer() {
                 weight="fill"
                 className="text-primary mr-2 shrink-0 transition-transform group-hover:scale-110"
               />
-              <span>+62 857 2553 9262</span>
+              <span>{settings?.phone || "+62 857 2553 9262"}</span>
             </li>
           </ul>
         </div>
@@ -109,19 +102,21 @@ export default function Footer() {
             <h3 className="text-lg font-semibold text-gray-900">Session Times</h3>
           </div>
           <ul className="space-y-3 text-gray-600 font-medium">
-            {SESSIONS.map(({ time, label }) => (
+            {sessions && sessions.length > 0 ? sessions.map((session) => (
               <li
-                key={time}
+                key={session.id || session.name}
                 className="
                   flex justify-between
                   border-b border-dashed border-gray-300 pb-2
                   transition-transform duration-300 hover:translate-x-2 cursor-default
                 "
               >
-                <span className="font-semibold text-gray-800">{time}</span>
-                <span className="w-28 text-right text-sm">{label}</span>
+                <span className="font-semibold text-gray-800">{session.startTime} - {session.endTime}</span>
+                <span className="w-28 text-right text-sm">{session.name}</span>
               </li>
-            ))}
+            )) : (
+              <li className="text-sm italic text-gray-400">Belum ada sesi operasional</li>
+            )}
           </ul>
         </div>
 
