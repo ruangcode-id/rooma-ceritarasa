@@ -1,8 +1,10 @@
 "use client";
 
 import type { ChartData, ChartOptions } from "chart.js";
+import { usePathname, useRouter } from "next/navigation";
 import {
   CalendarCheck,
+  ArrowClockwise,
   CheckCircle,
   Clock,
   ForkKnife,
@@ -132,6 +134,8 @@ export function AdminDashboardClient({
 }: {
   dashboard: AdminDashboardData;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const statusItems = dashboard.statusCounts.filter((item) => item.count > 0);
   const statusChartData: ChartData<"doughnut"> = {
     labels:
@@ -170,7 +174,7 @@ export function AdminDashboardClient({
         borderRadius: 8,
       },
       {
-        label: "Checked in",
+        label: "Checked-in guests",
         data: dashboard.sessions.map((session) => session.checkedIn),
         backgroundColor: chartPalette.darkSoft,
         borderColor: chartPalette.dark,
@@ -198,17 +202,48 @@ export function AdminDashboardClient({
 
   return (
     <div className="space-y-8">
-      <section>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-          Daily Operations
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">
-          Dashboard Operasional Harian
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Ringkasan operasional staf untuk {dashboard.dateLabel}, berdasarkan
-          data reservasi dan pembayaran hari ini.
-        </p>
+      <section className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+            Daily Operations
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-950">
+            Dashboard Operasional Harian
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            Ringkasan operasional staf untuk {dashboard.dateLabel}, berdasarkan
+            tanggal reservasi yang dipilih.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-sm font-semibold text-slate-700">
+            Tanggal reservasi
+            <input
+              type="date"
+              value={dashboard.date}
+              onChange={(event) => {
+                if (!event.target.value) {
+                  router.replace(pathname);
+                  return;
+                }
+
+                const params = new URLSearchParams();
+                params.set("date", event.target.value);
+                router.replace(`${pathname}?${params.toString()}`);
+              }}
+              className="mt-2 block rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => router.refresh()}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <ArrowClockwise size={17} />
+            Refresh
+          </button>
+        </div>
       </section>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -223,8 +258,8 @@ export function AdminDashboardClient({
           Icon={UsersThree}
         />
         <MetricCard
-          label="Checked In"
-          value={String(dashboard.metrics.checkedInGuests)}
+          label="Checked-in Reservations"
+          value={String(dashboard.metrics.checkedInReservations)}
           Icon={CheckCircle}
         />
         <MetricCard
@@ -238,18 +273,18 @@ export function AdminDashboardClient({
         <DashboardChart
           type="doughnut"
           title="Reservation Status"
-          description="Distribusi status reservasi untuk hari ini."
+          description="Distribusi status reservasi pada tanggal yang dipilih."
           data={statusChartData}
           height={300}
-          footer={`Paid revenue today: ${formatCurrency(
-            dashboard.metrics.paidRevenueToday
+          footer={`Paid revenue: ${formatCurrency(
+            dashboard.metrics.paidRevenue
           )}`}
         />
 
         <DashboardChart
           type="bar"
           title="Session Load"
-          description="Jumlah tamu per sesi dan tamu yang sudah check-in."
+          description="Jumlah expected guests dan tamu yang sudah check-in per sesi."
           data={sessionChartData}
           options={sessionOptions}
           height={300}
@@ -284,7 +319,7 @@ export function AdminDashboardClient({
                 </p>
               </div>
               <div>
-                <p className="text-slate-500">Guests</p>
+                <p className="text-slate-500">Expected Pax</p>
                 <p className="mt-1 font-semibold text-slate-950">
                   {session.guests}
                 </p>
@@ -311,7 +346,7 @@ export function AdminDashboardClient({
             </h2>
           </div>
           <p className="text-sm text-slate-500">
-            Revenue: {formatCompactCurrency(dashboard.metrics.paidRevenueToday)}
+            Revenue: {formatCompactCurrency(dashboard.metrics.paidRevenue)}
           </p>
         </div>
         <DataTable
@@ -321,7 +356,7 @@ export function AdminDashboardClient({
           rowKey="id"
           initialPageSize={8}
           pageSizeOptions={[8, 12, 20]}
-          emptyState="Belum ada reservasi untuk hari ini."
+          emptyState={`Belum ada reservasi pada ${dashboard.dateLabel}.`}
         />
       </section>
     </div>
