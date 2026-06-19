@@ -84,6 +84,7 @@ export type PaymentSummary = {
 export type BulkPaymentSyncResult = {
   total: number;
   synced: number;
+  notStarted: number;
   failed: number;
 };
 
