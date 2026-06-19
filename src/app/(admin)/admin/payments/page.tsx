@@ -14,6 +14,10 @@ import {
 import { useEffect, useState } from "react";
 import { MetricCard } from "@/components/cards/MetricCard";
 import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/tables/DataTable";
+import {
   FeedbackDialog,
   type FeedbackDialogVariant,
 } from "@/components/ui/FeedbackDialog";
@@ -356,7 +360,12 @@ export default function AdminPaymentsPage() {
       const payload = (await response.json()) as
         | {
             success: true;
-            data: { total: number; synced: number; failed: number };
+            data: {
+              total: number;
+              synced: number;
+              notStarted: number;
+              failed: number;
+            };
           }
         | ApiErrorResponse;
 
@@ -371,8 +380,11 @@ export default function AdminPaymentsPage() {
         message:
           payload.data.total === 0
             ? "Tidak ada transaksi pending atau failed yang perlu disinkronkan."
-            : `${payload.data.synced} dari ${payload.data.total} transaksi berhasil disinkronkan.${payload.data.failed > 0 ? ` ${payload.data.failed} transaksi gagal dan perlu dicoba kembali.` : ""}`,
-        variant: payload.data.failed > 0 ? "warning" : "success",
+            : `${payload.data.synced} dari ${payload.data.total} transaksi diperbarui dari Midtrans.${payload.data.notStarted > 0 ? ` ${payload.data.notStarted} pembayaran belum dimulai oleh pelanggan sehingga status lokalnya tidak diubah.` : ""}${payload.data.failed > 0 ? ` ${payload.data.failed} transaksi mengalami gangguan sinkronisasi dan perlu dicoba kembali.` : ""}`,
+        variant:
+          payload.data.notStarted > 0 || payload.data.failed > 0
+            ? "warning"
+            : "success",
       });
       await fetchPayments(meta.page);
     } catch (err) {
@@ -439,6 +451,119 @@ export default function AdminPaymentsPage() {
       setActionKey("");
     }
   }
+
+  const paymentColumns: Array<DataTableColumn<PaymentItem>> = [
+    {
+      id: "order",
+      header: "Order",
+      cell: (payment) => (
+        <>
+          <p className="break-all font-semibold text-slate-900">
+            {payment.orderId}
+          </p>
+          <p className="mt-1 text-xs capitalize text-slate-500">
+            {payment.type} payment
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "guest",
+      header: "Guest",
+      cell: (payment) => (
+        <>
+          <p className="font-semibold text-slate-900">
+            {payment.reservation.guest.name}
+          </p>
+          <p className="break-all text-xs text-slate-500">
+            {payment.reservation.guest.phone}
+          </p>
+          {payment.reservation.guest.email ? (
+            <p className="break-all text-xs text-slate-500">
+              {payment.reservation.guest.email}
+            </p>
+          ) : null}
+        </>
+      ),
+    },
+    {
+      id: "reservation",
+      header: "Reservasi",
+      cell: (payment) => (
+        <>
+          <p>{formatDate(payment.reservation.date)}</p>
+          <p className="text-xs text-slate-500">
+            {payment.reservation.session.name},{" "}
+            {formatTime(payment.reservation.session.startTime)} -{" "}
+            {formatTime(payment.reservation.session.endTime)}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            {payment.reservation.partySize} tamu
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "amount",
+      header: "Amount",
+      cell: (payment) => (
+        <>
+          <p className="font-semibold text-slate-900">
+            {formatRupiah(payment.amount)}
+          </p>
+          <p className="text-xs capitalize text-slate-500">
+            {getPaymentMethodLabel(payment.paymentMethod)}
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "status",
+      header: "Status",
+      cell: (payment) => (
+        <StatusBadge
+          status={payment.status}
+          statuses={paymentStatusBadges}
+        />
+      ),
+    },
+    {
+      id: "timeline",
+      header: "Timeline",
+      cell: (payment) => (
+        <>
+          <p className="text-xs text-slate-500">
+            Created: {formatDateTime(payment.createdAt)}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Paid: {formatDateTime(payment.paidAt)}
+          </p>
+        </>
+      ),
+    },
+    {
+      id: "refund",
+      header: "Refund",
+      headerClassName: "text-right",
+      className: "text-right",
+      cell: (payment) => {
+        const refundActionKey = `refund-${payment.id}`;
+
+        return (
+          <button
+            type="button"
+            onClick={() => setConfirmRefund(payment)}
+            disabled={
+              payment.status !== "paid" || actionKey === refundActionKey
+            }
+            className="rounded-xl bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition-all duration-300 hover:scale-105 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Refund
+          </button>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="space-y-8">
@@ -562,151 +687,25 @@ export default function AdminPaymentsPage() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-300 text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-[0.15em] text-slate-500">
-              <tr>
-                <th className="px-4 py-3">Order</th>
-                <th className="px-4 py-3">Guest</th>
-                <th className="px-4 py-3">Reservasi</th>
-                <th className="px-4 py-3">Amount</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Timeline</th>
-                <th className="px-4 py-3 text-right">Refund</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td className="px-4 py-6 text-slate-500" colSpan={7}>
-                    Memuat data pembayaran...
-                  </td>
-                </tr>
-              ) : payments.length === 0 ? (
-                <tr>
-                  <td
-                    className="px-4 py-10 text-center text-slate-500"
-                    colSpan={7}
-                  >
-                    Belum ada pembayaran yang sesuai filter.
-                  </td>
-                </tr>
-              ) : (
-                payments.map((payment) => {
-                  const refundActionKey = `refund-${payment.id}`;
-
-                  return (
-                    <tr
-                      key={payment.id}
-                      className="border-t border-slate-100 align-top transition-colors hover:bg-slate-50/70"
-                    >
-                      <td className="px-4 py-4">
-                        <p className="break-all font-semibold text-slate-900">
-                          {payment.orderId}
-                        </p>
-                        <p className="mt-1 text-xs capitalize text-slate-500">
-                          {payment.type} payment
-                        </p>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <p className="font-semibold text-slate-900">
-                          {payment.reservation.guest.name}
-                        </p>
-                        <p className="break-all text-xs text-slate-500">
-                          {payment.reservation.guest.phone}
-                        </p>
-                        {payment.reservation.guest.email && (
-                          <p className="break-all text-xs text-slate-500">
-                            {payment.reservation.guest.email}
-                          </p>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <p>{formatDate(payment.reservation.date)}</p>
-                        <p className="text-xs text-slate-500">
-                          {payment.reservation.session.name},{" "}
-                          {formatTime(payment.reservation.session.startTime)} -{" "}
-                          {formatTime(payment.reservation.session.endTime)}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {payment.reservation.partySize} tamu
-                        </p>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <p className="font-semibold text-slate-900">
-                          {formatRupiah(payment.amount)}
-                        </p>
-                        <p className="text-xs capitalize text-slate-500">
-                          {getPaymentMethodLabel(payment.paymentMethod)}
-                        </p>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <StatusBadge
-                          status={payment.status}
-                          statuses={paymentStatusBadges}
-                        />
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <p className="text-xs text-slate-500">
-                          Created: {formatDateTime(payment.createdAt)}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Paid: {formatDateTime(payment.paidAt)}
-                        </p>
-                      </td>
-
-                      <td className="px-4 py-4 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setConfirmRefund(payment)}
-                          disabled={
-                            payment.status !== "paid" ||
-                            actionKey === refundActionKey
-                          }
-                          className="rounded-xl bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition-all duration-300 hover:scale-105 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          Refund
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex flex-col gap-4 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-600">
-            Halaman {meta.page} dari {meta.totalPages}
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => void fetchPayments(meta.page - 1)}
-              disabled={!meta.hasPrev || isLoading}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Sebelumnya
-            </button>
-            <button
-              type="button"
-              onClick={() => void fetchPayments(meta.page + 1)}
-              disabled={!meta.hasNext || isLoading}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Berikutnya
-            </button>
-          </div>
-        </div>
-      </section>
+      <DataTable
+        columns={paymentColumns}
+        data={payments}
+        rowKey="id"
+        caption="Daftar transaksi pembayaran reservasi"
+        loading={isLoading}
+        loadingState="Memuat data pembayaran..."
+        emptyState="Belum ada pembayaran yang sesuai filter."
+        tableClassName="min-w-300"
+        pagination={{
+          page: meta.page,
+          pageSize: meta.limit,
+          total: meta.total,
+          totalPages: meta.totalPages,
+          hasNext: meta.hasNext,
+          hasPrev: meta.hasPrev,
+          onPageChange: (page) => void fetchPayments(page),
+        }}
+      />
 
       {confirmRefund && (
         <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 px-4 py-6">

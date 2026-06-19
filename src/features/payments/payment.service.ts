@@ -23,6 +23,31 @@ import {
   PaymentType as DbPaymentType,
 } from "@/generated/prisma/client";
 
+type MidtransApiError = {
+  httpStatusCode?: number | string;
+  ApiResponse?: {
+    status_code?: number | string;
+    status_message?: string;
+  };
+};
+
+class MidtransTransactionNotStartedError extends Error {
+  constructor(orderId: string) {
+    super(`Transaksi Midtrans ${orderId} belum dimulai oleh pelanggan.`);
+    this.name = "MidtransTransactionNotStartedError";
+  }
+}
+
+function isMidtransTransactionNotStarted(error: unknown) {
+  if (typeof error !== "object" || error === null) return false;
+
+  const midtransError = error as MidtransApiError;
+  const statusCode =
+    midtransError.ApiResponse?.status_code ?? midtransError.httpStatusCode;
+
+  return String(statusCode) === "404";
+}
+
 function mapDbStatusToFeature(status: DbPaymentStatus): PaymentStatus {
   return status as PaymentStatus;
 }
@@ -260,7 +285,28 @@ export async function syncPaymentStatus(
     midtransResponse = (await core.transaction.status(
       payment.midtransOrderId
     )) as Record<string, unknown>;
-  } catch {
+  } catch (error) {
+    if (isMidtransTransactionNotStarted(error)) {
+      throw new MidtransTransactionNotStartedError(payment.midtransOrderId);
+    }
+
+    const midtransError =
+      typeof error === "object" && error !== null
+        ? (error as MidtransApiError)
+        : null;
+
+    console.error("[payment-sync] Midtrans status request failed", {
+      paymentId: payment.id,
+      orderId: payment.midtransOrderId,
+      statusCode:
+        midtransError?.ApiResponse?.status_code ??
+        midtransError?.httpStatusCode ??
+        null,
+      message:
+        midtransError?.ApiResponse?.status_message ??
+        (error instanceof Error ? error.message : String(error)),
+    });
+
     throw new Error(
       "Status transaksi tidak dapat diambil dari Midtrans. Coba lagi beberapa saat."
     );
@@ -450,6 +496,7 @@ export async function syncMutablePaymentStatuses(): Promise<BulkPaymentSyncResul
   const concurrency = 3;
   let cursor = 0;
   let synced = 0;
+  let notStarted = 0;
   let failed = 0;
 
   async function worker() {
@@ -461,6 +508,14 @@ export async function syncMutablePaymentStatuses(): Promise<BulkPaymentSyncResul
         await syncPaymentStatus(payment.id);
         synced += 1;
       } catch (error) {
+        if (error instanceof MidtransTransactionNotStartedError) {
+          notStarted += 1;
+          console.info("[payment-sync] transaction not started", {
+            paymentId: payment.id,
+          });
+          continue;
+        }
+
         failed += 1;
         console.error("[payment-sync] failed", {
           paymentId: payment.id,
@@ -479,6 +534,7 @@ export async function syncMutablePaymentStatuses(): Promise<BulkPaymentSyncResul
   return {
     total: payments.length,
     synced,
+    notStarted,
     failed,
   };
 }
