@@ -38,6 +38,7 @@ export type DataTableProps<TData> = {
   caption?: string;
   className?: string;
   tableClassName?: string;
+  embedded?: boolean;
 };
 
 function getCellValue<TData>(
@@ -73,6 +74,7 @@ export function DataTable<TData>({
   caption,
   className = "",
   tableClassName = "min-w-[720px]",
+  embedded = false,
 }: DataTableProps<TData>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -110,7 +112,11 @@ export function DataTable<TData>({
 
   return (
     <section
-      className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}
+      className={`overflow-hidden ${
+        embedded
+          ? ""
+          : "rounded-2xl border border-slate-200 bg-white shadow-sm"
+      } ${className}`}
     >
       <div className="overflow-x-auto">
         <table className={`w-full text-left text-sm ${tableClassName}`}>
