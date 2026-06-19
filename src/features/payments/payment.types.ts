@@ -63,6 +63,30 @@ export type PaymentRecord = {
   raw?: Record<string, unknown>;
 };
 
+export type PaymentSyncResult = {
+  paymentId: string;
+  orderId: string;
+  previousStatus: PaymentStatus;
+  paymentStatus: PaymentStatus;
+  midtransStatus: string;
+  reservationId: string;
+  reservationStatus: string;
+  reservationStatusChanged: boolean;
+};
+
+export type PaymentSummary = {
+  paidRevenue: number;
+  paidCount: number;
+  pendingCount: number;
+  refundedCount: number;
+};
+
+export type BulkPaymentSyncResult = {
+  total: number;
+  synced: number;
+  failed: number;
+};
+
 export type MidtransWebhookPayload = {
   order_id: string;
   status_code: string;

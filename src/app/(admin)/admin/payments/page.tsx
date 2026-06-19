@@ -2,17 +2,29 @@
 
 import {
   ArrowClockwise,
+  CheckCircle,
+  Clock,
   CreditCard,
   CurrencyCircleDollar,
   MagnifyingGlass,
   Receipt,
   WarningCircle,
+  XCircle,
 } from "@phosphor-icons/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { MetricCard } from "@/components/cards/MetricCard";
+import {
+  FeedbackDialog,
+  type FeedbackDialogVariant,
+} from "@/components/ui/FeedbackDialog";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import {
+  StatusBadge,
+  type StatusBadgeOption,
+} from "@/components/ui/StatusBadge";
 
 type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
-type ManualPaymentStatus = Exclude<PaymentStatus, "refunded">;
 
 type PaymentItem = {
   id: string;
@@ -55,13 +67,29 @@ type PaymentMeta = {
 
 type ApiListResponse = {
   success: true;
-  data: PaymentItem[];
-  meta: PaymentMeta;
+  data: {
+    data: PaymentItem[];
+    summary: PaymentSummary;
+    meta: PaymentMeta;
+  };
 };
 
 type ApiErrorResponse = {
   success: false;
   error?: string;
+};
+
+type PaymentSummary = {
+  paidRevenue: number;
+  paidCount: number;
+  pendingCount: number;
+  refundedCount: number;
+};
+
+type FeedbackState = {
+  title: string;
+  message: string;
+  variant: FeedbackDialogVariant;
 };
 
 const paymentStatuses: Array<{ value: PaymentStatus; label: string }> = [
@@ -71,10 +99,31 @@ const paymentStatuses: Array<{ value: PaymentStatus; label: string }> = [
   { value: "refunded", label: "Refunded" },
 ];
 
-const manualStatuses: Array<{ value: ManualPaymentStatus; label: string }> = [
-  { value: "pending", label: "Pending" },
-  { value: "paid", label: "Paid" },
-  { value: "failed", label: "Failed" },
+const paymentStatusBadges: Array<StatusBadgeOption<PaymentStatus>> = [
+  {
+    id: "pending",
+    label: "Pending",
+    className: "bg-amber-100 text-amber-700",
+    Icon: Clock,
+  },
+  {
+    id: "paid",
+    label: "Paid",
+    className: "bg-green-100 text-green-700",
+    Icon: CheckCircle,
+  },
+  {
+    id: "failed",
+    label: "Failed",
+    className: "bg-red-100 text-red-700",
+    Icon: XCircle,
+  },
+  {
+    id: "refunded",
+    label: "Refunded",
+    className: "bg-blue-100 text-blue-700",
+    Icon: ArrowClockwise,
+  },
 ];
 
 function formatRupiah(amount: number) {
@@ -127,21 +176,6 @@ function formatTime(value: string) {
   }
 
   return value.slice(0, 5);
-}
-
-function getStatusClass(status: PaymentStatus) {
-  switch (status) {
-    case "paid":
-      return "bg-green-100 text-green-700";
-    case "pending":
-      return "bg-amber-100 text-amber-700";
-    case "failed":
-      return "bg-red-100 text-red-700";
-    case "refunded":
-      return "bg-blue-100 text-blue-700";
-    default:
-      return "bg-slate-100 text-slate-700";
-  }
 }
 
 function getPaymentMethodLabel(method: string | null) {
@@ -198,6 +232,12 @@ async function requestPayments({
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<PaymentItem[]>([]);
+  const [summary, setSummary] = useState<PaymentSummary>({
+    paidRevenue: 0,
+    paidCount: 0,
+    pendingCount: 0,
+    refundedCount: 0,
+  });
   const [meta, setMeta] = useState<PaymentMeta>({
     total: 0,
     page: 1,
@@ -210,14 +250,11 @@ export default function AdminPaymentsPage() {
   const [appliedOrderId, setAppliedOrderId] = useState("");
   const [status, setStatus] = useState("");
   const [appliedStatus, setAppliedStatus] = useState("");
-  const [manualStatusByOrder, setManualStatusByOrder] = useState<
-    Record<string, ManualPaymentStatus>
-  >({});
   const [confirmRefund, setConfirmRefund] = useState<PaymentItem | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [actionKey, setActionKey] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
 
   async function fetchPayments(
     nextPage = meta.page,
@@ -225,7 +262,6 @@ export default function AdminPaymentsPage() {
     nextStatus = appliedStatus
   ) {
     setIsLoading(true);
-    setError("");
 
     try {
       const payload = await requestPayments({
@@ -235,23 +271,18 @@ export default function AdminPaymentsPage() {
         status: nextStatus,
       });
 
-      setPayments(payload.data);
-      setMeta(payload.meta);
-      setManualStatusByOrder((current) => {
-        const next = { ...current };
-
-        for (const payment of payload.data) {
-          if (payment.status !== "refunded" && !next[payment.orderId]) {
-            next[payment.orderId] = payment.status;
-          }
-        }
-
-        return next;
-      });
+      setPayments(payload.data.data);
+      setSummary(payload.data.summary);
+      setMeta(payload.data.meta);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Gagal mengambil data pembayaran."
-      );
+      setFeedback({
+        title: "Data payments gagal dimuat",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Gagal mengambil data pembayaran.",
+        variant: "error",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -270,28 +301,20 @@ export default function AdminPaymentsPage() {
           signal: controller.signal,
         });
 
-        setPayments(payload.data);
-        setMeta(payload.meta);
-        setManualStatusByOrder(
-          payload.data.reduce<Record<string, ManualPaymentStatus>>(
-            (acc, payment) => {
-              if (payment.status !== "refunded") {
-                acc[payment.orderId] = payment.status;
-              }
-
-              return acc;
-            },
-            {}
-          )
-        );
+        setPayments(payload.data.data);
+        setSummary(payload.data.summary);
+        setMeta(payload.data.meta);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
 
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Gagal mengambil data pembayaran."
-        );
+        setFeedback({
+          title: "Data payments gagal dimuat",
+          message:
+            err instanceof Error
+              ? err.message
+              : "Gagal mengambil data pembayaran.",
+          variant: "error",
+        });
       } finally {
         setIsLoading(false);
       }
@@ -302,32 +325,9 @@ export default function AdminPaymentsPage() {
     return () => controller.abort();
   }, [meta.limit]);
 
-  const summary = useMemo(() => {
-    return payments.reduce(
-      (acc, payment) => {
-        if (payment.status === "paid") {
-          acc.paidCount += 1;
-          acc.paidAmount += payment.amount;
-        }
-
-        if (payment.status === "pending") acc.pendingCount += 1;
-        if (payment.status === "refunded") acc.refundedCount += 1;
-
-        return acc;
-      },
-      {
-        paidCount: 0,
-        paidAmount: 0,
-        pendingCount: 0,
-        refundedCount: 0,
-      }
-    );
-  }, [payments]);
-
   function applyFilters() {
     setAppliedOrderId(orderId);
     setAppliedStatus(status);
-    setNotice("");
     setMeta((current) => ({ ...current, page: 1 }));
     void fetchPayments(1, orderId, status);
   }
@@ -337,29 +337,16 @@ export default function AdminPaymentsPage() {
     setStatus("");
     setAppliedOrderId("");
     setAppliedStatus("");
-    setNotice("");
     setMeta((current) => ({ ...current, page: 1 }));
     void fetchPayments(1, "", "");
   }
 
-  async function updateManualStatus(payment: PaymentItem) {
-    const nextStatus = manualStatusByOrder[payment.orderId] ?? payment.status;
-    const key = `status-${payment.orderId}`;
-
-    setActionKey(key);
-    setError("");
-    setNotice("");
+  async function syncPayments() {
+    setIsSyncing(true);
 
     try {
-      const response = await fetch("/api/admin/payments", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          orderId: payment.orderId,
-          status: nextStatus,
-        }),
+      const response = await fetch("/api/admin/payments/sync", {
+        method: "POST",
       });
 
       if (!response.ok) {
@@ -367,21 +354,38 @@ export default function AdminPaymentsPage() {
       }
 
       const payload = (await response.json()) as
-        | { success: true; data: unknown }
+        | {
+            success: true;
+            data: { total: number; synced: number; failed: number };
+          }
         | ApiErrorResponse;
 
       if (!payload.success) {
-        throw new Error(payload.error ?? "Gagal mengubah status pembayaran.");
+        throw new Error(
+          payload.error ?? "Gagal menyinkronkan status pembayaran."
+        );
       }
 
-      setNotice(`Status ${payment.orderId} diubah menjadi ${nextStatus}.`);
+      setFeedback({
+        title: "Sinkronisasi Midtrans selesai",
+        message:
+          payload.data.total === 0
+            ? "Tidak ada transaksi pending atau failed yang perlu disinkronkan."
+            : `${payload.data.synced} dari ${payload.data.total} transaksi berhasil disinkronkan.${payload.data.failed > 0 ? ` ${payload.data.failed} transaksi gagal dan perlu dicoba kembali.` : ""}`,
+        variant: payload.data.failed > 0 ? "warning" : "success",
+      });
       await fetchPayments(meta.page);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Gagal mengubah status pembayaran."
-      );
+      setFeedback({
+        title: "Sinkronisasi Midtrans gagal",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Gagal menyinkronkan status pembayaran.",
+        variant: "error",
+      });
     } finally {
-      setActionKey("");
+      setIsSyncing(false);
     }
   }
 
@@ -390,8 +394,6 @@ export default function AdminPaymentsPage() {
 
     const key = `refund-${confirmRefund.id}`;
     setActionKey(key);
-    setError("");
-    setNotice("");
 
     try {
       const response = await fetch(
@@ -419,11 +421,20 @@ export default function AdminPaymentsPage() {
         throw new Error(payload.error ?? "Gagal memproses refund.");
       }
 
-      setNotice(`Refund untuk ${confirmRefund.orderId} berhasil dikirim.`);
+      setFeedback({
+        title: "Refund berhasil dikirim",
+        message: `Refund untuk ${confirmRefund.orderId} berhasil dikirim ke Midtrans.`,
+        variant: "success",
+      });
       setConfirmRefund(null);
       await fetchPayments(meta.page);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memproses refund.");
+      setFeedback({
+        title: "Refund gagal",
+        message:
+          err instanceof Error ? err.message : "Gagal memproses refund.",
+        variant: "error",
+      });
     } finally {
       setActionKey("");
     }
@@ -432,22 +443,18 @@ export default function AdminPaymentsPage() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-          Payment Operations
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">
-          Midtrans Payments & Refund
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Rekap transaksi reservasi, koreksi status pembayaran manual, dan
-          konfirmasi refund dana tamu.
-        </p>
+        <SectionTitle
+          eyebrow="Payment Operations"
+          title="Midtrans Payments & Refund"
+          level={1}
+          description="Rekap transaksi reservasi, sinkronisasi status langsung dari Midtrans, dan konfirmasi refund dana tamu."
+        />
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Paid Revenue"
-          value={formatCompactRupiah(summary.paidAmount)}
+          value={formatCompactRupiah(summary.paidRevenue)}
           Icon={CurrencyCircleDollar}
         />
         <MetricCard
@@ -468,18 +475,31 @@ export default function AdminPaymentsPage() {
       </div>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-              Filters
-            </p>
-            <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-              Payment Ledger
-            </h2>
-          </div>
-          <p className="text-sm text-slate-500">
-            {meta.total} transaksi ditemukan
-          </p>
+        <div className="mb-5">
+          <SectionTitle
+            eyebrow="Filters"
+            title="Payment Ledger"
+            actions={
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm text-slate-500">
+                  {meta.total} transaksi ditemukan
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void syncPayments()}
+                  disabled={isSyncing || isLoading}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-300 hover:border-primary/40 hover:text-primary disabled:cursor-wait disabled:opacity-50"
+                >
+                  {isSyncing ? (
+                    <LoadingSpinner className="size-4" />
+                  ) : (
+                    <ArrowClockwise size={17} weight="bold" />
+                  )}
+                  {isSyncing ? "Menyinkronkan..." : "Refresh Status Midtrans"}
+                </button>
+              </div>
+            }
+          />
         </div>
 
         <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_auto]">
@@ -496,7 +516,7 @@ export default function AdminPaymentsPage() {
                 onKeyDown={(event) => {
                   if (event.key === "Enter") void applyFilters();
                 }}
-                placeholder="Cari Midtrans order ID"
+                placeholder="Cari Order ID atau Reservation ID"
                 className="min-w-0 flex-1 rounded-xl px-1 py-2 pr-3 text-sm font-normal outline-none"
               />
             </div>
@@ -542,18 +562,6 @@ export default function AdminPaymentsPage() {
         </div>
       </section>
 
-      {notice && (
-        <div className="rounded-xl bg-green-50 p-4 text-sm text-green-700">
-          {notice}
-        </div>
-      )}
-
-      {error && (
-        <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600">
-          {error}
-        </div>
-      )}
-
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full min-w-300 text-left text-sm">
@@ -564,8 +572,7 @@ export default function AdminPaymentsPage() {
                 <th className="px-4 py-3">Reservasi</th>
                 <th className="px-4 py-3">Amount</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Midtrans</th>
-                <th className="px-4 py-3">Manual Status</th>
+                <th className="px-4 py-3">Timeline</th>
                 <th className="px-4 py-3 text-right">Refund</th>
               </tr>
             </thead>
@@ -573,7 +580,7 @@ export default function AdminPaymentsPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td className="px-4 py-6 text-slate-500" colSpan={8}>
+                  <td className="px-4 py-6 text-slate-500" colSpan={7}>
                     Memuat data pembayaran...
                   </td>
                 </tr>
@@ -581,17 +588,13 @@ export default function AdminPaymentsPage() {
                 <tr>
                   <td
                     className="px-4 py-10 text-center text-slate-500"
-                    colSpan={8}
+                    colSpan={7}
                   >
                     Belum ada pembayaran yang sesuai filter.
                   </td>
                 </tr>
               ) : (
                 payments.map((payment) => {
-                  const selectedStatus =
-                    manualStatusByOrder[payment.orderId] ??
-                    (payment.status === "refunded" ? "paid" : payment.status);
-                  const statusActionKey = `status-${payment.orderId}`;
                   const refundActionKey = `refund-${payment.id}`;
 
                   return (
@@ -644,13 +647,10 @@ export default function AdminPaymentsPage() {
                       </td>
 
                       <td className="px-4 py-4">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${getStatusClass(
-                            payment.status
-                          )}`}
-                        >
-                          {payment.status}
-                        </span>
+                        <StatusBadge
+                          status={payment.status}
+                          statuses={paymentStatusBadges}
+                        />
                       </td>
 
                       <td className="px-4 py-4">
@@ -660,47 +660,6 @@ export default function AdminPaymentsPage() {
                         <p className="mt-1 text-xs text-slate-500">
                           Paid: {formatDateTime(payment.paidAt)}
                         </p>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex min-w-56 items-center gap-2">
-                          <select
-                            value={selectedStatus}
-                            onChange={(event) =>
-                              setManualStatusByOrder((current) => ({
-                                ...current,
-                                [payment.orderId]: event.target
-                                  .value as ManualPaymentStatus,
-                              }))
-                            }
-                            disabled={
-                              payment.status === "refunded" ||
-                              actionKey === statusActionKey
-                            }
-                            className="h-10 min-w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
-                          >
-                            {manualStatuses.map((item) => (
-                              <option key={item.value} value={item.value}>
-                                {item.label}
-                              </option>
-                            ))}
-                          </select>
-
-                          <button
-                            type="button"
-                            onClick={() => void updateManualStatus(payment)}
-                            disabled={
-                              payment.status === "refunded" ||
-                              actionKey === statusActionKey ||
-                              selectedStatus === payment.status
-                            }
-                            className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {actionKey === statusActionKey
-                              ? "Menyimpan"
-                              : "Update"}
-                          </button>
-                        </div>
                       </td>
 
                       <td className="px-4 py-4 text-right">
@@ -806,6 +765,14 @@ export default function AdminPaymentsPage() {
           </section>
         </div>
       )}
+
+      <FeedbackDialog
+        open={feedback !== null}
+        title={feedback?.title ?? ""}
+        message={feedback?.message ?? ""}
+        variant={feedback?.variant}
+        onClose={() => setFeedback(null)}
+      />
     </div>
   );
 }

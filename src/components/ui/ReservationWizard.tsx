@@ -213,7 +213,7 @@ export default function ReservationWizard({
 
   const openSnapPayment = (token: string) => {
     try {
-      payWithSnap(token, {
+      const opened = payWithSnap(token, {
         onSuccess: () => {
           setPaymentState("paid");
           setPaymentError(null);
@@ -230,6 +230,10 @@ export default function ReservationWizard({
           setPaymentState("waiting_snap");
         },
       });
+
+      if (!opened) return;
+
+      setPaymentError(null);
     } catch (error) {
       setPaymentState("waiting_snap");
       setPaymentError(
