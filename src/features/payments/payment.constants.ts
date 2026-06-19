@@ -11,6 +11,7 @@ export const MIDTRANS_STATUS_MAP: Record<string, PaymentStatus> = {
   deny: PaymentStatus.Failed,
   cancel: PaymentStatus.Failed,
   expire: PaymentStatus.Failed,
+  failure: PaymentStatus.Failed,
   refund: PaymentStatus.Refunded,
   partial_refund: PaymentStatus.Refunded,
 };
