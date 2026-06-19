@@ -27,11 +27,11 @@ export type OwnerMonthlyMetric = {
   guests: number;
 };
 
-export type OwnerSessionOccupancy = {
+export type OwnerSessionPaidBookingLoad = {
   label: string;
   guests: number;
   capacity: number;
-  occupancyRate: number;
+  loadRate: number;
 };
 
 export type OwnerStatusSummary = {
@@ -50,9 +50,9 @@ export type OwnerPaymentAnalytics = {
   totalPaymentCount: number;
   reservationCount: number;
   guestCount: number;
-  averageOccupancyRate: number;
+  averagePaidBookingLoadRate: number;
   monthlyMetrics: OwnerMonthlyMetric[];
-  occupancyBySession: OwnerSessionOccupancy[];
+  paidBookingLoadBySession: OwnerSessionPaidBookingLoad[];
   statusSummary: OwnerStatusSummary[];
   paymentRows: OwnerPaymentRow[];
 };
@@ -112,9 +112,15 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
   const monthlyBuckets = getLastMonthBuckets(6, now);
   const monthlyBucketMap = new Map(monthlyBuckets.map((bucket) => [bucket.key, bucket]));
   const reservationMap = new Map<string, PaymentListItem["reservation"]>();
+  const paidReservationMap = new Map<string, PaymentListItem["reservation"]>();
   const sessionMap = new Map<
     string,
-    { guests: number; capacity: number; reservationIds: Set<string> }
+    {
+      guests: number;
+      capacity: number;
+      reservationIds: Set<string>;
+      sessionDateKeys: Set<string>;
+    }
   >();
 
   const statusSummary = new Map<OwnerPaymentStatus, OwnerStatusSummary>(
@@ -144,6 +150,10 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
     }
 
     if (status === "paid") {
+      if (!paidReservationMap.has(payment.reservation.id)) {
+        paidReservationMap.set(payment.reservation.id, payment.reservation);
+      }
+
       const date = getPaymentDate(payment);
       const monthKey = getMonthKey(date);
       const bucket = monthlyBucketMap.get(monthKey);
@@ -176,35 +186,48 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
     }
   }
 
-  for (const reservation of reservationMap.values()) {
+  for (const reservation of paidReservationMap.values()) {
     const sessionName = reservation.session.name;
     const current = sessionMap.get(sessionName) ?? {
       guests: 0,
       capacity: 0,
       reservationIds: new Set<string>(),
+      sessionDateKeys: new Set<string>(),
     };
 
     if (!current.reservationIds.has(reservation.id)) {
       current.reservationIds.add(reservation.id);
       current.guests += reservation.partySize;
+    }
+
+    const sessionDateKey = `${reservation.session.id}:${reservation.date
+      .toISOString()
+      .slice(0, 10)}`;
+
+    if (!current.sessionDateKeys.has(sessionDateKey)) {
+      current.sessionDateKeys.add(sessionDateKey);
       current.capacity += reservation.session.maxCapacity;
     }
 
     sessionMap.set(sessionName, current);
   }
 
-  const occupancyBySession = Array.from(sessionMap.entries()).map(
+  const paidBookingLoadBySession = Array.from(sessionMap.entries()).map(
     ([label, value]) => ({
       label,
       guests: value.guests,
       capacity: value.capacity,
-      occupancyRate:
+      loadRate:
         value.capacity > 0 ? Math.round((value.guests / value.capacity) * 100) : 0,
     })
   );
 
-  const totalCapacity = occupancyBySession.reduce(
+  const totalPaidBookingCapacity = paidBookingLoadBySession.reduce(
     (sum, session) => sum + session.capacity,
+    0
+  );
+  const paidBookingGuestCount = Array.from(paidReservationMap.values()).reduce(
+    (sum, reservation) => sum + reservation.partySize,
     0
   );
   const guestCount = Array.from(reservationMap.values()).reduce(
@@ -222,8 +245,10 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
     totalPaymentCount: payments.length,
     reservationCount: reservationMap.size,
     guestCount,
-    averageOccupancyRate:
-      totalCapacity > 0 ? Math.round((guestCount / totalCapacity) * 100) : 0,
+    averagePaidBookingLoadRate:
+      totalPaidBookingCapacity > 0
+        ? Math.round((paidBookingGuestCount / totalPaidBookingCapacity) * 100)
+        : 0,
     monthlyMetrics: monthlyBuckets.map((bucket) => ({
       label: bucket.label,
       revenue: bucket.revenue,
@@ -235,7 +260,7 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
         0
       ),
     })),
-    occupancyBySession,
+    paidBookingLoadBySession,
     statusSummary: Array.from(statusSummary.values()),
     paymentRows: payments.map(toPaymentRow),
   };

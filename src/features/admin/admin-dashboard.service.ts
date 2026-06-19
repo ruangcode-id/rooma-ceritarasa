@@ -9,10 +9,9 @@ export type AdminDashboardStatus = `${ReservationStatus}`;
 export type AdminDashboardMetric = {
   totalReservations: number;
   expectedGuests: number;
-  checkedInGuests: number;
-  pendingReservations: number;
-  paidRevenueToday: number;
-  occupancyRate: number;
+  checkedInReservations: number;
+  awaitingCheckInReservations: number;
+  paidRevenue: number;
 };
 
 export type AdminDashboardSessionRow = {
@@ -23,7 +22,6 @@ export type AdminDashboardSessionRow = {
   guests: number;
   checkedIn: number;
   capacity: number;
-  occupancyRate: number;
 };
 
 export type AdminDashboardReservationRow = {
@@ -40,6 +38,7 @@ export type AdminDashboardReservationRow = {
 
 export type AdminDashboardData = {
   generatedAt: string;
+  date: string;
   dateLabel: string;
   metrics: AdminDashboardMetric;
   statusCounts: Array<{ status: AdminDashboardStatus; count: number }>;
@@ -58,16 +57,35 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("id-ID", {
   day: "2-digit",
   month: "long",
   year: "numeric",
+  timeZone: "Asia/Jakarta",
 });
 
-function getTodayRange(now = new Date()) {
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
+const JAKARTA_DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Asia/Jakarta",
+});
 
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+function getJakartaDateString(now = new Date()) {
+  return JAKARTA_DATE_FORMATTER.format(now);
+}
 
-  return { start, end };
+function parseDateOnlyUTC(date: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error("Invalid dashboard date. Use YYYY-MM-DD.");
+  }
+
+  const parsedDate = new Date(`${date}T00:00:00.000Z`);
+
+  if (
+    Number.isNaN(parsedDate.getTime()) ||
+    parsedDate.toISOString().slice(0, 10) !== date
+  ) {
+    throw new Error("Invalid dashboard date. Use YYYY-MM-DD.");
+  }
+
+  return parsedDate;
 }
 
 function formatSessionTime(startTime: Date, endTime: Date) {
@@ -76,18 +94,17 @@ function formatSessionTime(startTime: Date, endTime: Date) {
     .slice(11, 16)}`;
 }
 
-export async function getAdminOperationalDashboard(): Promise<AdminDashboardData> {
+export async function getAdminOperationalDashboard(
+  selectedDate = getJakartaDateString()
+): Promise<AdminDashboardData> {
   const now = new Date();
-  const { start, end } = getTodayRange(now);
-  const dayOfWeek = now.getDay();
+  const dashboardDate = parseDateOnlyUTC(selectedDate);
+  const dayOfWeek = dashboardDate.getUTCDay();
 
   const [reservations, activeSessions, paidRevenue] = await Promise.all([
     prisma.reservation.findMany({
       where: {
-        date: {
-          gte: start,
-          lt: end,
-        },
+        date: dashboardDate,
       },
       orderBy: [{ date: "asc" }, { createdAt: "asc" }],
       include: {
@@ -147,9 +164,11 @@ export async function getAdminOperationalDashboard(): Promise<AdminDashboardData
     prisma.payment.aggregate({
       where: {
         status: PaymentStatus.paid,
+        reservation: {
+          date: dashboardDate,
+        },
         paidAt: {
-          gte: start,
-          lt: end,
+          not: null,
         },
       },
       _sum: {
@@ -165,14 +184,9 @@ export async function getAdminOperationalDashboard(): Promise<AdminDashboardData
     (sum, reservation) => sum + reservation.partySize,
     0
   );
-  const checkedInGuests = reservations
-    .filter((reservation) => reservation.status === ReservationStatus.checked_in)
-    .reduce((sum, reservation) => sum + reservation.partySize, 0);
-  const totalCapacity = activeSessions.reduce(
-    (sum, session) => sum + session.maxCapacity,
-    0
-  );
-
+  const checkedInReservations = reservations.filter(
+    (reservation) => reservation.status === ReservationStatus.checked_in
+  ).length;
   const statusCounts = Object.values(ReservationStatus).map((status) => ({
     status,
     count: reservations.filter((reservation) => reservation.status === status)
@@ -218,29 +232,22 @@ export async function getAdminOperationalDashboard(): Promise<AdminDashboardData
     sessionMap.set(row.id, row);
   }
 
-  const sessions = Array.from(sessionMap.values()).map((session) => ({
-    ...session,
-    occupancyRate:
-      session.capacity > 0
-        ? Math.round((session.guests / session.capacity) * 100)
-        : 0,
-  }));
+  const sessions = Array.from(sessionMap.values());
 
   return {
     generatedAt: now.toISOString(),
-    dateLabel: DATE_FORMATTER.format(now),
+    date: selectedDate,
+    dateLabel: DATE_FORMATTER.format(dashboardDate),
     metrics: {
       totalReservations: reservations.length,
       expectedGuests,
-      checkedInGuests,
-      pendingReservations: reservations.filter(
-        (reservation) => reservation.status === ReservationStatus.pending
+      checkedInReservations,
+      awaitingCheckInReservations: reservations.filter((reservation) =>
+        [ReservationStatus.pending, ReservationStatus.confirmed].includes(
+          reservation.status
+        )
       ).length,
-      paidRevenueToday: Number(paidRevenue._sum.amount ?? 0),
-      occupancyRate:
-        totalCapacity > 0
-          ? Math.round((expectedGuests / totalCapacity) * 100)
-          : 0,
+      paidRevenue: Number(paidRevenue._sum.amount ?? 0),
     },
     statusCounts,
     sessions,
