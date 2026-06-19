@@ -336,13 +336,11 @@ export default function AdminPaymentsPage() {
     void fetchPayments(1, orderId, status);
   }
 
-  function resetFilters() {
-    setOrderId("");
-    setStatus("");
-    setAppliedOrderId("");
-    setAppliedStatus("");
+  function applyStatusFilter(nextStatus: string) {
+    setStatus(nextStatus);
+    setAppliedStatus(nextStatus);
     setMeta((current) => ({ ...current, page: 1 }));
-    void fetchPayments(1, "", "");
+    void fetchPayments(1, appliedOrderId, nextStatus);
   }
 
   async function syncPayments() {
@@ -599,113 +597,82 @@ export default function AdminPaymentsPage() {
         />
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-5">
-          <SectionTitle
-            eyebrow="Filters"
-            title="Payment Ledger"
-            actions={
-              <div className="flex flex-wrap items-center gap-3">
-                <p className="text-sm text-slate-500">
-                  {meta.total} transaksi ditemukan
-                </p>
-                <button
-                  type="button"
-                  onClick={() => void syncPayments()}
-                  disabled={isSyncing || isLoading}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-300 hover:border-primary/40 hover:text-primary disabled:cursor-wait disabled:opacity-50"
-                >
-                  {isSyncing ? (
-                    <LoadingSpinner className="size-4" />
-                  ) : (
-                    <ArrowClockwise size={17} weight="bold" />
-                  )}
-                  {isSyncing ? "Menyinkronkan..." : "Refresh Status Midtrans"}
-                </button>
-              </div>
-            }
-          />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_auto_auto]">
-          <label className="text-sm font-semibold text-slate-700">
-            Order ID
-            <div className="mt-2 flex rounded-xl border border-slate-200 bg-white focus-within:ring-2 focus-within:ring-primary/30">
-              <span className="grid size-10 place-items-center text-slate-400">
-                <MagnifyingGlass size={16} weight="bold" />
-              </span>
-              <input
-                type="search"
-                value={orderId}
-                onChange={(event) => setOrderId(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") void applyFilters();
-                }}
-                placeholder="Cari Order ID atau Reservation ID"
-                className="min-w-0 flex-1 rounded-xl px-1 py-2 pr-3 text-sm font-normal outline-none"
-              />
-            </div>
-          </label>
-
-          <label className="text-sm font-semibold text-slate-700">
-            Status
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
             <select
+              aria-label="Filter status pembayaran"
               value={status}
-              onChange={(event) => setStatus(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-normal outline-none transition focus:ring-2 focus:ring-primary/30"
+              onChange={(event) => applyStatusFilter(event.target.value)}
+              className="h-10 min-w-44 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
             >
-              <option value="">Semua status</option>
+              <option value="">Semua Status</option>
               {paymentStatuses.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
                 </option>
               ))}
             </select>
-          </label>
-
-          <div className="flex items-end">
-            <button
-              type="button"
-              onClick={() => void applyFilters()}
-              className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isLoading}
-            >
-              Filter
-            </button>
           </div>
 
-          <div className="flex items-end">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <p className="text-sm text-slate-500">
+              {meta.total} transaksi ditemukan
+            </p>
+            <div className="flex min-w-0 flex-1 rounded-lg border border-slate-300 bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary sm:w-72">
+              <span className="grid size-10 shrink-0 place-items-center text-slate-400">
+                <MagnifyingGlass size={16} weight="bold" />
+              </span>
+              <input
+                type="search"
+                aria-label="Cari transaksi pembayaran"
+                value={orderId}
+                onChange={(event) => setOrderId(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void applyFilters();
+                }}
+                placeholder="Cari Order ID atau Reservation ID..."
+                className="min-w-0 flex-1 rounded-lg bg-transparent py-2 pr-3 text-sm outline-none"
+              />
+            </div>
             <button
               type="button"
-              onClick={() => void resetFilters()}
-              className="w-full rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-all duration-300 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isLoading}
+              onClick={() => void syncPayments()}
+              disabled={isSyncing || isLoading}
+              aria-label="Refresh status pembayaran dari Midtrans"
+              title="Refresh status pembayaran"
+              className="grid size-10 shrink-0 place-items-center text-slate-600 transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-wait disabled:opacity-50"
             >
-              Reset
+              {isSyncing ? (
+                <LoadingSpinner className="size-4" />
+              ) : (
+                <ArrowClockwise size={20} weight="bold" />
+              )}
             </button>
           </div>
         </div>
-      </section>
 
-      <DataTable
-        columns={paymentColumns}
-        data={payments}
-        rowKey="id"
-        caption="Daftar transaksi pembayaran reservasi"
-        loading={isLoading}
-        loadingState="Memuat data pembayaran..."
-        emptyState="Belum ada pembayaran yang sesuai filter."
-        tableClassName="min-w-300"
-        pagination={{
-          page: meta.page,
-          pageSize: meta.limit,
-          total: meta.total,
-          totalPages: meta.totalPages,
-          hasNext: meta.hasNext,
-          hasPrev: meta.hasPrev,
-          onPageChange: (page) => void fetchPayments(page),
-        }}
-      />
+        <DataTable
+          columns={paymentColumns}
+          data={payments}
+          rowKey="id"
+          caption="Daftar transaksi pembayaran reservasi"
+          loading={isLoading}
+          loadingState="Memuat data pembayaran..."
+          emptyState="Belum ada pembayaran yang sesuai filter."
+          tableClassName="min-w-300"
+          embedded
+          pagination={{
+            page: meta.page,
+            pageSize: meta.limit,
+            total: meta.total,
+            totalPages: meta.totalPages,
+            hasNext: meta.hasNext,
+            hasPrev: meta.hasPrev,
+            onPageChange: (page) => void fetchPayments(page),
+          }}
+        />
+      </section>
 
       {confirmRefund && (
         <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 px-4 py-6">
