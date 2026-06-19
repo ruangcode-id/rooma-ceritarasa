@@ -85,8 +85,12 @@ const recentPaymentColumns: Array<DataTableColumn<OwnerPaymentRow>> = [
     header: "Order",
     cell: (payment) => (
       <div>
-        <p className="font-semibold text-slate-900">{payment.orderId}</p>
-        <p className="mt-1 text-slate-500">{payment.guestName}</p>
+        <p className="break-all font-semibold text-slate-900">
+          {payment.orderId}
+        </p>
+        <p className="mt-1 wrap-break-word text-slate-500">
+          {payment.guestName}
+        </p>
       </div>
     ),
   },
@@ -228,7 +232,7 @@ export function OwnerDashboardClient({
     <div className="space-y-8">
       <section>
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-          Dev B Owner Analytics
+          Owner Analytics
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">
           Executive Dashboard
@@ -262,7 +266,7 @@ export function OwnerDashboardClient({
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[1.35fr_0.85fr]">
         <DashboardChart
           type="line"
           title="Monthly Revenue"
@@ -282,6 +286,55 @@ export function OwnerDashboardClient({
           footer={`${analytics.reservationCount} reservasi terhitung dalam sampel pembayaran.`}
         />
       </div>
+
+      <section className="grid min-w-0 gap-4 md:grid-cols-3">
+        {analytics.occupancyBySession.length > 0 ? (
+          analytics.occupancyBySession.map((session) => (
+            <article
+              key={session.label}
+              className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                    Session
+                  </p>
+                  <h2 className="mt-2 wrap-break-word text-xl font-semibold text-slate-950">
+                    {session.label}
+                  </h2>
+                </div>
+                <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  {session.occupancyRate}%
+                </span>
+              </div>
+              <div className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                <div>
+                  <p className="text-slate-500">Guests</p>
+                  <p className="mt-1 font-semibold text-slate-950">
+                    {session.guests}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Capacity</p>
+                  <p className="mt-1 font-semibold text-slate-950">
+                    {session.capacity}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-slate-500">Open</p>
+                  <p className="mt-1 font-semibold text-slate-950">
+                    {Math.max(session.capacity - session.guests, 0)}
+                  </p>
+                </div>
+              </div>
+            </article>
+          ))
+        ) : (
+          <article className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm md:col-span-3">
+            Belum ada data okupansi sesi dari pembayaran.
+          </article>
+        )}
+      </section>
 
       <DashboardChart
         type="bar"

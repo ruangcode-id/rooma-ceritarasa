@@ -150,6 +150,7 @@ export async function listPayments(query: PaymentListQuery) {
 
   return {
     data: rows.map((payment) => ({
+      id: payment.id,
       orderId: payment.midtransOrderId ?? payment.id,
       status: mapDbStatusToFeature(payment.status),
       type: mapDbPaymentTypeToReservation(payment.type),

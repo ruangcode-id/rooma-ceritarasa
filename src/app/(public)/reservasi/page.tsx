@@ -1,13 +1,19 @@
-export default function Page() {
+import ReservationWizard from "@/components/ui/ReservationWizard";
+
+export default function ReservationPage() {
+  const snapClientKey = process.env.MIDTRANS_CLIENT_KEY ?? "";
+  const snapScriptUrl =
+    process.env.MIDTRANS_IS_PRODUCTION === "true"
+      ? "https://app.midtrans.com/snap/snap.js"
+      : "https://app.sandbox.midtrans.com/snap/snap.js";
+
   return (
-    <div className="max-w-4xl mx-auto py-12 px-6">
-      <div className="mb-8">
-        <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded mb-4 inline-block">Dev A</span>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Reservation Wizard</h1>
-        <p className="text-slate-500">Flow reservasi</p>
-      </div>
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 min-h-[300px] flex items-center justify-center">
-        <p className="text-slate-400">Placeholder UI Component</p>
+    <div className="min-h-screen w-full bg-white text-slate-900 pb-20">
+      <div className="w-full max-w-4xl mx-auto pt-8 px-4">
+        <ReservationWizard
+          snapClientKey={snapClientKey}
+          snapScriptUrl={snapScriptUrl}
+        />
       </div>
     </div>
   );
