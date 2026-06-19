@@ -10,9 +10,8 @@ export type AdminDashboardMetric = {
   totalReservations: number;
   expectedGuests: number;
   checkedInReservations: number;
-  pendingReservations: number;
+  awaitingCheckInReservations: number;
   paidRevenue: number;
-  occupancyRate: number;
 };
 
 export type AdminDashboardSessionRow = {
@@ -23,7 +22,6 @@ export type AdminDashboardSessionRow = {
   guests: number;
   checkedIn: number;
   capacity: number;
-  occupancyRate: number;
 };
 
 export type AdminDashboardReservationRow = {
@@ -189,11 +187,6 @@ export async function getAdminOperationalDashboard(
   const checkedInReservations = reservations.filter(
     (reservation) => reservation.status === ReservationStatus.checked_in
   ).length;
-  const totalCapacity = activeSessions.reduce(
-    (sum, session) => sum + session.maxCapacity,
-    0
-  );
-
   const statusCounts = Object.values(ReservationStatus).map((status) => ({
     status,
     count: reservations.filter((reservation) => reservation.status === status)
@@ -239,13 +232,7 @@ export async function getAdminOperationalDashboard(
     sessionMap.set(row.id, row);
   }
 
-  const sessions = Array.from(sessionMap.values()).map((session) => ({
-    ...session,
-    occupancyRate:
-      session.capacity > 0
-        ? Math.round((session.guests / session.capacity) * 100)
-        : 0,
-  }));
+  const sessions = Array.from(sessionMap.values());
 
   return {
     generatedAt: now.toISOString(),
@@ -255,14 +242,12 @@ export async function getAdminOperationalDashboard(
       totalReservations: reservations.length,
       expectedGuests,
       checkedInReservations,
-      pendingReservations: reservations.filter(
-        (reservation) => reservation.status === ReservationStatus.pending
+      awaitingCheckInReservations: reservations.filter((reservation) =>
+        [ReservationStatus.pending, ReservationStatus.confirmed].includes(
+          reservation.status
+        )
       ).length,
       paidRevenue: Number(paidRevenue._sum.amount ?? 0),
-      occupancyRate:
-        totalCapacity > 0
-          ? Math.round((expectedGuests / totalCapacity) * 100)
-          : 0,
     },
     statusCounts,
     sessions,

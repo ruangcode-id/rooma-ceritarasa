@@ -5,7 +5,6 @@ import {
   CalendarCheck,
   ChartLineUp,
   CreditCard,
-  ForkKnife,
   UsersThree,
 } from "@phosphor-icons/react";
 import { MetricCard } from "@/components/cards/MetricCard";
@@ -171,17 +170,17 @@ export function OwnerDashboardClient({
     ],
   };
 
-  const occupancyItems =
-    analytics.occupancyBySession.length > 0
-      ? analytics.occupancyBySession
-      : [{ label: "No data", occupancyRate: 0, guests: 0, capacity: 0 }];
+  const paidBookingLoadItems =
+    analytics.paidBookingLoadBySession.length > 0
+      ? analytics.paidBookingLoadBySession
+      : [{ label: "No data", loadRate: 0, guests: 0, capacity: 0 }];
 
-  const occupancyChartData: ChartData<"doughnut"> = {
-    labels: occupancyItems.map((item) => item.label),
+  const paidBookingLoadChartData: ChartData<"doughnut"> = {
+    labels: paidBookingLoadItems.map((item) => item.label),
     datasets: [
       {
-        label: "Occupancy",
-        data: occupancyItems.map((item) => Math.max(item.occupancyRate, 1)),
+        label: "Paid booking load",
+        data: paidBookingLoadItems.map((item) => Math.max(item.loadRate, 1)),
         backgroundColor: [
           chartPalette.primary,
           chartPalette.dark,
@@ -238,8 +237,8 @@ export function OwnerDashboardClient({
           Executive Dashboard
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Ringkasan pendapatan, tren reservasi, dan okupansi berdasarkan data
-          pembayaran reservasi.
+          Ringkasan pendapatan, tren reservasi, dan beban booking berdasarkan
+          data pembayaran reservasi.
         </p>
       </section>
 
@@ -260,9 +259,9 @@ export function OwnerDashboardClient({
           Icon={UsersThree}
         />
         <MetricCard
-          label="Avg Occupancy"
-          value={`${analytics.averageOccupancyRate}%`}
-          Icon={ForkKnife}
+          label="Paid Booking Load"
+          value={`${analytics.averagePaidBookingLoadRate}%`}
+          Icon={CalendarCheck}
         />
       </div>
 
@@ -279,17 +278,17 @@ export function OwnerDashboardClient({
 
         <DashboardChart
           type="doughnut"
-          title="Occupancy by Session"
-          description="Rasio party size terhadap kapasitas sesi pada reservasi yang memiliki payment."
-          data={occupancyChartData}
+          title="Paid Booking Load by Session"
+          description="Rasio tamu dari reservasi berstatus paid terhadap kapasitas unik setiap kombinasi tanggal dan sesi."
+          data={paidBookingLoadChartData}
           height={320}
-          footer={`${analytics.reservationCount} reservasi terhitung dalam sampel pembayaran.`}
+          footer="Kapasitas sesi hanya dihitung sekali untuk setiap tanggal."
         />
       </div>
 
       <section className="grid min-w-0 gap-4 md:grid-cols-3">
-        {analytics.occupancyBySession.length > 0 ? (
-          analytics.occupancyBySession.map((session) => (
+        {analytics.paidBookingLoadBySession.length > 0 ? (
+          analytics.paidBookingLoadBySession.map((session) => (
             <article
               key={session.label}
               className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
@@ -304,7 +303,7 @@ export function OwnerDashboardClient({
                   </h2>
                 </div>
                 <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                  {session.occupancyRate}%
+                  {session.loadRate}%
                 </span>
               </div>
               <div className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
@@ -331,7 +330,7 @@ export function OwnerDashboardClient({
           ))
         ) : (
           <article className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-500 shadow-sm md:col-span-3">
-            Belum ada data okupansi sesi dari pembayaran.
+            Belum ada data beban booking dari pembayaran berstatus paid.
           </article>
         )}
       </section>
