@@ -1,9 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EnvelopeOpen, CalendarCheck, UsersThree, CheckCircle } from "@phosphor-icons/react";
+import {
+  CalendarCheck,
+  CheckCircle,
+  EnvelopeOpen,
+  UsersThree,
+  X,
+  XCircle,
+} from "@phosphor-icons/react";
 import { MetricCard } from "@/components/cards/MetricCard";
 import EventOfferForm from "@/components/admin/EventOfferForm";
+import {
+  DataTable,
+  type DataTableColumn,
+} from "@/components/tables/DataTable";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import {
+  StatusBadge,
+  type StatusBadgeOption,
+} from "@/components/ui/StatusBadge";
+
+type EventRequestStatus =
+  | "pending"
+  | "offered"
+  | "accepted"
+  | "rejected"
+  | "cancelled";
 
 type EventRequestRow = {
   id: string;
@@ -12,10 +36,50 @@ type EventRequestRow = {
   eventDate: string;
   partySize: number;
   description: string | null;
-  status: string;
+  status: EventRequestStatus;
   latestOffer: { id: string; price: number; documentUrl: string; status: string; createdAt: string } | null;
   createdAt: string;
 };
+
+const eventRequestStatuses: Array<
+  StatusBadgeOption<EventRequestStatus>
+> = [
+  {
+    id: "pending",
+    label: "Pending",
+    className: "bg-amber-100 text-amber-700",
+    Icon: CalendarCheck,
+  },
+  {
+    id: "offered",
+    label: "Offered",
+    className: "bg-blue-100 text-blue-700",
+    Icon: EnvelopeOpen,
+  },
+  {
+    id: "accepted",
+    label: "Accepted",
+    className: "bg-green-100 text-green-700",
+    Icon: CheckCircle,
+  },
+  {
+    id: "rejected",
+    label: "Rejected",
+    className: "bg-red-100 text-red-700",
+    Icon: XCircle,
+  },
+  {
+    id: "cancelled",
+    label: "Cancelled",
+    className: "bg-slate-100 text-slate-600",
+    Icon: XCircle,
+  },
+];
+
+const currencyFormatter = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+});
 
 async function requestEventRequests(signal?: AbortSignal) {
   const res = await fetch(`/api/admin/event-requests`, { cache: "no-store", signal });
@@ -32,7 +96,7 @@ export default function AdminEventRequestsPage() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<EventRequestRow | null>(null);
 
-  async function load(initial = false) {
+  async function load() {
     setIsLoading(true);
     setError("");
 
@@ -47,7 +111,23 @@ export default function AdminEventRequestsPage() {
   }
 
   useEffect(() => {
-    void load();
+    const controller = new AbortController();
+
+    requestEventRequests(controller.signal)
+      .then((data) => {
+        setRows(data);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : String(err));
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   const totalRequests = rows.length;
@@ -55,13 +135,119 @@ export default function AdminEventRequestsPage() {
   const offeredRequests = rows.filter((r) => r.status === "offered").length;
   const acceptedRequests = rows.filter((r) => r.status === "accepted").length;
 
+  const eventRequestColumns: Array<DataTableColumn<EventRequestRow>> = [
+    {
+      id: "guest",
+      header: "Guest",
+      headerClassName: "w-[21%] text-left",
+      className: "w-[21%] align-middle text-left",
+      cell: (request) => (
+        <div className="min-w-0">
+          <p className="break-words font-semibold text-slate-900">
+            {request.guest.name}
+          </p>
+          <p className="break-all text-xs text-slate-500">
+            {request.guest.phone}
+          </p>
+          {request.guest.email ? (
+            <p className="break-all text-xs text-slate-500">
+              {request.guest.email}
+            </p>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      id: "event",
+      header: "Event",
+      headerClassName: "w-[27%] text-left",
+      className: "w-[27%] align-middle text-left",
+      cell: (request) => (
+        <div className="min-w-0">
+          <p className="break-words font-semibold text-slate-900">
+            {request.eventType}
+          </p>
+          <p className="text-xs text-slate-500">
+            {new Date(request.eventDate).toLocaleDateString("id-ID")}
+          </p>
+          {request.description ? (
+            <p className="mt-2 break-words text-xs text-slate-500">
+              {request.description}
+            </p>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      id: "partySize",
+      header: "Pax",
+      accessor: "partySize",
+      headerClassName: "w-[8%] text-center",
+      className: "w-[8%] align-middle text-center",
+    },
+    {
+      id: "status",
+      header: "Status",
+      headerClassName: "w-[14%] text-center",
+      className: "w-[14%] align-middle text-center",
+      cell: (request) => (
+        <StatusBadge
+          status={request.status}
+          statuses={eventRequestStatuses}
+        />
+      ),
+    },
+    {
+      id: "latestOffer",
+      header: "Latest Offer",
+      headerClassName: "w-[15%] text-center",
+      className: "w-[15%] align-middle text-center",
+      cell: (request) =>
+        request.latestOffer ? (
+          <div className="min-w-0 text-center">
+            <p className="break-words font-semibold text-slate-900">
+              {currencyFormatter.format(request.latestOffer.price)}
+            </p>
+            <a
+              className="text-xs text-primary hover:underline"
+              href={request.latestOffer.documentUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Lihat dokumen
+            </a>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-500">Belum ada</p>
+        ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      headerClassName: "w-[15%] text-center",
+      className: "w-[15%] align-middle text-center",
+      cell: (request) => (
+        <button
+          type="button"
+          onClick={() => setSelected(request)}
+          className="w-32 rounded-xl bg-primary/10 px-3 py-2 text-xs font-semibold text-primary transition-all duration-300 hover:scale-105 hover:bg-primary/20"
+        >
+          Kirim Penawaran
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-8">
-      <section>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Event Requests</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Event Requests</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Tinjau pengajuan acara dari publik dan kirim penawaran.</p>
-      </section>
+      <header>
+        <SectionTitle
+          eyebrow="Event Requests"
+          title="Event Requests"
+          level={1}
+          description="Tinjau pengajuan acara dari publik dan kirim penawaran."
+        />
+      </header>
 
       {error && <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</div>}
 
@@ -72,127 +258,107 @@ export default function AdminEventRequestsPage() {
         <MetricCard label="Accepted" value={String(acceptedRequests)} Icon={CheckCircle} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-220 text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-[0.15em] text-slate-500">
-                <tr>
-                  <th className="px-4 py-3">Guest</th>
-                  <th className="px-4 py-3">Event</th>
-                  <th className="px-4 py-3">Pax</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Latest Offer</th>
-                  <th className="px-4 py-3">Actions</th>
-                </tr>
-              </thead>
+      <DataTable
+        columns={eventRequestColumns}
+        data={rows}
+        rowKey="id"
+        caption="Daftar pengajuan acara"
+        initialPageSize={10}
+        loading={isLoading}
+        loadingState={
+          <span className="inline-flex items-center gap-2">
+            <LoadingSpinner className="size-4" />
+            Memuat data...
+          </span>
+        }
+        emptyState="Tidak ada pengajuan event."
+        tableClassName="min-w-[1100px] table-fixed"
+      />
 
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td className="px-4 py-6 text-slate-500" colSpan={6}>
-                      Memuat data...
-                    </td>
-                  </tr>
-                ) : rows.length === 0 ? (
-                  <tr>
-                    <td className="px-4 py-6 text-slate-500" colSpan={6}>
-                      Tidak ada pengajuan event.
-                    </td>
-                  </tr>
-                ) : (
-                  rows.map((r) => (
-                    <tr key={r.id} className="border-t border-slate-100 align-top">
-                      <td className="px-4 py-4 w-55">
-                        <p className="font-semibold wrap-break-word">{r.guest.name}</p>
-                        <p className="text-xs text-slate-500 break-all">{r.guest.phone}</p>
-                        {r.guest.email && <p className="text-xs text-slate-500 break-all">{r.guest.email}</p>}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <p className="font-semibold">{r.eventType}</p>
-                        <p className="text-xs text-slate-500">{new Date(r.eventDate).toLocaleDateString("id-ID")}</p>
-                        {r.description && <p className="mt-2 text-xs text-slate-500 max-w-xl wrap-break-word">{r.description}</p>}
-                      </td>
-
-                      <td className="px-4 py-4">{r.partySize}</td>
-
-                      <td className="px-4 py-4">
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold capitalize text-slate-700">{r.status}</span>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        {r.latestOffer ? (
-                          <div>
-                            <p className="text-sm font-semibold">{new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR" }).format(r.latestOffer.price)}</p>
-                            <a className="text-xs text-primary" href={r.latestOffer.documentUrl} target="_blank" rel="noreferrer">Lihat dokumen</a>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-slate-500">Belum ada</p>
-                        )}
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setSelected(r)}
-                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white"
-                          >
-                            <EnvelopeOpen size={16} />
-                            Kirim Penawaran
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <aside className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          {selected ? (
-            <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Detail Request</p>
-              <h2 className="mt-2 text-xl font-semibold text-slate-950">{selected.guest.name}</h2>
-              <p className="mt-1 text-sm text-slate-600">{selected.eventType} — {new Date(selected.eventDate).toLocaleDateString("id-ID")}</p>
-
-              <div className="mt-4 space-y-2 text-sm text-slate-700">
-                <div>
-                  <p className="text-xs text-slate-500">Phone</p>
-                  <p className="font-semibold">{selected.guest.phone}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Pax</p>
-                  <p className="font-semibold">{selected.partySize}</p>
-                </div>
-                {selected.description && (
-                  <div>
-                    <p className="text-xs text-slate-500">Deskripsi</p>
-                    <p className="text-sm text-slate-700">{selected.description}</p>
-                  </div>
-                )}
+      {selected && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="event-offer-dialog-title"
+        >
+          <section className="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <EnvelopeOpen size={22} weight="fill" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                  Event Offer
+                </p>
+                <h2
+                  id="event-offer-dialog-title"
+                  className="mt-2 text-2xl font-semibold text-slate-950"
+                >
+                  Kirim penawaran acara
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Lengkapi harga dan dokumen penawaran untuk request{" "}
+                  <span className="font-semibold text-slate-900">
+                    {selected.guest.name}
+                  </span>
+                  .
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                aria-label="Tutup form penawaran"
+                className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-              <div className="mt-6">
-                <EventOfferForm
-                  eventRequestId={selected.id}
-                  onClose={() => setSelected(null)}
-                  onSuccess={() => {
-                    void load();
-                  }}
-                />
+            <div className="mt-6 grid gap-3 rounded-xl bg-slate-50 p-4 text-sm text-slate-600 sm:grid-cols-2">
+              <div>
+                <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
+                  Event
+                </p>
+                <p className="mt-1 font-semibold text-slate-900">
+                  {selected.eventType}
+                </p>
+                <p>
+                  {new Date(selected.eventDate).toLocaleDateString("id-ID")}
+                </p>
               </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
+                  Tamu
+                </p>
+                <p className="mt-1 font-semibold text-slate-900">
+                  {selected.partySize} orang
+                </p>
+                <p>{selected.guest.phone}</p>
+              </div>
+              {selected.description ? (
+                <div className="sm:col-span-2">
+                  <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
+                    Deskripsi
+                  </p>
+                  <p className="mt-1 text-slate-700">{selected.description}</p>
+                </div>
+              ) : null}
             </div>
-          ) : (
-            <div className="mt-5 rounded-2xl border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
-              Pilih salah satu event request untuk melihat detail dan mengirim penawaran.
+
+            <div className="mt-6">
+              <EventOfferForm
+                eventRequestId={selected.id}
+                onClose={() => setSelected(null)}
+                onSuccess={() => {
+                  setSelected(null);
+                  void load();
+                }}
+              />
             </div>
-          )}
-        </aside>
-      </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
