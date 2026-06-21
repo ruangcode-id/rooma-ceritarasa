@@ -133,8 +133,9 @@ export default function ReservationWizard({
         
         if (data.success) {
           const blocked = new Set<string>();
-          data.data.forEach((b: BlockedDate) => {
-            blocked.add(b.date.split("T")[0]);
+          data.data.forEach((b: any) => {
+            const dateStr = typeof b === "string" ? b : b.date;
+            blocked.add(dateStr.split("T")[0]);
           });
           setBlockedDates(blocked);
         }
