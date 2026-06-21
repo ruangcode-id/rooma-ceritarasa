@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Script from "next/script";
 import {
+  ArrowLeft,
   CalendarCheck,
   CheckCircle,
   CircleNotch,
@@ -10,6 +11,7 @@ import {
   FileText,
   WarningCircle,
 } from "@phosphor-icons/react";
+import Link from "next/link";
 import { payWithSnap } from "@/lib/midtrans-snap-client";
 
 type EventRequestPaymentStatus = "idle" | "creating" | "ready" | "pending" | "paid" | "failed";
@@ -93,6 +95,8 @@ export function EventRequestPaymentClient({
 
   const isAlreadyPaid = detail.payment?.status === "paid";
   const canStartPayment = detail.canPay && !isAlreadyPaid && Boolean(snapClientKey);
+  const hasOffer = detail.offer !== null;
+  const isWaitingForOffer = detail.status === "pending" && !hasOffer;
 
   function openSnap(token: string) {
     try {
@@ -165,7 +169,7 @@ export function EventRequestPaymentClient({
   }
 
   return (
-    <main className="min-h-screen bg-[#fcfbf9] px-4 py-12 text-slate-900 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-[#fcfbf9] px-4 pb-12 pt-32 text-slate-900 sm:px-6 lg:px-8">
       {snapClientKey ? (
         <Script
           src={snapScriptUrl}
@@ -182,14 +186,17 @@ export function EventRequestPaymentClient({
       <div className="mx-auto max-w-5xl space-y-8">
         <header>
           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-            Event Payment
+            {isWaitingForOffer ? "Event Request" : "Event Payment"}
           </p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-950">
-            Konfirmasi Penawaran Event
+            {isWaitingForOffer
+              ? "Pengajuan Event Diterima"
+              : "Konfirmasi Penawaran Event"}
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Tinjau ringkasan acara dan selesaikan pembayaran DP untuk mengunci
-            jadwal event Anda di Rooma Ceritarasa.
+            {isWaitingForOffer
+              ? "Tim Rooma Ceritarasa akan meninjau kebutuhan acara Anda dan menyiapkan penawaran. Simpan halaman ini untuk memeriksa pembaruan."
+              : "Tinjau ringkasan acara dan selesaikan pembayaran DP untuk mengunci jadwal event Anda di Rooma Ceritarasa."}
           </p>
         </header>
 
@@ -255,32 +262,46 @@ export function EventRequestPaymentClient({
               </span>
               <div>
                 <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Offer Summary
+                  {hasOffer ? "Offer Summary" : "Request Progress"}
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">
                   {detail.offer?.price
                     ? formatRupiah(detail.offer.price)
-                    : "Belum ada harga"}
+                    : "Menunggu penawaran"}
                 </h2>
               </div>
             </div>
 
             <div className="mt-6 space-y-4 border-y border-slate-100 py-5 text-sm">
+              {hasOffer ? (
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-500">DP 30%</span>
+                  <span className="font-semibold text-slate-950">
+                    {depositEstimate ? formatRupiah(depositEstimate) : "-"}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">DP 30%</span>
-                <span className="font-semibold text-slate-950">
-                  {depositEstimate ? formatRupiah(depositEstimate) : "-"}
+                <span className="text-slate-500">
+                  {hasOffer ? "Payment" : "Status"}
                 </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">Payment</span>
                 <span className="font-semibold capitalize text-slate-950">
-                  {paymentStatus === "paid"
-                    ? "paid"
-                    : detail.payment?.status ?? paymentStatus}
+                  {hasOffer
+                    ? paymentStatus === "paid"
+                      ? "paid"
+                      : detail.payment?.status ?? paymentStatus
+                    : detail.status}
                 </span>
               </div>
             </div>
+
+            {isWaitingForOffer ? (
+              <div className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-700">
+                Pengajuan sedang ditinjau. Setelah penawaran dikirim oleh admin,
+                harga, dokumen, dan tombol pembayaran DP akan tampil di halaman
+                ini.
+              </div>
+            ) : null}
 
             {detail.offer?.description ? (
               <p className="mt-5 text-sm leading-6 text-slate-600">
@@ -316,7 +337,7 @@ export function EventRequestPaymentClient({
               <div className="mt-6 rounded-xl bg-green-50 p-4 text-sm font-semibold text-green-700">
                 DP event sudah terbayar.
               </div>
-            ) : (
+            ) : isWaitingForOffer ? null : (
               <button
                 type="button"
                 onClick={() => void handlePayDeposit()}
@@ -336,17 +357,27 @@ export function EventRequestPaymentClient({
               </button>
             )}
 
-            {!snapClientKey ? (
+            {!snapClientKey && !isWaitingForOffer ? (
               <p className="mt-4 text-sm text-red-600">
                 Konfigurasi Midtrans belum tersedia.
               </p>
-            ) : !canStartPayment && !isAlreadyPaid ? (
+            ) : !canStartPayment && !isAlreadyPaid && !isWaitingForOffer ? (
               <p className="mt-4 text-sm text-slate-500">
                 Pembayaran belum tersedia untuk status pengajuan saat ini.
               </p>
-            ) : null}
+            ) : (
+              null
+            )}
           </aside>
         </section>
+
+        <Link
+          href="/event"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition-colors hover:text-primary"
+        >
+          <ArrowLeft size={16} weight="bold" />
+          Kembali ke Events
+        </Link>
       </div>
     </main>
   );
