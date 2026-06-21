@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 403 });
     }
     if (error.name === "ZodError") {
-      return NextResponse.json({ success: false, error: "Validation Error", details: error.issues }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.issues[0]?.message || "Validation Error", details: error.issues }, { status: 400 });
     }
     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
