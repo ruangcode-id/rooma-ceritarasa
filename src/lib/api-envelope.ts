@@ -36,7 +36,7 @@ export function jsonValidationError(zodError: ZodError) {
   return NextResponse.json(
     {
       success: false as const,
-      error: "Validation Error",
+      error: zodError.issues[0]?.message || "Validation Error",
       details: zodError.issues,
     },
     { status: 400 },
