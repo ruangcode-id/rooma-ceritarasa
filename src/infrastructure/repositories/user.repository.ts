@@ -10,6 +10,7 @@ export const UserRepository = {
       prisma.user.findMany({
         skip,
         take,
+        where: { isActive: true },
         orderBy: { createdAt: "desc" },
         select: {
           id: true,
@@ -20,7 +21,7 @@ export const UserRepository = {
           createdAt: true,
         },
       }),
-      prisma.user.count(),
+      prisma.user.count({ where: { isActive: true } }),
     ]);
 
     return { users, total };

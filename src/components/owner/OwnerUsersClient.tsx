@@ -113,7 +113,7 @@ export default function OwnerUsersClient() {
       let res;
       if (editingUser) {
         res = await fetch(`/api/owner/users/${editingUser.id}`, {
-          method: "PUT",
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
@@ -291,12 +291,12 @@ export default function OwnerUsersClient() {
               
               <div className="space-y-2 text-sm text-slate-600 mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="w-16 font-medium text-xs uppercase tracking-wider text-slate-400">Email</span>
+                  <span className="w-24 shrink-0 font-medium text-xs uppercase tracking-wider text-slate-400">Email</span>
                   <span className="truncate text-slate-900 font-medium">{user.email}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-16 font-medium text-xs uppercase tracking-wider text-slate-400">Bergabung</span>
-                  <span>{format(parseISO(user.createdAt), "dd MMM yyyy", { locale: id })}</span>
+                  <span className="w-24 shrink-0 font-medium text-xs uppercase tracking-wider text-slate-400">Bergabung</span>
+                  <span className="truncate text-slate-900 font-medium">{format(parseISO(user.createdAt), "dd MMM yyyy", { locale: id })}</span>
                 </div>
               </div>
             </div>
