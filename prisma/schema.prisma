@@ -355,17 +355,21 @@ model Payment {
 // -----------------------------------------------
 
 model EventRequest {
-  id          String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  guestId     String             @map("guest_id") @db.Uuid
-  sessionId   String?            @map("session_id") @db.Uuid
-  eventType   String?            @map("event_type") @db.VarChar(100)
-  eventDate   DateTime           @map("event_date") @db.Date
-  partySize   Int?               @map("party_size")
-  description String?            @db.Text
-  status      EventRequestStatus
-  reminderSentAt DateTime?       @map("reminder_sent_at")
-  createdAt   DateTime           @default(now()) @map("created_at")
-  updatedAt   DateTime           @updatedAt @map("updated_at")
+  id             String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  guestId        String             @map("guest_id") @db.Uuid
+  contactName    String             @map("contact_name") @db.VarChar(100)
+  contactPhone   String             @map("contact_phone") @db.VarChar(20)
+  contactEmail   String?            @map("contact_email") @db.VarChar(150)
+  accessToken    String             @unique @map("access_token") @db.VarChar(100)
+  sessionId      String?            @map("session_id") @db.Uuid
+  eventType      String?            @map("event_type") @db.VarChar(100)
+  eventDate      DateTime           @map("event_date") @db.Date
+  partySize      Int?               @map("party_size")
+  description    String?            @db.Text
+  status         EventRequestStatus
+  reminderSentAt DateTime?          @map("reminder_sent_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
   // Relations
   guest         Guest              @relation(fields: [guestId], references: [id])

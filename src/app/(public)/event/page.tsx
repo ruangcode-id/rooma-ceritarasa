@@ -1,14 +1,35 @@
-export default function Page() {
-  return (
-    <div className="max-w-4xl mx-auto py-12 px-6">
-      <div className="mb-8">
-        <span className="bg-green-100 text-green-800 text-xs font-bold px-2 py-1 rounded mb-4 inline-block">Dev A</span>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Special Events</h1>
-        <p className="text-slate-500">Daftar acara publik</p>
-      </div>
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200 min-h-[300px] flex items-center justify-center">
-        <p className="text-slate-400">Placeholder UI Component</p>
-      </div>
-    </div>
-  );
+import type { Metadata } from "next";
+import {
+  PublicEventsClient,
+  type PublicEventItem,
+} from "@/components/public/PublicEventsClient";
+import { getPublishedEventsUseCase } from "@/application/use-cases/event/get-published-events.usecase";
+
+export const metadata: Metadata = {
+  title: "Events | Rooma Ceritarasa",
+  description:
+    "Temukan event terbaru dan ajukan private event Anda di Rooma Ceritarasa.",
+};
+
+async function getPublicEvents(): Promise<PublicEventItem[]> {
+  try {
+    const events = await getPublishedEventsUseCase();
+
+    return events.map((event) => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      imageUrl: event.imageUrl,
+      eventDate: event.eventDate?.toISOString() ?? null,
+    }));
+  } catch (error) {
+    console.error("[Public Events Page]", error);
+    return [];
+  }
+}
+
+export default async function EventsPage() {
+  const events = await getPublicEvents();
+
+  return <PublicEventsClient events={events} />;
 }
