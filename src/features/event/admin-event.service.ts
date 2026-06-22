@@ -23,6 +23,20 @@ function getEventTrackingUrl(accessToken: string) {
   return `${appUrl.replace(/\/+$/, "")}/event/request/${accessToken}`;
 }
 
+function createOfferPdfPublicId(
+  eventRequestId: string,
+  originalName: string,
+) {
+  const fileStem =
+    originalName
+      .replace(/\.pdf$/i, "")
+      .replace(/[^a-zA-Z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "penawaran";
+
+  return `offer-${eventRequestId}-${Date.now()}-${fileStem}.pdf`;
+}
+
 // ─── List Event Requests ──────────────────────────────────────────────────────
 
 export async function getEventRequests(query: {
@@ -117,11 +131,11 @@ export async function submitEventOffer(
   }
 
   // 2. Upload PDF ke Cloudinary
-  const uploadResult = await uploadToCloudinary(pdfBuffer, {
+  const pdfDataUri = `data:application/pdf;base64,${pdfBuffer.toString("base64")}`;
+  const uploadResult = await uploadToCloudinary(pdfDataUri, {
     folder: "events/offers",
     resourceType: "raw",
-    publicId: `offer-${eventRequestId}-${Date.now()}`,
-    use_filename: true,
+    publicId: createOfferPdfPublicId(eventRequestId, pdfOriginalName),
     unique_filename: false,
   });
 

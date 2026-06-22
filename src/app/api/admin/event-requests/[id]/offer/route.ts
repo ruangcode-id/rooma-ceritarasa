@@ -25,13 +25,18 @@ export async function POST(
     let formData: FormData;
     try {
       formData = await req.formData();
-    } catch (error) {
+    } catch {
       return jsonError("Payload request tidak valid atau kosong (diharapkan multipart/form-data).", 400);
     }
 
     const pdfFile = formData.get("pdf");
     if (!pdfFile || !(pdfFile instanceof File)) {
       return jsonError("File PDF penawaran wajib dilampirkan (field: 'pdf').", 400);
+    }
+
+    const hasPdfExtension = pdfFile.name.toLowerCase().endsWith(".pdf");
+    if (pdfFile.type !== "application/pdf" && !hasPdfExtension) {
+      return jsonError("File penawaran harus berformat PDF.", 400);
     }
 
     const priceRaw = formData.get("price");
@@ -51,6 +56,9 @@ export async function POST(
     // Konversi File ke Buffer
     const arrayBuffer = await pdfFile.arrayBuffer();
     const pdfBuffer = Buffer.from(arrayBuffer);
+    if (pdfBuffer.subarray(0, 5).toString("ascii") !== "%PDF-") {
+      return jsonError("Isi file tidak valid. Unggah dokumen PDF yang benar.", 400);
+    }
 
     const result = await submitEventOffer(
       id,

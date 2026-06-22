@@ -12,15 +12,40 @@ export default function EventOfferForm({
   onClose: () => void;
   onSuccess?: () => void;
 }) {
-  const [price, setPrice] = useState(0);
+  const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [pdf, setPdf] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const formattedPrice = price
+    ? new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0,
+      }).format(Number(price))
+    : "";
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files && e.target.files[0];
-    if (f) setPdf(f);
+    if (!f) {
+      setPdf(null);
+      return;
+    }
+
+    if (f.type !== "application/pdf" && !f.name.toLowerCase().endsWith(".pdf")) {
+      e.target.value = "";
+      setPdf(null);
+      setError("File penawaran harus berformat PDF.");
+      return;
+    }
+
+    setError("");
+    setPdf(f);
+  }
+
+  function onPriceChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const digitsOnly = e.target.value.replace(/\D/g, "");
+    setPrice(digitsOnly.replace(/^0+(?=\d)/, ""));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -32,14 +57,15 @@ export default function EventOfferForm({
       return;
     }
 
-    if (!price || Number.isNaN(price) || price <= 0) {
+    const numericPrice = Number(price);
+    if (!price || Number.isNaN(numericPrice) || numericPrice <= 0) {
       setError("Harga harus berupa angka lebih dari 0.");
       return;
     }
 
     const fd = new FormData();
     fd.append("pdf", pdf);
-    fd.append("price", String(price));
+    fd.append("price", String(numericPrice));
     if (description) fd.append("description", description);
 
     setIsSubmitting(true);
@@ -92,12 +118,18 @@ export default function EventOfferForm({
         </label>
         <input
           id="event-offer-price"
-          type="number"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
           value={price}
-          onChange={(e) => setPrice(Number(e.target.value))}
-          min={1}
+          onChange={onPriceChange}
+          placeholder="Contoh: 2000000"
+          autoComplete="off"
           className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary/30"
         />
+        {formattedPrice ? (
+          <p className="mt-1 text-xs text-slate-500">{formattedPrice}</p>
+        ) : null}
       </div>
 
       <div>
