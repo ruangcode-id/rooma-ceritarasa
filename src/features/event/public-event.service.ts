@@ -5,11 +5,10 @@ import { EventRequestStatus, EventPaymentStatus, EventPaymentType } from "@/gene
 
 // ─── Get Detail (for public tamu page) ───────────────────────────────────────
 
-export async function getPublicEventRequestDetail(id: string) {
+export async function getPublicEventRequestDetail(accessToken: string) {
   const eventRequest = await prisma.eventRequest.findUnique({
-    where: { id },
+    where: { accessToken },
     include: {
-      guest: { select: { id: true, name: true, phone: true, email: true } },
       eventOffers: {
         orderBy: { createdAt: "desc" },
         take: 1,
@@ -50,7 +49,12 @@ export async function getPublicEventRequestDetail(id: string) {
     eventDate: eventRequest.eventDate,
     partySize: eventRequest.partySize,
     description: eventRequest.description,
-    guest: eventRequest.guest,
+    guest: {
+      id: eventRequest.guestId,
+      name: eventRequest.contactName,
+      phone: eventRequest.contactPhone,
+      email: eventRequest.contactEmail,
+    },
     offer: latestOffer,
     payment: latestPayment,
     canPay:
@@ -62,11 +66,10 @@ export async function getPublicEventRequestDetail(id: string) {
 
 // ─── Create Event Payment (generate Midtrans token) ──────────────────────────
 
-export async function createEventPayment(eventRequestId: string) {
+export async function createEventPayment(accessToken: string) {
   const eventRequest = await prisma.eventRequest.findUnique({
-    where: { id: eventRequestId },
+    where: { accessToken },
     include: {
-      guest: { select: { name: true, phone: true, email: true } },
       eventOffers: {
         where: { status: "sent" },
         orderBy: { createdAt: "desc" },
@@ -78,6 +81,7 @@ export async function createEventPayment(eventRequestId: string) {
   if (!eventRequest) {
     throw new Error("Pengajuan event tidak ditemukan.");
   }
+  const eventRequestId = eventRequest.id;
 
   if (eventRequest.status !== EventRequestStatus.offered) {
     throw new Error(
@@ -128,9 +132,9 @@ export async function createEventPayment(eventRequestId: string) {
         gross_amount: depositAmount,
       },
       customer_details: {
-        first_name: eventRequest.guest.name,
-        phone: eventRequest.guest.phone,
-        email: eventRequest.guest.email ?? undefined,
+        first_name: eventRequest.contactName,
+        phone: eventRequest.contactPhone,
+        email: eventRequest.contactEmail ?? undefined,
       },
       item_details: [
         {

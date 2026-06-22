@@ -361,6 +361,7 @@ export default function ReservationWizard({
             width={160}
             height={80}
             className="mx-auto mb-4 h-16 w-auto object-contain drop-shadow-sm md:h-20"
+            style={{ width: "auto" }}
           />
           <p className="text-sm md:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
             Jl. Lawu No.2, Kotabaru, Kec. Gondokusuman, Kota Yogyakarta, DI Yogyakarta 55224

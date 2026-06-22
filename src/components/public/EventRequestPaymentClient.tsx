@@ -57,6 +57,7 @@ type EventPaymentResponse = {
 
 type EventRequestPaymentClientProps = {
   detail: PublicEventRequestDetail;
+  accessToken: string;
   snapClientKey: string;
   snapScriptUrl: string;
 };
@@ -79,6 +80,7 @@ function formatDate(value: string) {
 
 export function EventRequestPaymentClient({
   detail,
+  accessToken,
   snapClientKey,
   snapScriptUrl,
 }: EventRequestPaymentClientProps) {
@@ -137,7 +139,7 @@ export function EventRequestPaymentClient({
     setError(null);
 
     try {
-      const response = await fetch(`/api/events/request/${detail.id}/pay`, {
+      const response = await fetch(`/api/events/request/${accessToken}/pay`, {
         method: "POST",
       });
       const payload = (await response.json()) as

@@ -162,7 +162,7 @@ export function EventRequestForm({
         }),
       });
       const payload = (await response.json()) as
-        | { success: true; data: { id: string } }
+        | { success: true; data: { accessToken: string } }
         | ApiErrorPayload;
 
       if (!response.ok || !payload.success) {
@@ -173,7 +173,7 @@ export function EventRequestForm({
         );
       }
 
-      router.push(`/event/request/${payload.data.id}`);
+      router.push(`/event/request/${payload.data.accessToken}`);
     } catch (requestError) {
       setError(
         requestError instanceof Error

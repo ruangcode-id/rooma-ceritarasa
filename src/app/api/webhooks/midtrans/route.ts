@@ -136,11 +136,7 @@ async function handleEventPaymentWebhook(
   const eventPayment = await prisma.eventPayment.findFirst({
     where: { paymentMethod: `midtrans:${orderId}` },
     include: {
-      eventRequest: {
-        include: {
-          guest: { select: { name: true, phone: true, email: true } },
-        },
-      },
+      eventRequest: true,
     },
   });
 
@@ -172,9 +168,9 @@ async function handleEventPaymentWebhook(
       .triggerEventNotification({
         type: "event_accepted",
         eventRequestId: eventPayment.eventRequestId,
-        picName: eventPayment.eventRequest.guest.name,
-        picPhone: eventPayment.eventRequest.guest.phone,
-        picEmail: eventPayment.eventRequest.guest.email ?? null,
+        picName: eventPayment.eventRequest.contactName,
+        picPhone: eventPayment.eventRequest.contactPhone,
+        picEmail: eventPayment.eventRequest.contactEmail,
         eventDate: eventPayment.eventRequest.eventDate,
       })
       .catch((err) => console.error("[midtrans-webhook] event notification failed:", err));

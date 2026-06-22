@@ -59,6 +59,7 @@ export default async function EventRequestPaymentPage({
     return (
       <EventRequestPaymentClient
         detail={detail}
+        accessToken={id}
         snapClientKey={snapClientKey}
         snapScriptUrl={snapScriptUrl}
       />

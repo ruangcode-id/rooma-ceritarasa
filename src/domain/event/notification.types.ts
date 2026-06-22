@@ -7,6 +7,7 @@
  */
 
 export type EventNotificationType =
+  | "event_request_received" // Pengajuan diterima → kirim link pantau ke PIC
   | "event_offer_sent"      // Admin kirim penawaran PDF → WA/Email ke PIC
   | "event_deposit_paid"    // Tamu bayar DP → WA/Email konfirmasi pembayaran
   | "event_accepted"        // Event dikonfirmasi sepenuhnya
@@ -24,4 +25,6 @@ export interface EventNotificationTrigger {
   offerPdfUrl?: string;
   /** Harga penawaran — disertakan saat type = 'event_offer_sent' */
   offerPrice?: number;
+  /** Link aman untuk memantau pengajuan dan melakukan pembayaran */
+  trackingUrl?: string;
 }
