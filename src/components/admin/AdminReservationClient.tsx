@@ -302,7 +302,7 @@ export default function AdminReservationClient() {
               </span>
             ) : (
               <span className="truncate">
-                #{reservation.cancelToken.substring(0, 8).toUpperCase()}...
+                #{reservation.cancelToken?.substring(0, 8).toUpperCase() ?? 'N/A'}...
                 <span className="opacity-60"> (copy)</span>
               </span>
             )}
