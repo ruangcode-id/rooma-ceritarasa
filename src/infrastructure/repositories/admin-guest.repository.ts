@@ -26,6 +26,13 @@ export type GuestNoteRow = {
   updatedAt: Date;
 };
 
+export type GuestStats = {
+  totalGuests: number;
+  vipGuests: number;
+  returningGuests: number;
+  totalVisits: number;
+};
+
 type GuestNotesPage = {
   rows: GuestNoteRow[];
   total: number;
@@ -54,6 +61,7 @@ export async function countActiveGuests(phone?: string, tag?: string, q?: string
             OR: [
               { name: { contains: q, mode: "insensitive" as const } },
               { phone: { contains: q, mode: "insensitive" as const } },
+              { email: { contains: q, mode: "insensitive" as const } },
             ],
           }
         : {}),
@@ -80,7 +88,11 @@ export async function findManyGuestsPaginated(params: {
     ? Prisma.sql`AND ${params.tag} = ANY(g.tags)`
     : Prisma.empty;
   const qFilter = params.q
-    ? Prisma.sql`AND (g.name ILIKE ${`%${params.q}%`} OR g.phone ILIKE ${`%${params.q}%`})`
+    ? Prisma.sql`AND (
+        g.name ILIKE ${`%${params.q}%`}
+        OR g.phone ILIKE ${`%${params.q}%`}
+        OR g.email ILIKE ${`%${params.q}%`}
+      )`
     : Prisma.empty;
 
   const rows = await prisma.$queryRaw<
@@ -113,7 +125,7 @@ export async function findManyGuestsPaginated(params: {
     LEFT JOIN (
       SELECT guest_id, COUNT(*)::int AS cnt
       FROM reservations
-      WHERE status = ${ReservationStatus.confirmed}
+      WHERE status = ${ReservationStatus.checked_in}
       GROUP BY guest_id
     ) rc ON rc.guest_id = g.id
     WHERE g.deleted_at IS NULL
@@ -176,13 +188,48 @@ export async function findGuestByIdActive(id: string) {
   });
 }
 
-export async function countConfirmedVisitsForGuest(guestId: string): Promise<number> {
+export async function countCompletedVisitsForGuest(guestId: string): Promise<number> {
   return prisma.reservation.count({
     where: {
       guestId,
-      status: ReservationStatus.confirmed,
+      status: ReservationStatus.checked_in,
     },
   });
+}
+
+export async function getGuestStats(): Promise<GuestStats> {
+  const rows = await prisma.$queryRaw<
+    Array<{
+      total_guests: number | bigint;
+      vip_guests: number | bigint;
+      returning_guests: number | bigint;
+      total_visits: number | bigint;
+    }>
+  >(Prisma.sql`
+    SELECT
+      COUNT(*)::int AS total_guests,
+      COUNT(*) FILTER (
+        WHERE g.is_vip = true OR ${"VIP"} = ANY(g.tags)
+      )::int AS vip_guests,
+      COUNT(*) FILTER (WHERE COALESCE(v.visit_count, 0) > 1)::int AS returning_guests,
+      COALESCE(SUM(v.visit_count), 0)::int AS total_visits
+    FROM guests g
+    LEFT JOIN (
+      SELECT guest_id, COUNT(*)::int AS visit_count
+      FROM reservations
+      WHERE status = ${ReservationStatus.checked_in}
+      GROUP BY guest_id
+    ) v ON v.guest_id = g.id
+    WHERE g.deleted_at IS NULL
+  `);
+  const stats = rows[0];
+
+  return {
+    totalGuests: Number(stats?.total_guests ?? 0),
+    vipGuests: Number(stats?.vip_guests ?? 0),
+    returningGuests: Number(stats?.returning_guests ?? 0),
+    totalVisits: Number(stats?.total_visits ?? 0),
+  };
 }
 
 export async function createGuest(data: {
@@ -216,15 +263,11 @@ export async function updateGuest(
     select: { id: true },
   });
   if (!existing) return null;
-  try {
-    return await prisma.guest.update({
-      where: { id },
-      data,
-      select: { id: true },
-    });
-  } catch {
-    return null;
-  }
+  return prisma.guest.update({
+    where: { id },
+    data,
+    select: { id: true },
+  });
 }
 
 export async function softDeleteGuest(id: string): Promise<boolean> {
@@ -322,7 +365,10 @@ export async function deleteGuestNote(guestId: string, noteId: string): Promise<
   return result.count > 0;
 }
 
-export async function updateGuestTags(guestId: string, tags: string[]): Promise<{ id: string; tags: string[] } | null> {
+export async function updateGuestTags(
+  guestId: string,
+  tags: string[],
+): Promise<{ id: string; tags: string[]; isVip: boolean } | null> {
   const existing = await prisma.guest.findFirst({
     where: { id: guestId, deletedAt: null },
     select: { id: true },
@@ -330,7 +376,10 @@ export async function updateGuestTags(guestId: string, tags: string[]): Promise<
   if (!existing) return null;
   return prisma.guest.update({
     where: { id: guestId },
-    data: { tags },
-    select: { id: true, tags: true },
+    data: {
+      tags,
+      isVip: tags.includes("VIP"),
+    },
+    select: { id: true, tags: true, isVip: true },
   });
 }
