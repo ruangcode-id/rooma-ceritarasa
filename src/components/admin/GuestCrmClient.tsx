@@ -1,22 +1,24 @@
 "use client";
 
-import {
-  FormEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
   CalendarCheck,
+  CheckCircle,
+  ClockCounterClockwise,
+  Crown,
+  Eye,
+  MagnifyingGlass,
   NotePencil,
   Plus,
   Tag,
   UserCircle,
   UsersThree,
+  X,
 } from "@phosphor-icons/react";
+import { MetricCard } from "@/components/cards/MetricCard";
 import { DataTable, type DataTableColumn } from "@/components/tables";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 import {
   StatusBadge,
   type StatusBadgeOption,
@@ -66,14 +68,36 @@ type GuestDetail = GuestListItem & {
   visitHistory: GuestVisit[];
 };
 
-type ApiListResponse<T> =
-  | { success: true; data: T[] }
+type GuestStats = {
+  totalGuests: number;
+  vipGuests: number;
+  returningGuests: number;
+  totalVisits: number;
+};
+
+type ListMeta = {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
+
+type ApiListResponse =
+  | {
+      success: true;
+      data: GuestListItem[];
+      meta: ListMeta;
+      stats: GuestStats;
+    }
   | { success: false; error: string };
 
 type ApiItemResponse<T> =
   | { success: true; data: T }
   | { success: false; error: string };
 
+const PAGE_SIZE = 10;
 const tagOptions: GuestTag[] = [
   "VIP",
   "ALLERGY",
@@ -85,31 +109,31 @@ const tagOptions: GuestTag[] = [
 const visitStatuses: Array<StatusBadgeOption<ReservationStatus>> = [
   {
     id: "confirmed",
-    label: "Confirmed",
-    className: "bg-green-100 text-green-700",
+    label: "Terkonfirmasi",
+    className: "bg-blue-100 text-blue-700",
     Icon: CalendarCheck,
   },
   {
     id: "pending",
-    label: "Pending",
+    label: "Menunggu",
     className: "bg-amber-100 text-amber-700",
     Icon: CalendarCheck,
   },
   {
     id: "checked_in",
-    label: "Checked in",
-    className: "bg-blue-100 text-blue-700",
-    Icon: CalendarCheck,
+    label: "Hadir",
+    className: "bg-green-100 text-green-700",
+    Icon: CheckCircle,
   },
   {
     id: "cancelled",
-    label: "Cancelled",
+    label: "Batal",
     className: "bg-red-100 text-red-700",
     Icon: CalendarCheck,
   },
   {
     id: "no_show",
-    label: "No show",
+    label: "No-Show",
     className: "bg-slate-100 text-slate-500",
     Icon: CalendarCheck,
   },
@@ -121,8 +145,10 @@ const dateFormatter = new Intl.DateTimeFormat("id-ID", {
   year: "numeric",
 });
 
-function formatDate(value: string) {
-  return dateFormatter.format(new Date(value));
+function formatDate(value: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : dateFormatter.format(date);
 }
 
 function getTagClass(tag: GuestTag) {
@@ -142,53 +168,70 @@ function getTagClass(tag: GuestTag) {
 }
 
 async function readJson<T>(response: Response): Promise<T> {
-  const payload = (await response.json()) as T;
-  return payload;
+  return (await response.json()) as T;
 }
 
 const visitColumns: Array<DataTableColumn<GuestVisit>> = [
   {
     id: "date",
-    header: "Date",
+    header: "Tanggal",
+    headerClassName: "w-[30%] text-left",
+    className: "w-[30%] align-middle text-left",
     cell: (visit) => formatDate(visit.date),
   },
   {
     id: "party",
     header: "Pax",
     accessor: "partySize",
+    headerClassName: "w-[15%] text-center",
+    className: "w-[15%] align-middle text-center font-semibold",
   },
   {
     id: "status",
     header: "Status",
+    headerClassName: "w-[30%] text-center",
+    className: "w-[30%] align-middle text-center",
     cell: (visit) => (
       <StatusBadge status={visit.status} statuses={visitStatuses} />
     ),
   },
   {
     id: "created",
-    header: "Created",
+    header: "Dibuat",
+    headerClassName: "w-[25%] text-left",
+    className: "w-[25%] align-middle text-left",
     cell: (visit) => formatDate(visit.createdAt),
   },
 ];
 
 export function GuestCrmClient() {
   const [guests, setGuests] = useState<GuestListItem[]>([]);
-  const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
-  const selectedGuestIdRef = useRef<string | null>(null);
-  const [guestDetail, setGuestDetail] = useState<GuestDetail | null>(null);
+  const [meta, setMeta] = useState<ListMeta>({
+    total: 0,
+    page: 1,
+    limit: PAGE_SIZE,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  });
+  const [stats, setStats] = useState<GuestStats>({
+    totalGuests: 0,
+    vipGuests: 0,
+    returningGuests: 0,
+    totalVisits: 0,
+  });
+  const [page, setPage] = useState(1);
+  const [refreshVersion, setRefreshVersion] = useState(0);
   const [query, setQuery] = useState("");
   const [tagFilter, setTagFilter] = useState<GuestTag | "all">("all");
+  const [selectedGuest, setSelectedGuest] = useState<GuestListItem | null>(null);
+  const [guestDetail, setGuestDetail] = useState<GuestDetail | null>(null);
   const [noteContent, setNoteContent] = useState("");
-  const [loadingGuests, setLoadingGuests] = useState(false);
+  const [loadingGuests, setLoadingGuests] = useState(true);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [submittingNote, setSubmittingNote] = useState(false);
   const [updatingTag, setUpdatingTag] = useState<GuestTag | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const selectedGuest = useMemo(
-    () => guests.find((guest) => guest.id === selectedGuestId) ?? null,
-    [guests, selectedGuestId]
-  );
 
   const loadGuestDetail = useCallback(async (guestId: string) => {
     setLoadingDetail(true);
@@ -205,6 +248,7 @@ export function GuestCrmClient() {
       }
 
       setGuestDetail(payload.data);
+      setSelectedGuest(payload.data);
       setGuests((current) =>
         current.map((guest) =>
           guest.id === payload.data.id
@@ -214,83 +258,91 @@ export function GuestCrmClient() {
                 notes: payload.data.notes,
                 totalVisits: payload.data.totalVisits,
               }
-            : guest
-        )
+            : guest,
+        ),
       );
     } catch (requestError) {
       setGuestDetail(null);
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Gagal memuat detail tamu."
+          : "Gagal memuat detail tamu.",
       );
     } finally {
       setLoadingDetail(false);
     }
   }, []);
 
-  const loadGuests = useCallback(async () => {
-    setLoadingGuests(true);
-    setError(null);
-
-    const params = new URLSearchParams({
-      page: "1",
-      limit: "50",
-      sortBy: "totalVisits",
-      sortOrder: "desc",
-    });
-
-    if (query.trim()) params.set("q", query.trim());
-    if (tagFilter !== "all") params.set("tag", tagFilter);
-
-    try {
-      const response = await fetch(`/api/admin/guests?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const payload = await readJson<ApiListResponse<GuestListItem>>(response);
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.success ? "Gagal memuat tamu." : payload.error);
-      }
-
-      setGuests(payload.data);
-      const currentSelectedId = selectedGuestIdRef.current;
-      const nextSelectedId =
-        currentSelectedId &&
-        payload.data.some((guest) => guest.id === currentSelectedId)
-          ? currentSelectedId
-          : payload.data[0]?.id ?? null;
-
-      selectedGuestIdRef.current = nextSelectedId;
-      setSelectedGuestId(nextSelectedId);
-
-      if (nextSelectedId) {
-        await loadGuestDetail(nextSelectedId);
-      } else {
-        setGuestDetail(null);
-      }
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Gagal memuat tamu."
-      );
-    } finally {
-      setLoadingGuests(false);
-    }
-  }, [loadGuestDetail, query, tagFilter]);
-
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadGuests();
-    }, 250);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => {
+      setLoadingGuests(true);
+      setError(null);
 
-    return () => window.clearTimeout(timer);
-  }, [loadGuests]);
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(PAGE_SIZE),
+        sortBy: "totalVisits",
+        sortOrder: "desc",
+      });
+      if (query.trim()) params.set("q", query.trim());
+      if (tagFilter !== "all") params.set("tag", tagFilter);
+
+      fetch(`/api/admin/guests?${params.toString()}`, {
+        cache: "no-store",
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          const payload = await readJson<ApiListResponse>(response);
+          if (!response.ok || !payload.success) {
+            throw new Error(
+              payload.success ? "Gagal memuat tamu." : payload.error,
+            );
+          }
+
+          setGuests(payload.data);
+          setMeta(payload.meta);
+          setStats(payload.stats);
+        })
+        .catch((requestError: unknown) => {
+          if (
+            requestError instanceof DOMException &&
+            requestError.name === "AbortError"
+          ) {
+            return;
+          }
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Gagal memuat tamu.",
+          );
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoadingGuests(false);
+        });
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [page, query, refreshVersion, tagFilter]);
+
+  function openGuestDetail(guest: GuestListItem) {
+    setSelectedGuest(guest);
+    setGuestDetail(null);
+    setNoteContent("");
+    void loadGuestDetail(guest.id);
+  }
+
+  function closeGuestDetail() {
+    setSelectedGuest(null);
+    setGuestDetail(null);
+    setNoteContent("");
+  }
 
   async function handleAddNote(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     if (!guestDetail || !noteContent.trim()) return;
 
     setSubmittingNote(true);
@@ -299,15 +351,15 @@ export function GuestCrmClient() {
     try {
       const response = await fetch(`/api/admin/guests/${guestDetail.id}/notes`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: noteContent.trim() }),
       });
       const payload = await readJson<ApiItemResponse<GuestNote>>(response);
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.success ? "Gagal menyimpan note." : payload.error);
+        throw new Error(
+          payload.success ? "Gagal menyimpan catatan." : payload.error,
+        );
       }
 
       setNoteContent("");
@@ -316,7 +368,7 @@ export function GuestCrmClient() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Gagal menyimpan note."
+          : "Gagal menyimpan catatan.",
       );
     } finally {
       setSubmittingNote(false);
@@ -333,386 +385,438 @@ export function GuestCrmClient() {
     try {
       const response = await fetch(`/api/admin/guests/${guestDetail.id}/tags`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           add: hasTag ? [] : [tag],
           remove: hasTag ? [tag] : [],
         }),
       });
       const payload = await readJson<
-        ApiItemResponse<{ id: string; tags: GuestTag[] }>
+        ApiItemResponse<{ id: string; tags: GuestTag[]; isVip: boolean }>
       >(response);
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.success ? "Gagal mengubah label." : payload.error);
+        throw new Error(
+          payload.success ? "Gagal mengubah label." : payload.error,
+        );
       }
 
       setGuestDetail((current) =>
-        current ? { ...current, tags: payload.data.tags } : current
+        current
+          ? {
+              ...current,
+              tags: payload.data.tags,
+              isVip: payload.data.isVip,
+            }
+          : current,
+      );
+      setSelectedGuest((current) =>
+        current
+          ? {
+              ...current,
+              tags: payload.data.tags,
+              isVip: payload.data.isVip,
+            }
+          : current,
       );
       setGuests((current) =>
         current.map((guest) =>
           guest.id === payload.data.id
-            ? { ...guest, tags: payload.data.tags }
-            : guest
-        )
+            ? {
+                ...guest,
+                tags: payload.data.tags,
+                isVip: payload.data.isVip,
+              }
+            : guest,
+        ),
       );
+      setRefreshVersion((current) => current + 1);
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Gagal mengubah label."
+          : "Gagal mengubah label.",
       );
     } finally {
       setUpdatingTag(null);
     }
   }
 
+  const guestColumns: Array<DataTableColumn<GuestListItem>> = [
+    {
+      id: "guest",
+      header: "Tamu",
+      headerClassName: "w-[24%] text-left",
+      className: "w-[24%] align-middle text-left",
+      cell: (guest) => (
+        <div className="min-w-0">
+          <p className="break-words font-semibold text-slate-900">
+            {guest.name}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Bergabung {formatDate(guest.createdAt)}
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "contact",
+      header: "Kontak",
+      headerClassName: "w-[25%] text-left",
+      className: "w-[25%] align-middle text-left",
+      cell: (guest) => (
+        <div className="min-w-0">
+          <p className="break-all text-sm text-slate-700">{guest.phone}</p>
+          <p className="mt-1 break-all text-xs text-slate-500">
+            {guest.email ?? "Email belum tersedia"}
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "visits",
+      header: "Kunjungan",
+      accessor: "totalVisits",
+      headerClassName: "w-[11%] text-center",
+      className: "w-[11%] align-middle text-center font-semibold",
+    },
+    {
+      id: "labels",
+      header: "Label",
+      headerClassName: "w-[25%] text-left",
+      className: "w-[25%] align-middle text-left",
+      cell: (guest) =>
+        guest.tags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {guest.tags.map((tag) => (
+              <span
+                key={tag}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getTagClass(tag)}`}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span className="text-xs text-slate-400">Belum ada label</span>
+        ),
+    },
+    {
+      id: "actions",
+      header: "Aksi",
+      headerClassName: "w-[15%] text-center",
+      className: "w-[15%] align-middle text-center",
+      cell: (guest) => (
+        <button
+          type="button"
+          onClick={() => openGuestDetail(guest)}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 transition-all duration-300 hover:scale-105 hover:bg-slate-200"
+        >
+          <Eye size={15} weight="bold" />
+          Detail
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-8">
-      <section>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-          Guest Management
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">
-          Guest CRM
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Kelola profil tamu, label, internal notes, dan histori kunjungan dari
-          data reservasi.
-        </p>
-      </section>
+      <header>
+        <SectionTitle
+          eyebrow="Guest Management"
+          title="Guest CRM"
+          level={1}
+          description="Kelola profil tamu, label, catatan internal, dan riwayat kunjungan berdasarkan data reservasi."
+        />
+      </header>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
-          <label>
-            <span className="text-sm font-semibold text-slate-700">
-              Search guest
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard
+          label="Total Tamu"
+          value={String(stats.totalGuests)}
+          Icon={UsersThree}
+        />
+        <MetricCard
+          label="Tamu VIP"
+          value={String(stats.vipGuests)}
+          Icon={Crown}
+        />
+        <MetricCard
+          label="Tamu Kembali"
+          value={String(stats.returningGuests)}
+          Icon={ClockCounterClockwise}
+        />
+        <MetricCard
+          label="Total Kunjungan"
+          value={String(stats.totalVisits)}
+          Icon={CalendarCheck}
+        />
+      </div>
+
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <select
+            aria-label="Filter label tamu"
+            value={tagFilter}
+            onChange={(event) => {
+              setTagFilter(event.target.value as GuestTag | "all");
+              setPage(1);
+            }}
+            className="h-10 min-w-44 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+          >
+            <option value="all">Semua Label</option>
+            {tagOptions.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex w-full rounded-lg border border-slate-300 bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary lg:w-80">
+            <span className="grid size-10 shrink-0 place-items-center text-slate-400">
+              <MagnifyingGlass size={16} weight="bold" />
             </span>
             <input
+              type="search"
+              aria-label="Cari nama, telepon, atau email tamu"
+              placeholder="Cari nama, telepon, atau email..."
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Name or phone"
-              className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/30"
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setPage(1);
+              }}
+              className="min-w-0 flex-1 rounded-lg bg-transparent py-2 pr-3 text-sm outline-none"
             />
-          </label>
-          <label>
-            <span className="text-sm font-semibold text-slate-700">Label</span>
-            <select
-              value={tagFilter}
-              onChange={(event) =>
-                setTagFilter(event.target.value as GuestTag | "all")
-              }
-              className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="all">All labels</option>
-              {tagOptions.map((tag) => (
-                <option key={tag} value={tag}>
-                  {tag}
-                </option>
-              ))}
-            </select>
-          </label>
+          </div>
         </div>
+
+        {error ? (
+          <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        ) : null}
+
+        <DataTable
+          columns={guestColumns}
+          data={guests}
+          rowKey="id"
+          caption="Daftar tamu restoran"
+          loading={loadingGuests}
+          loadingState={
+            <span className="inline-flex items-center gap-2">
+              <LoadingSpinner className="size-4" />
+              Memuat data tamu...
+            </span>
+          }
+          emptyState="Tidak ada tamu sesuai pencarian atau filter."
+          tableClassName="min-w-[1050px] table-fixed"
+          embedded
+          pagination={{
+            page: meta.page,
+            pageSize: meta.limit,
+            total: meta.total,
+            totalPages: meta.totalPages,
+            hasNext: meta.hasNext,
+            hasPrev: meta.hasPrev,
+            onPageChange: setPage,
+          }}
+        />
       </section>
 
-      {error ? (
-        <section className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-600">
-          {error}
-        </section>
-      ) : null}
-
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Guests
+      {selectedGuest ? (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 px-4 py-6 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="guest-detail-dialog-title"
+        >
+          <section className="my-auto w-full max-w-5xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <UserCircle size={23} weight="fill" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                  Guest Profile
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                  Guest List
-                </h2>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                  {guests.length} shown
-                </span>
-                <span className="grid size-10 place-items-center rounded-xl bg-slate-100 text-slate-700">
-                  <UsersThree size={18} />
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="max-h-[420px] overflow-y-auto p-2 sm:max-h-[520px] xl:max-h-[680px]">
-            {loadingGuests ? (
-              <p className="px-2 py-8 text-center text-sm text-slate-500">
-                Memuat data tamu...
-              </p>
-            ) : null}
-
-            {!loadingGuests && guests.length === 0 ? (
-              <p className="px-2 py-8 text-center text-sm text-slate-500">
-                Belum ada tamu sesuai filter.
-              </p>
-            ) : null}
-
-            {guests.map((guest) => {
-              const selected = guest.id === selectedGuestId;
-
-              return (
-                <button
-                  key={guest.id}
-                  type="button"
-                  onClick={() => {
-                    selectedGuestIdRef.current = guest.id;
-                    setSelectedGuestId(guest.id);
-                    void loadGuestDetail(guest.id);
-                  }}
-                  className={`group mb-1 w-full rounded-xl border px-3 py-3 text-left transition-all duration-300 ${
-                    selected
-                      ? "border-primary/40 bg-primary/5 shadow-sm"
-                      : "border-transparent bg-white hover:border-slate-200 hover:bg-slate-50"
-                  }`}
+                <h2
+                  id="guest-detail-dialog-title"
+                  className="mt-2 break-words text-2xl font-semibold text-slate-950"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="break-words text-base font-semibold text-slate-950">
-                        {guest.name}
-                      </p>
-                      <p className="mt-1 break-all text-sm text-slate-500">
-                        {guest.phone}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-lg font-semibold leading-none text-slate-950">
-                        {guest.totalVisits}
-                      </p>
-                      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
-                        Visits
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {guest.tags.length > 0 ? (
-                      guest.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${getTagClass(
-                            tag
-                          )}`}
-                        >
-                          {tag}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs text-slate-400">No labels</span>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+                  {selectedGuest.name}
+                </h2>
+                <p className="mt-2 break-all text-sm text-slate-600">
+                  {selectedGuest.phone}
+                  {selectedGuest.email ? ` / ${selectedGuest.email}` : ""}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeGuestDetail}
+                aria-label="Tutup detail tamu"
+                className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
-        <section className="min-w-0 space-y-6">
-          <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            {!selectedGuest ? (
-              <div className="grid min-h-72 place-items-center text-center text-sm text-slate-500">
-                Pilih tamu untuk melihat detail CRM.
+            {loadingDetail && !guestDetail ? (
+              <div className="grid min-h-72 place-items-center text-sm text-slate-500">
+                <span className="inline-flex items-center gap-2">
+                  <LoadingSpinner className="size-4" />
+                  Memuat detail tamu...
+                </span>
+              </div>
+            ) : guestDetail ? (
+              <div className="mt-6 max-h-[70vh] space-y-6 overflow-y-auto pr-1">
+                <div className="grid gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  <ProfileValue
+                    label="Kunjungan"
+                    value={String(guestDetail.totalVisits)}
+                  />
+                  <ProfileValue
+                    label="VIP"
+                    value={guestDetail.isVip ? "Ya" : "Tidak"}
+                  />
+                  <ProfileValue
+                    label="Tanggal Lahir"
+                    value={formatDate(guestDetail.birthdate)}
+                  />
+                  <ProfileValue
+                    label="Terdaftar Sejak"
+                    value={formatDate(guestDetail.createdAt)}
+                  />
+                </div>
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <article className="rounded-2xl border border-slate-200 p-5">
+                    <div className="flex items-center gap-2">
+                      <Tag size={18} className="text-primary" weight="fill" />
+                      <h3 className="text-xl font-semibold text-slate-950">
+                        Label
+                      </h3>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {tagOptions.map((tag) => {
+                        const active = guestDetail.tags.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            disabled={updatingTag === tag}
+                            onClick={() => void handleToggleTag(tag)}
+                            className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                              active
+                                ? "border-primary bg-primary text-white"
+                                : "border-slate-200 bg-white text-slate-700 hover:border-primary/40"
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
+                          >
+                            {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </article>
+
+                  <article className="rounded-2xl border border-slate-200 p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <NotePencil
+                          size={18}
+                          className="text-primary"
+                          weight="fill"
+                        />
+                        <h3 className="text-xl font-semibold text-slate-950">
+                          Catatan Internal
+                        </h3>
+                      </div>
+                      <span className="text-sm text-slate-500">
+                        {guestDetail.guestNotes.length} catatan
+                      </span>
+                    </div>
+                    <form onSubmit={handleAddNote} className="mt-4">
+                      <textarea
+                        value={noteContent}
+                        onChange={(event) => setNoteContent(event.target.value)}
+                        placeholder="Tambahkan catatan untuk staf..."
+                        rows={3}
+                        className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary/30"
+                      />
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={!noteContent.trim() || submittingNote}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {submittingNote ? (
+                            <LoadingSpinner className="size-4 border-white/40 border-t-white" />
+                          ) : (
+                            <Plus size={16} weight="bold" />
+                          )}
+                          Tambah Catatan
+                        </button>
+                      </div>
+                    </form>
+                    <div className="mt-4 max-h-48 divide-y divide-slate-100 overflow-y-auto border-t border-slate-100">
+                      {guestDetail.guestNotes.length === 0 ? (
+                        <p className="py-4 text-sm text-slate-500">
+                          Belum ada catatan internal.
+                        </p>
+                      ) : null}
+                      {guestDetail.guestNotes.map((note) => (
+                        <div key={note.id} className="py-3">
+                          <p className="text-sm leading-6 text-slate-700">
+                            {note.content}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {formatDate(note.createdAt)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                </div>
+
+                <article>
+                  <div className="mb-4">
+                    <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                      Visit History
+                    </p>
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-950">
+                      Riwayat Reservasi
+                    </h3>
+                  </div>
+                  <DataTable
+                    caption="Riwayat reservasi tamu"
+                    columns={visitColumns}
+                    data={guestDetail.visitHistory}
+                    rowKey="id"
+                    initialPageSize={5}
+                    pageSizeOptions={[5, 10]}
+                    emptyState="Belum ada riwayat reservasi."
+                    tableClassName="min-w-[680px] table-fixed"
+                  />
+                </article>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex min-w-0 items-start gap-4">
-                    <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-slate-100 text-slate-700">
-                      <UserCircle size={24} />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                        Guest Profile
-                      </p>
-                      <h2 className="mt-2 break-words text-2xl font-semibold text-slate-950">
-                        {selectedGuest.name}
-                      </h2>
-                      <p className="mt-2 break-all text-sm leading-6 text-slate-600">
-                        {selectedGuest.phone}
-                        {selectedGuest.email ? ` / ${selectedGuest.email}` : ""}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 lg:justify-end">
-                    {selectedGuest.tags.length > 0 ? (
-                      selectedGuest.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getTagClass(
-                            tag
-                          )}`}
-                        >
-                          {tag}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-                        No labels
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid divide-y divide-slate-100 border-y border-slate-100 text-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-                  <div className="py-4 sm:px-4 sm:first:pl-0">
-                    <p className="text-slate-500">Visits</p>
-                    <p className="mt-1 text-xl font-semibold text-slate-950">
-                      {selectedGuest.totalVisits}
-                    </p>
-                  </div>
-                  <div className="py-4 sm:px-4">
-                    <p className="text-slate-500">VIP</p>
-                    <p className="mt-1 text-xl font-semibold text-slate-950">
-                      {selectedGuest.isVip ? "Yes" : "No"}
-                    </p>
-                  </div>
-                  <div className="py-4 sm:px-4 sm:last:pr-0">
-                    <p className="text-slate-500">Since</p>
-                    <p className="mt-1 text-xl font-semibold text-slate-950">
-                      {formatDate(selectedGuest.createdAt)}
-                    </p>
-                  </div>
-                </div>
+              <div className="grid min-h-72 place-items-center text-sm text-red-600">
+                Detail tamu tidak dapat dimuat.
               </div>
             )}
-          </article>
+          </section>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
-          {selectedGuest ? (
-            <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <Tag size={18} className="text-primary" weight="fill" />
-                  <h2 className="text-xl font-semibold text-slate-950">
-                    Labels
-                  </h2>
-                </div>
-                <p className="text-sm text-slate-500">
-                  {tagOptions.length} labels available
-                </p>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {tagOptions.map((tag) => {
-                  const active = Boolean(guestDetail?.tags.includes(tag));
-                  return (
-                    <button
-                      key={tag}
-                      type="button"
-                      disabled={!guestDetail || updatingTag === tag}
-                      onClick={() => void handleToggleTag(tag)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                        active
-                          ? "border-primary bg-primary text-white"
-                          : "border-slate-200 bg-white text-slate-700 hover:border-primary/40"
-                      } disabled:cursor-not-allowed disabled:opacity-50`}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-            </article>
-          ) : null}
-
-          {selectedGuest ? (
-            <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <NotePencil
-                    size={18}
-                    className="text-primary"
-                    weight="fill"
-                  />
-                  <h2 className="text-xl font-semibold text-slate-950">
-                    Internal Notes
-                  </h2>
-                </div>
-                <p className="text-sm text-slate-500">
-                  {guestDetail?.guestNotes.length ?? 0} notes
-                </p>
-              </div>
-              <form onSubmit={handleAddNote} className="mt-4">
-                <label>
-                  <span className="sr-only">Internal note</span>
-                  <textarea
-                    value={noteContent}
-                    onChange={(event) => setNoteContent(event.target.value)}
-                    placeholder="Tambahkan catatan internal untuk staf..."
-                    rows={3}
-                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary/30"
-                  />
-                </label>
-                <div className="mt-3 flex sm:justify-end">
-                  <button
-                    type="submit"
-                    disabled={!noteContent.trim() || submittingNote}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                  >
-                    <Plus size={16} weight="bold" />
-                    Add Note
-                  </button>
-                </div>
-              </form>
-
-              <div className="mt-5 divide-y divide-slate-100 border-t border-slate-100">
-                {loadingDetail ? (
-                  <p className="py-4 text-sm text-slate-500">
-                    Memuat detail...
-                  </p>
-                ) : null}
-                {guestDetail?.guestNotes.length === 0 ? (
-                  <p className="py-4 text-sm text-slate-500">
-                    Belum ada internal notes.
-                  </p>
-                ) : null}
-                {guestDetail?.guestNotes.map((note) => (
-                  <article key={note.id} className="py-4">
-                    <p className="text-sm leading-6 text-slate-700">
-                      {note.content}
-                    </p>
-                    <p className="mt-2 text-xs text-slate-500">
-                      {formatDate(note.createdAt)}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </article>
-          ) : null}
-
-          {selectedGuest ? (
-            <article className="min-w-0">
-              <div className="mb-5">
-                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                  Visit History
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                  Riwayat Kunjungan
-                </h2>
-              </div>
-              <DataTable
-                caption="Guest visit history"
-                columns={visitColumns}
-                data={guestDetail?.visitHistory ?? []}
-                rowKey="id"
-                initialPageSize={5}
-                pageSizeOptions={[5, 10]}
-                emptyState="Belum ada riwayat reservasi."
-              />
-            </article>
-          ) : null}
-        </section>
-      </div>
+function ProfileValue({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 break-words font-semibold text-slate-900">{value}</p>
     </div>
   );
 }
