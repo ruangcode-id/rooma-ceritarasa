@@ -80,13 +80,13 @@ function toPaymentRecord(entity: {
   midtransOrderId: string | null;
   status: DbPaymentStatus;
   type: DbPaymentType;
-  amount: number;
+  amount: Prisma.Decimal | number;
 }): PaymentRecord {
   return {
     orderId: entity.midtransOrderId ?? entity.id,
     status: mapDbStatusToFeature(entity.status),
     type: mapDbPaymentTypeToReservation(entity.type),
-    amount: entity.amount,
+    amount: Number(entity.amount),
   };
 }
 
@@ -141,8 +141,8 @@ export async function createPayment(
 }
 
 export async function listPayments(query: PaymentListQuery) {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 20;
+  const page = Math.max(query.page ?? 1, 1);
+  const limit = Math.max(query.limit ?? 20, 1);
   const skip = (page - 1) * limit;
 
   const where: Prisma.PaymentWhereInput = {};
@@ -153,51 +153,54 @@ export async function listPayments(query: PaymentListQuery) {
 
   if (query.orderId) {
     const search = query.orderId.trim();
-    const filters: Prisma.PaymentWhereInput[] = [
-      {
-        midtransOrderId: {
-          contains: search,
-          mode: "insensitive",
+
+    if (search.length > 0) {
+      const filters: Prisma.PaymentWhereInput[] = [
+        {
+          midtransOrderId: {
+            contains: search,
+            mode: "insensitive",
+          },
         },
-      },
-    ];
+      ];
 
-    if (z.string().uuid().safeParse(search).success) {
-      filters.push({ id: search }, { reservationId: search });
+      if (z.string().uuid().safeParse(search).success) {
+        filters.push({ id: search }, { reservationId: search });
+      }
+
+      where.OR = filters;
     }
-
-    where.OR = filters;
   }
 
   const [rows, total, paidAggregate, paidCount, pendingCount, refundedCount] =
     await Promise.all([
-    prisma.payment.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy: {
-        createdAt: "desc",
-      },
-      include: {
-        reservation: {
-          include: {
-            guest: true,
-            session: true,
+      prisma.payment.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          reservation: {
+            include: {
+              guest: true,
+              session: true,
+            },
           },
         },
-      },
-    }),
-    prisma.payment.count({
-      where,
-    }),
-    prisma.payment.aggregate({
-      where: { status: DbPaymentStatus.paid },
-      _sum: { amount: true },
-    }),
-    prisma.payment.count({ where: { status: DbPaymentStatus.paid } }),
-    prisma.payment.count({ where: { status: DbPaymentStatus.pending } }),
-    prisma.payment.count({ where: { status: DbPaymentStatus.refunded } }),
-  ]);
+      }),
+      prisma.payment.count({
+        where,
+      }),
+      prisma.payment.aggregate({
+        where: { status: DbPaymentStatus.paid },
+        _sum: { amount: true },
+      }),
+      prisma.payment.count({ where: { status: DbPaymentStatus.paid } }),
+      prisma.payment.count({ where: { status: DbPaymentStatus.pending } }),
+      prisma.payment.count({ where: { status: DbPaymentStatus.refunded } }),
+    ]);
 
   const summary: PaymentSummary = {
     paidRevenue: Number(paidAggregate._sum.amount ?? 0),
@@ -239,6 +242,72 @@ export async function listPayments(query: PaymentListQuery) {
     total,
     page,
     limit,
+    summary,
+  };
+}
+
+export async function listPaymentsForAnalytics() {
+  const [rows, paidAggregate, paidCount, pendingCount, refundedCount] =
+    await Promise.all([
+      prisma.payment.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+        include: {
+          reservation: {
+            include: {
+              guest: true,
+              session: true,
+            },
+          },
+        },
+      }),
+      prisma.payment.aggregate({
+        where: { status: DbPaymentStatus.paid },
+        _sum: { amount: true },
+      }),
+      prisma.payment.count({ where: { status: DbPaymentStatus.paid } }),
+      prisma.payment.count({ where: { status: DbPaymentStatus.pending } }),
+      prisma.payment.count({ where: { status: DbPaymentStatus.refunded } }),
+    ]);
+
+  const summary: PaymentSummary = {
+    paidRevenue: Number(paidAggregate._sum.amount ?? 0),
+    paidCount,
+    pendingCount,
+    refundedCount,
+  };
+
+  return {
+    data: rows.map((payment) => ({
+      id: payment.id,
+      orderId: payment.midtransOrderId ?? payment.id,
+      status: mapDbStatusToFeature(payment.status),
+      type: mapDbPaymentTypeToReservation(payment.type),
+      amount: Number(payment.amount),
+      paymentMethod: payment.paymentMethod,
+      paidAt: payment.paidAt,
+      createdAt: payment.createdAt,
+      reservation: {
+        id: payment.reservation.id,
+        date: payment.reservation.date,
+        partySize: payment.reservation.partySize,
+        status: payment.reservation.status,
+        guest: {
+          id: payment.reservation.guest.id,
+          name: payment.reservation.guest.name,
+          phone: payment.reservation.guest.phone,
+          email: payment.reservation.guest.email,
+        },
+        session: {
+          id: payment.reservation.session.id,
+          name: payment.reservation.session.name,
+          startTime: payment.reservation.session.startTime,
+          endTime: payment.reservation.session.endTime,
+          maxCapacity: payment.reservation.session.maxCapacity,
+        },
+      },
+    })),
     summary,
   };
 }
@@ -315,6 +384,7 @@ export async function syncPaymentStatus(
   const transactionStatus = String(
     midtransResponse.transaction_status ?? ""
   ).toLowerCase();
+
   const fraudStatus =
     typeof midtransResponse.fraud_status === "string"
       ? midtransResponse.fraud_status
@@ -366,10 +436,12 @@ export async function syncPaymentStatus(
   const isTerminalFailure = ["cancel", "expire", "failure"].includes(
     transactionStatus
   );
+
   const paymentMethod =
     typeof midtransResponse.payment_type === "string"
       ? midtransResponse.payment_type
       : null;
+
   const transactionId =
     typeof midtransResponse.transaction_id === "string"
       ? midtransResponse.transaction_id
@@ -414,6 +486,7 @@ export async function syncPaymentStatus(
           expiresAt: null,
         },
       });
+
       reservationStatus = updatedReservation.status;
       reservationStatusChanged = true;
     }
@@ -437,6 +510,7 @@ export async function syncPaymentStatus(
           where: { id: currentPayment.reservationId },
           data: { status: ReservationStatus.cancelled },
         });
+
         reservationStatus = updatedReservation.status;
         reservationStatusChanged = true;
       }
@@ -465,6 +539,7 @@ export async function syncPaymentStatus(
     const { notifyGuestPaymentSuccess } = await import(
       "@/infrastructure/notifications/guest-notification.service"
     );
+
     const detail = `Pembayaran ${payment.type} Rp ${Number(
       payment.amount
     ).toLocaleString("id-ID")}`;
@@ -594,7 +669,7 @@ export async function refundPayment(
 
   return {
     ...toPaymentRecord(updated),
-    amount: amount ?? updated.amount,
+    amount: amount ?? Number(updated.amount),
   };
 }
 
@@ -606,28 +681,72 @@ export async function handleMidtransWebhook(
     payload.fraud_status
   );
 
-  const paidAt = status === "paid" ? new Date() : null;
+  const paidAt = status === PaymentStatus.Paid ? new Date() : null;
 
-  const updated = await paymentRepository.updateFromWebhook({
-    orderId: payload.order_id,
-    status,
-    paymentMethod: payload.payment_type ?? null,
-    midtransTxnId: payload.transaction_id ?? null,
-    paidAt,
+  const updated = await prisma.$transaction(async (tx) => {
+    const payment = await tx.payment.findFirst({
+      where: {
+        midtransOrderId: payload.order_id,
+      },
+      include: {
+        reservation: true,
+      },
+    });
+
+    if (!payment) {
+      throw new Error("Payment not found");
+    }
+
+    const updatedPayment = await tx.payment.update({
+      where: {
+        id: payment.id,
+      },
+      data: {
+        status: status as DbPaymentStatus,
+        paymentMethod: payload.payment_type ?? payment.paymentMethod,
+        midtransTxnId: payload.transaction_id ?? payment.midtransTxnId,
+        paidAt:
+          status === PaymentStatus.Paid
+            ? payment.paidAt ?? paidAt
+            : status === PaymentStatus.Refunded
+              ? payment.paidAt
+              : null,
+      },
+    });
+
+    if (
+      status === PaymentStatus.Paid &&
+      payment.reservation.status === ReservationStatus.pending
+    ) {
+      await tx.reservation.update({
+        where: {
+          id: payment.reservationId,
+        },
+        data: {
+          status: ReservationStatus.confirmed,
+          expiresAt: null,
+        },
+      });
+    }
+
+    return updatedPayment;
   });
 
-  if (!updated) {
-    throw new Error("Payment not found");
-  }
-
-  if (status === "paid") {
+  if (status === PaymentStatus.Paid) {
     const { notifyStaffPaymentConfirmed } = await import(
       "@/infrastructure/payment/payment-confirmed.notify"
     );
-    await notifyStaffPaymentConfirmed({
-      reservationId: updated.reservationId,
-      detail: `Pembayaran ${updated.type} dikonfirmasi`,
-    });
+    const { notifyGuestPaymentSuccess } = await import(
+      "@/infrastructure/notifications/guest-notification.service"
+    );
+
+    await Promise.allSettled([
+      notifyStaffPaymentConfirmed({
+        reservationId: updated.reservationId,
+        detail: `Pembayaran ${updated.type} dikonfirmasi`,
+      }),
+      notifyGuestPaymentSuccess(updated.reservationId),
+    ]);
   }
 
   return {

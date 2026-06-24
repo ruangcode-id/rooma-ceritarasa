@@ -12,6 +12,7 @@ import {
 import { MetricCard } from "@/components/cards/MetricCard";
 import { chartPalette, DashboardChart } from "@/components/charts";
 import { DataTable, type DataTableColumn } from "@/components/tables";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 import {
   StatusBadge,
   type StatusBadgeOption,
@@ -21,7 +22,6 @@ import type {
   OwnerPaymentAnalytics,
   OwnerPaymentRow,
   OwnerPaymentStatus,
-  OwnerStatusSummary,
 } from "@/features/owner/owner-analytics.service";
 
 const paymentStatuses: Array<StatusBadgeOption<OwnerPaymentStatus>> = [
@@ -52,11 +52,25 @@ const paymentStatuses: Array<StatusBadgeOption<OwnerPaymentStatus>> = [
 ];
 
 const statusLabels: Record<OwnerPaymentStatus | "all", string> = {
-  all: "All status",
+  all: "Semua status",
   paid: "Paid",
   pending: "Pending",
   failed: "Failed",
   refunded: "Refunded",
+};
+
+const statusOrder: OwnerPaymentStatus[] = [
+  "paid",
+  "pending",
+  "failed",
+  "refunded",
+];
+
+const statusChartColors: Record<OwnerPaymentStatus, string> = {
+  paid: chartPalette.primary,
+  pending: chartPalette.secondary,
+  failed: chartPalette.slate,
+  refunded: chartPalette.dark,
 };
 
 const currencyFormatter = new Intl.NumberFormat("id-ID", {
@@ -76,7 +90,21 @@ const dateFormatter = new Intl.DateTimeFormat("id-ID", {
   day: "2-digit",
   month: "short",
   year: "numeric",
+  timeZone: "Asia/Jakarta",
 });
+
+const dateInputFormatter = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: "Asia/Jakarta",
+});
+
+const filterControlClassName =
+  "mt-2 block h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:ring-2 focus:ring-primary/30";
+
+const presetButtonClassName =
+  "rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50";
 
 function formatCurrency(value: number) {
   return currencyFormatter.format(value);
@@ -91,22 +119,65 @@ function formatDate(value: string) {
 }
 
 function formatPaymentType(value: string) {
-  return value === "full" ? "Full payment" : "Deposit";
+  if (value === "full") return "Pelunasan";
+  if (value === "refund") return "Refund";
+  return "Deposit";
 }
 
-function getStatusAmount(
-  statusSummary: OwnerStatusSummary[],
-  status: OwnerPaymentStatus
-) {
-  return statusSummary.find((item) => item.status === status)?.amount ?? 0;
+function getTransactionDate(payment: OwnerPaymentRow) {
+  return payment.paidAt ?? payment.createdAt;
+}
+
+function getDateInputValue(value: string) {
+  const parts = dateInputFormatter.formatToParts(new Date(value));
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+  const month = parts.find((part) => part.type === "month")?.value ?? "00";
+  const day = parts.find((part) => part.type === "day")?.value ?? "00";
+
+  return `${year}-${month}-${day}`;
+}
+
+function getJakartaDateInputValue(value = new Date()) {
+  const parts = dateInputFormatter.formatToParts(value);
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+  const month = parts.find((part) => part.type === "month")?.value ?? "00";
+  const day = parts.find((part) => part.type === "day")?.value ?? "00";
+
+  return `${year}-${month}-${day}`;
+}
+
+function getJakartaMonthStartInputValue(value = new Date()) {
+  const parts = dateInputFormatter.formatToParts(value);
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+  const month = parts.find((part) => part.type === "month")?.value ?? "00";
+
+  return `${year}-${month}-01`;
+}
+
+function getDaysAgoInputValue(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+
+  return getJakartaDateInputValue(date);
+}
+
+function sumByStatus(rows: OwnerPaymentRow[], status: OwnerPaymentStatus) {
+  return rows
+    .filter((payment) => payment.status === status)
+    .reduce((sum, payment) => sum + payment.amount, 0);
 }
 
 const paymentColumns: Array<DataTableColumn<OwnerPaymentRow>> = [
   {
     id: "order",
     header: "Order",
+    headerClassName: "w-[24%] text-left",
+    className: "w-[24%] align-middle text-left",
     cell: (payment) => (
-      <div>
+      <div className="min-w-0">
         <p className="break-all font-semibold text-slate-900">
           {payment.orderId}
         </p>
@@ -117,33 +188,61 @@ const paymentColumns: Array<DataTableColumn<OwnerPaymentRow>> = [
     ),
   },
   {
-    id: "date",
-    header: "Reservation",
+    id: "transactionDate",
+    header: "Transaksi",
+    headerClassName: "w-[16%] text-left",
+    className: "w-[16%] align-middle text-left",
     cell: (payment) => (
-      <div>
-        <p>{formatDate(payment.reservationDate)}</p>
-        <p className="mt-1 text-slate-500">{payment.sessionName}</p>
+      <div className="min-w-0">
+        <p className="font-medium text-slate-900">
+          {formatDate(getTransactionDate(payment))}
+        </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Reservasi {formatDate(payment.reservationDate)}
+        </p>
+      </div>
+    ),
+  },
+  {
+    id: "reservation",
+    header: "Reservasi",
+    headerClassName: "w-[16%] text-left",
+    className: "w-[16%] align-middle text-left",
+    cell: (payment) => (
+      <div className="min-w-0">
+        <p className="font-medium text-slate-900">{payment.sessionName}</p>
+        <p className="mt-1 text-xs text-slate-500">{payment.partySize} pax</p>
       </div>
     ),
   },
   {
     id: "type",
-    header: "Type",
-    cell: (payment) => formatPaymentType(payment.paymentType),
-  },
-  {
-    id: "method",
-    header: "Method",
-    accessor: "paymentMethod",
+    header: "Tipe",
+    headerClassName: "w-[13%] text-left",
+    className: "w-[13%] align-middle text-left",
+    cell: (payment) => (
+      <div className="min-w-0">
+        <p className="font-medium text-slate-900">
+          {formatPaymentType(payment.paymentType)}
+        </p>
+        <p className="mt-1 wrap-break-word text-xs text-slate-500">
+          {payment.paymentMethod}
+        </p>
+      </div>
+    ),
   },
   {
     id: "amount",
-    header: "Amount",
+    header: "Nominal",
+    headerClassName: "w-[17%] text-right",
+    className: "w-[17%] align-middle text-right font-semibold text-slate-900",
     cell: (payment) => formatCurrency(payment.amount),
   },
   {
     id: "status",
     header: "Status",
+    headerClassName: "w-[14%] text-center",
+    className: "w-[14%] align-middle text-center",
     cell: (payment) => (
       <StatusBadge status={payment.status} statuses={paymentStatuses} />
     ),
@@ -153,12 +252,12 @@ const paymentColumns: Array<DataTableColumn<OwnerPaymentRow>> = [
 const monthlyColumns: Array<DataTableColumn<OwnerMonthlyMetric>> = [
   {
     id: "month",
-    header: "Month",
+    header: "Bulan",
     accessor: "label",
   },
   {
     id: "revenue",
-    header: "Revenue",
+    header: "Revenue Paid",
     cell: (month) => formatCurrency(month.revenue),
   },
   {
@@ -168,17 +267,17 @@ const monthlyColumns: Array<DataTableColumn<OwnerMonthlyMetric>> = [
   },
   {
     id: "full",
-    header: "Full",
+    header: "Pelunasan",
     cell: (month) => formatCurrency(month.fullPayments),
   },
   {
     id: "reservations",
-    header: "Reservations",
+    header: "Reservasi",
     accessor: "reservations",
   },
   {
     id: "guests",
-    header: "Guests",
+    header: "Pax",
     accessor: "guests",
   },
 ];
@@ -192,193 +291,221 @@ export function OwnerReportsClient({
   const [statusFilter, setStatusFilter] = useState<OwnerPaymentStatus | "all">(
     "all"
   );
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
+  const currentMonthStatusSummary = useMemo(
+    () =>
+      new Map(
+        analytics.currentMonthStatusSummary.map((item) => [item.status, item])
+      ),
+    [analytics.currentMonthStatusSummary]
+  );
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
     return analytics.paymentRows.filter((payment) => {
+      const transactionDate = getDateInputValue(getTransactionDate(payment));
+
       const matchesStatus =
         statusFilter === "all" || payment.status === statusFilter;
+
       const matchesQuery =
         normalizedQuery.length === 0 ||
         payment.orderId.toLowerCase().includes(normalizedQuery) ||
-        payment.guestName.toLowerCase().includes(normalizedQuery);
+        payment.guestName.toLowerCase().includes(normalizedQuery) ||
+        payment.sessionName.toLowerCase().includes(normalizedQuery);
 
-      return matchesStatus && matchesQuery;
+      const matchesStartDate =
+        startDate.length === 0 || transactionDate >= startDate;
+
+      const matchesEndDate =
+        endDate.length === 0 || transactionDate <= endDate;
+
+      return matchesStatus && matchesQuery && matchesStartDate && matchesEndDate;
     });
-  }, [analytics.paymentRows, query, statusFilter]);
+  }, [analytics.paymentRows, endDate, query, startDate, statusFilter]);
+
+  const filteredStatusSummary = useMemo(
+    () =>
+      statusOrder.map((status) => ({
+        status,
+        count: filteredRows.filter((payment) => payment.status === status)
+          .length,
+        amount: sumByStatus(filteredRows, status),
+      })),
+    [filteredRows]
+  );
+
+  const visibleStatusSummary = filteredStatusSummary.filter(
+    (item) => item.count > 0 || item.amount > 0
+  );
+
+  const totalFilteredAmount = filteredStatusSummary.reduce(
+    (sum, item) => sum + item.amount,
+    0
+  );
+
+  const filteredPaidAmount = sumByStatus(filteredRows, "paid");
 
   const statusChartData: ChartData<"doughnut"> = {
-    labels: analytics.statusSummary.map(
-      (item) => statusLabels[item.status] ?? item.status
-    ),
+    labels:
+      visibleStatusSummary.length > 0
+        ? visibleStatusSummary.map((item) => statusLabels[item.status])
+        : ["Tidak ada data"],
     datasets: [
       {
-        label: "Payment amount",
-        data: analytics.statusSummary.map((item) => Math.max(item.amount, 1)),
-        backgroundColor: [
-          chartPalette.primary,
-          chartPalette.secondary,
-          chartPalette.slate,
-          chartPalette.dark,
-        ],
-        borderColor: "#ffffff",
+        label: "Nominal pembayaran",
+        data:
+          visibleStatusSummary.length > 0
+            ? visibleStatusSummary.map((item) => item.amount)
+            : [1],
+        backgroundColor:
+          visibleStatusSummary.length > 0
+            ? visibleStatusSummary.map((item) => statusChartColors[item.status])
+            : [chartPalette.slate],
+        borderColor: "white",
         borderWidth: 4,
       },
     ],
   };
 
+  const statusFooterText =
+    visibleStatusSummary.length > 0
+      ? `Total nominal: ${formatCompactCurrency(
+          totalFilteredAmount
+        )} • ${filteredRows.length} transaksi sesuai filter`
+      : "Tidak ada data sesuai filter.";
+
+  const hasActiveFilters =
+    query.trim().length > 0 ||
+    statusFilter !== "all" ||
+    startDate.length > 0 ||
+    endDate.length > 0;
+
+  function resetFilters() {
+    setQuery("");
+    setStatusFilter("all");
+    setStartDate("");
+    setEndDate("");
+  }
+
+  function applyTodayFilter() {
+    const today = getJakartaDateInputValue();
+
+    setStartDate(today);
+    setEndDate(today);
+  }
+
+  function applyLastSevenDaysFilter() {
+    setStartDate(getDaysAgoInputValue(6));
+    setEndDate(getJakartaDateInputValue());
+  }
+
+  function applyCurrentMonthFilter() {
+    setStartDate(getJakartaMonthStartInputValue());
+    setEndDate(getJakartaDateInputValue());
+  }
+
   return (
-    <div className="space-y-8">
+    <div className="relative space-y-8">
       <section>
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-          Financial Reports
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">
-          Owner Financial Reports
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Laporan pembayaran reservasi dari agregasi data payments untuk
-          pemantauan owner.
-        </p>
+        <SectionTitle
+          eyebrow="Financial Reports"
+          title="Laporan Keuangan"
+          level={1}
+          description={`Ringkasan keuangan bulan ${analytics.currentMonthLabel}. Gunakan filter untuk audit transaksi berdasarkan status, tamu, order, sesi, dan tanggal.`}
+        />
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Paid Revenue"
-          value={formatCompactCurrency(analytics.totalPaidRevenue)}
-          Icon={Receipt}
-        />
-        <MetricCard
-          label="Pending"
-          value={formatCompactCurrency(analytics.pendingAmount)}
-          Icon={CalendarCheck}
-        />
-        <MetricCard
-          label="Refunded"
-          value={formatCompactCurrency(analytics.refundedAmount)}
-          Icon={ChartLineUp}
-        />
-        <MetricCard
-          label="Payments"
-          value={String(analytics.totalPaymentCount)}
-          Icon={CreditCard}
-        />
-      </div>
+      <section
+        aria-label="Ringkasan laporan keuangan"
+        className="grid min-w-0 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-4"
+      >
+        <div className="min-w-0 *:h-full">
+          <MetricCard
+            label="Revenue"
+            value={formatCompactCurrency(analytics.currentMonthRevenue)}
+            Icon={Receipt}
+          />
+        </div>
 
-      <section className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {analytics.statusSummary.map((summary) => (
-          <article
-            key={summary.status}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Payment Status
-                </p>
-                <h2 className="mt-2 wrap-break-word text-xl font-semibold text-slate-950">
-                  {statusLabels[summary.status]}
-                </h2>
-              </div>
-              <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                {summary.count} rows
-              </span>
-            </div>
-            <div className="mt-5 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <p className="text-slate-500">Amount</p>
-                <p className="mt-1 font-semibold text-slate-950">
-                  {formatCompactCurrency(summary.amount)}
-                </p>
-              </div>
-              <div>
-                <p className="text-slate-500">Status</p>
-                <p className="mt-1 font-semibold capitalize text-slate-950">
-                  {summary.status}
-                </p>
-              </div>
-            </div>
-          </article>
-        ))}
+        <div className="min-w-0 *:h-full">
+          <MetricCard
+            label="Paid Orders"
+            value={String(analytics.currentMonthPaidPaymentCount)}
+            Icon={CreditCard}
+          />
+        </div>
+
+        <div className="min-w-0 *:h-full">
+          <MetricCard
+            label="Pending"
+            value={formatCompactCurrency(
+              currentMonthStatusSummary.get("pending")?.amount ?? 0
+            )}
+            Icon={CalendarCheck}
+          />
+        </div>
+
+        <div className="min-w-0 *:h-full">
+          <MetricCard
+            label="Refunded"
+            value={formatCompactCurrency(
+              currentMonthStatusSummary.get("refunded")?.amount ?? 0
+            )}
+            Icon={ChartLineUp}
+          />
+        </div>
       </section>
 
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+      <section className="min-w-0">
         <DashboardChart
           type="doughnut"
-          title="Payment Status Mix"
+          title="Distribusi Status"
           description="Distribusi nominal pembayaran berdasarkan status."
           data={statusChartData}
           height={300}
-          footer={`Paid ${formatCurrency(
-            getStatusAmount(analytics.statusSummary, "paid")
-          )}`}
+          footer={statusFooterText}
         />
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                Filters
+        <div className="mt-4 grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {filteredStatusSummary.map((item) => (
+            <article
+              key={item.status}
+              className="min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+            >
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <StatusBadge status={item.status} statuses={paymentStatuses} />
+                <p className="shrink-0 text-xs text-slate-500">
+                  {item.count} trx
+                </p>
+              </div>
+
+              <p
+                title={formatCurrency(item.amount)}
+                className="mt-3 truncate text-lg font-semibold text-slate-950"
+              >
+                {formatCompactCurrency(item.amount)}
               </p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                Payment Ledger
-              </h2>
-            </div>
-            <div className="grid w-full min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_180px] lg:w-130">
-              <label className="relative block">
-                <span className="sr-only">Search order or guest</span>
-                <MagnifyingGlass
-                  size={16}
-                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search order or guest"
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:ring-2 focus:ring-primary/30"
-                />
-              </label>
-              <label>
-                <span className="sr-only">Status</span>
-                <select
-                  value={statusFilter}
-                  onChange={(event) =>
-                    setStatusFilter(event.target.value as OwnerPaymentStatus | "all")
-                  }
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:ring-2 focus:ring-primary/30"
-                >
-                  {Object.entries(statusLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <DataTable
-        caption="Owner payment ledger"
-        columns={paymentColumns}
-        data={filteredRows}
-        rowKey="orderId"
-        initialPageSize={10}
-        pageSizeOptions={[10, 20, 50]}
-        emptyState="Tidak ada pembayaran sesuai filter."
-      />
-
-      <section>
-        <div className="mb-5">
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-            Monthly Recap
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-            Revenue Breakdown
-          </h2>
+            </article>
+          ))}
         </div>
+      </section>
+
+      <section className="min-w-0">
+        <div className="mb-5">
+          <SectionTitle
+            eyebrow="Monthly Recap"
+            title="Breakdown Bulanan"
+            description={`Rekap enam bulan terakhir (${analytics.reportRangeLabel}) dari transaksi paid, dipisahkan antara deposit dan pelunasan.`}
+            actions={
+              <p className="text-sm text-slate-500">6 bulan terakhir</p>
+            }
+          />
+        </div>
+
         <DataTable
           caption="Monthly owner financial recap"
           columns={monthlyColumns}
@@ -386,6 +513,157 @@ export function OwnerReportsClient({
           rowKey="label"
           initialPageSize={6}
           pageSizeOptions={[6]}
+          emptyState="Belum ada data rekap bulanan."
+          tableClassName="min-w-[900px]"
+        />
+      </section>
+
+      <section className="min-w-0">
+        <div className="mb-5">
+          <SectionTitle
+            eyebrow="Transaction Filter"
+            title="Filter Transaksi"
+            description={`${filteredRows.length} transaksi ditemukan berdasarkan filter yang sedang aktif.`}
+            actions={
+              <button
+                type="button"
+                onClick={resetFilters}
+                disabled={!hasActiveFilters}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Reset
+              </button>
+            }
+          />
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="grid min-w-0 gap-4 lg:grid-cols-[0.9fr_1.4fr_1.4fr]">
+            <label className="min-w-0 text-sm font-semibold text-slate-700">
+              Status
+              <select
+                aria-label="Filter status pembayaran"
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value as OwnerPaymentStatus | "all"
+                  )
+                }
+                className={filterControlClassName}
+              >
+                <option value="all">Semua Status</option>
+                {statusOrder.map((status) => (
+                  <option key={status} value={status}>
+                    {statusLabels[status]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="min-w-0 text-sm font-semibold text-slate-700">
+              Pencarian
+              <div className="mt-2 flex h-10 min-w-0 rounded-xl border border-slate-200 bg-white transition focus-within:ring-2 focus-within:ring-primary/30">
+                <span className="grid size-10 shrink-0 place-items-center text-slate-400">
+                  <MagnifyingGlass size={16} weight="bold" />
+                </span>
+                <input
+                  type="search"
+                  aria-label="Cari transaksi pembayaran"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Cari order ID, nama tamu, atau sesi..."
+                  className="min-w-0 flex-1 rounded-xl bg-transparent py-2 pr-3 text-sm font-normal text-slate-900 outline-none"
+                />
+              </div>
+            </label>
+
+            <div className="min-w-0 text-sm font-semibold text-slate-700">
+              Rentang Tanggal
+              <div className="mt-2 grid min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:ring-2 focus-within:ring-primary/30 sm:grid-cols-[1fr_auto_1fr]">
+                <input
+                  type="date"
+                  aria-label="Tanggal mulai"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  className="h-10 min-w-0 bg-transparent px-3 text-sm font-normal text-slate-900 outline-none"
+                />
+
+                <span className="grid h-10 shrink-0 place-items-center border-y border-slate-200 px-3 text-xs font-normal text-slate-400 sm:border-x sm:border-y-0">
+                  sampai
+                </span>
+
+                <input
+                  type="date"
+                  aria-label="Tanggal akhir"
+                  value={endDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  className="h-10 min-w-0 bg-transparent px-3 text-sm font-normal text-slate-900 outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+            <p className="mr-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+              Cepat
+            </p>
+
+            <button
+              type="button"
+              onClick={applyTodayFilter}
+              className={presetButtonClassName}
+            >
+              Hari ini
+            </button>
+
+            <button
+              type="button"
+              onClick={applyLastSevenDaysFilter}
+              className={presetButtonClassName}
+            >
+              7 hari terakhir
+            </button>
+
+            <button
+              type="button"
+              onClick={applyCurrentMonthFilter}
+              className={presetButtonClassName}
+            >
+              Bulan ini
+            </button>
+
+            <button
+              type="button"
+              onClick={resetFilters}
+              disabled={!hasActiveFilters}
+              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Bersihkan
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="min-w-0">
+        <div className="mb-5">
+          <SectionTitle
+            eyebrow="Payment Ledger"
+            title="Daftar Transaksi"
+            actions={
+              <p className="text-sm text-slate-500">
+                Total paid: {formatCompactCurrency(filteredPaidAmount)}
+              </p>
+            }
+          />
+        </div>
+
+        <DataTable
+          columns={paymentColumns}
+          data={filteredRows}
+          rowKey="orderId"
+          caption="Owner payment ledger"
+          emptyState="Tidak ada pembayaran sesuai filter."
+          tableClassName="min-w-[1000px] table-fixed"
         />
       </section>
     </div>

@@ -1,16 +1,9 @@
-import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/infrastructure/database/prisma";
+import { listPaymentsForAnalytics } from "@/features/payments/payment.service";
 
-type PaymentListItem = Prisma.PaymentGetPayload<{
-  include: {
-    reservation: {
-      include: {
-        guest: true;
-        session: true;
-      };
-    };
-  };
-}>;
+type PaymentListItem = Awaited<
+  ReturnType<typeof listPaymentsForAnalytics>
+>["data"][number];
 
 export type OwnerPaymentStatus = "paid" | "pending" | "failed" | "refunded";
 
@@ -93,8 +86,10 @@ function getMonthKey(date: Date) {
     month: "2-digit",
     timeZone: "Asia/Jakarta",
   }).formatToParts(date);
+
   const year = parts.find((part) => part.type === "year")?.value ?? "0000";
   const month = parts.find((part) => part.type === "month")?.value ?? "00";
+
   return `${year}-${month}`;
 }
 
@@ -109,9 +104,10 @@ function getLastMonthBuckets(count: number, now = new Date()) {
         currentYear,
         currentMonth - 1 - (count - 1 - index),
         15,
-        12,
-      ),
+        12
+      )
     );
+
     return {
       key: getMonthKey(date),
       label: MONTH_FORMATTER.format(date),
@@ -124,47 +120,61 @@ function getLastMonthBuckets(count: number, now = new Date()) {
   });
 }
 
-function normalizeStatus(status: PaymentListItem["status"]): OwnerPaymentStatus {
-  return status as OwnerPaymentStatus;
+function normalizeStatus(status: string): OwnerPaymentStatus {
+  if (
+    status === "paid" ||
+    status === "pending" ||
+    status === "failed" ||
+    status === "refunded"
+  ) {
+    return status;
+  }
+
+  return "pending";
+}
+
+function normalizePaymentType(type: unknown) {
+  const value = String(type).toLowerCase();
+
+  if (value === "full") return "full";
+  if (value === "refund") return "refund";
+
+  return "deposit";
 }
 
 function toPaymentRow(payment: PaymentListItem): OwnerPaymentRow {
   return {
-    orderId: payment.midtransOrderId ?? payment.id,
+    orderId: payment.orderId,
     guestName: payment.reservation.guest.name,
     reservationDate: payment.reservation.date.toISOString(),
     sessionName: payment.reservation.session.name,
     partySize: payment.reservation.partySize,
-    paymentType: payment.type,
+    paymentType: normalizePaymentType(payment.type),
     paymentMethod: payment.paymentMethod ?? "-",
     amount: Number(payment.amount),
-    status: normalizeStatus(payment.status),
+    status: normalizeStatus(String(payment.status)),
     paidAt: payment.paidAt?.toISOString() ?? null,
     createdAt: payment.createdAt.toISOString(),
   };
 }
 
 export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics> {
-  const payments = await prisma.payment.findMany({
-    orderBy: { createdAt: "desc" },
-    include: {
-      reservation: {
-        include: {
-          guest: true,
-          session: true,
-        },
-      },
-    },
-  });
+  const paymentAnalyticsSource = await listPaymentsForAnalytics();
+  const payments = paymentAnalyticsSource.data;
+
   const now = new Date();
   const currentMonthKey = getMonthKey(now);
   const monthlyBuckets = getLastMonthBuckets(6, now);
-  const monthlyBucketMap = new Map(monthlyBuckets.map((bucket) => [bucket.key, bucket]));
+  const monthlyBucketMap = new Map(
+    monthlyBuckets.map((bucket) => [bucket.key, bucket])
+  );
+
   const paidReservationMap = new Map<string, PaymentListItem["reservation"]>();
   const currentMonthPaidReservationMap = new Map<
     string,
     PaymentListItem["reservation"]
   >();
+
   const sessionMap = new Map<
     string,
     {
@@ -181,7 +191,11 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
       (status) => [status, { status, count: 0, amount: 0 }]
     )
   );
-  const currentMonthStatusSummary = new Map<OwnerPaymentStatus, OwnerStatusSummary>(
+
+  const currentMonthStatusSummary = new Map<
+    OwnerPaymentStatus,
+    OwnerStatusSummary
+  >(
     (["paid", "pending", "failed", "refunded"] as OwnerPaymentStatus[]).map(
       (status) => [status, { status, count: 0, amount: 0 }]
     )
@@ -195,7 +209,7 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
   let paidPaymentCount = 0;
 
   for (const payment of payments) {
-    const status = normalizeStatus(payment.status);
+    const status = normalizeStatus(String(payment.status));
     const amount = Number(payment.amount);
     const summary = statusSummary.get(status);
     const date = getPaymentDate(payment);
@@ -225,6 +239,7 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
       if (monthKey === currentMonthKey) {
         currentMonthRevenue += amount;
         currentMonthPaidPaymentCount += 1;
+
         if (!currentMonthPaidReservationMap.has(payment.reservation.id)) {
           currentMonthPaidReservationMap.set(
             payment.reservation.id,
@@ -235,8 +250,12 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
 
       if (bucket) {
         bucket.revenue += amount;
-        if (payment.type === "deposit") bucket.deposits += amount;
-        if (payment.type === "full") bucket.fullPayments += amount;
+
+        const paymentType = normalizePaymentType(payment.type);
+
+        if (paymentType === "deposit") bucket.deposits += amount;
+        if (paymentType === "full") bucket.fullPayments += amount;
+
         bucket.reservationIds.add(payment.reservation.id);
         bucket.guestCountByReservation.set(
           payment.reservation.id,
@@ -281,13 +300,15 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
     sessionMap.set(sessionId, current);
   }
 
-  const paidBookingLoadBySession = Array.from(sessionMap.entries()).map(
-    ([, value]) => ({
+  const paidBookingLoadBySession = Array.from(sessionMap.values()).map(
+    (value) => ({
       label: value.label,
       guests: value.guests,
       capacity: value.capacity,
       loadRate:
-        value.capacity > 0 ? Math.round((value.guests / value.capacity) * 100) : 0,
+        value.capacity > 0
+          ? Math.round((value.guests / value.capacity) * 100)
+          : 0,
     })
   );
 
@@ -295,18 +316,22 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
     (sum, session) => sum + session.capacity,
     0
   );
+
   const paidBookingGuestCount = Array.from(paidReservationMap.values()).reduce(
     (sum, reservation) => sum + reservation.partySize,
     0
   );
-  const guestCount = paidBookingGuestCount;
 
   const paidReservationIds = new Set(paidReservationMap.keys());
-  const checkedInCount = await prisma.checkIn.count({
-    where: {
-      reservationId: { in: Array.from(paidReservationIds) },
-    },
-  });
+
+  const checkedInCount =
+    paidReservationIds.size > 0
+      ? await prisma.checkIn.count({
+          where: {
+            reservationId: { in: Array.from(paidReservationIds) },
+          },
+        })
+      : 0;
 
   const [currentYear, currentMonth] = currentMonthKey.split("-").map(Number);
   const currentMonthStart = new Date(`${currentMonthKey}-01T00:00:00.000+07:00`);
@@ -315,6 +340,7 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
   );
   const nextMonthKey = getMonthKey(nextMonthDate);
   const currentMonthEnd = new Date(`${nextMonthKey}-01T00:00:00.000+07:00`);
+
   const currentMonthReservationWhere = {
     date: {
       gte: currentMonthStart,
@@ -322,26 +348,30 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
     },
   };
 
-  const currentMonthPendingReservationCount = await prisma.reservation.count({
-    where: {
-      ...currentMonthReservationWhere,
-      status: "pending",
-    },
-  });
-
-  const cancellationCount = await prisma.reservation.count({
-    where: {
-      ...currentMonthReservationWhere,
-      status: "cancelled",
-    },
-  });
-
-  const noShowCount = await prisma.reservation.count({
-    where: {
-      ...currentMonthReservationWhere,
-      status: "no_show",
-    },
-  });
+  const [
+    currentMonthPendingReservationCount,
+    cancellationCount,
+    noShowCount,
+  ] = await Promise.all([
+    prisma.reservation.count({
+      where: {
+        ...currentMonthReservationWhere,
+        status: "pending",
+      },
+    }),
+    prisma.reservation.count({
+      where: {
+        ...currentMonthReservationWhere,
+        status: "cancelled",
+      },
+    }),
+    prisma.reservation.count({
+      where: {
+        ...currentMonthReservationWhere,
+        status: "no_show",
+      },
+    }),
+  ]);
 
   const checkInConversionRate =
     paidReservationIds.size > 0
@@ -367,7 +397,7 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
     paidPaymentCount,
     totalPaymentCount: payments.length,
     reservationCount: paidReservationMap.size,
-    guestCount,
+    guestCount: paidBookingGuestCount,
     averagePaidBookingLoadRate:
       totalPaidBookingCapacity > 0
         ? Math.round((paidBookingGuestCount / totalPaidBookingCapacity) * 100)
