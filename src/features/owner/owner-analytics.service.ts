@@ -1,6 +1,16 @@
-import { listPayments } from "@/features/payments/payment.service";
+import { Prisma } from "@/generated/prisma/client";
+import { prisma } from "@/infrastructure/database/prisma";
 
-type PaymentListItem = Awaited<ReturnType<typeof listPayments>>["data"][number];
+type PaymentListItem = Prisma.PaymentGetPayload<{
+  include: {
+    reservation: {
+      include: {
+        guest: true;
+        session: true;
+      };
+    };
+  };
+}>;
 
 export type OwnerPaymentStatus = "paid" | "pending" | "failed" | "refunded";
 
@@ -42,7 +52,13 @@ export type OwnerStatusSummary = {
 
 export type OwnerPaymentAnalytics = {
   generatedAt: string;
+  currentMonthLabel: string;
+  reportRangeLabel: string;
   currentMonthRevenue: number;
+  currentMonthPaidPaymentCount: number;
+  currentMonthPaidReservationCount: number;
+  currentMonthPaidGuestCount: number;
+  currentMonthPendingReservationCount: number;
   totalPaidRevenue: number;
   pendingAmount: number;
   refundedAmount: number;
@@ -51,14 +67,20 @@ export type OwnerPaymentAnalytics = {
   reservationCount: number;
   guestCount: number;
   averagePaidBookingLoadRate: number;
+  checkInConversionRate: number;
+  cancellationCount: number;
+  noShowCount: number;
   monthlyMetrics: OwnerMonthlyMetric[];
   paidBookingLoadBySession: OwnerSessionPaidBookingLoad[];
   statusSummary: OwnerStatusSummary[];
+  currentMonthStatusSummary: OwnerStatusSummary[];
   paymentRows: OwnerPaymentRow[];
 };
 
 const MONTH_FORMATTER = new Intl.DateTimeFormat("id-ID", {
-  month: "short",
+  month: "long",
+  year: "numeric",
+  timeZone: "Asia/Jakarta",
 });
 
 function getPaymentDate(payment: PaymentListItem) {
@@ -66,12 +88,30 @@ function getPaymentDate(payment: PaymentListItem) {
 }
 
 function getMonthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    timeZone: "Asia/Jakarta",
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+  const month = parts.find((part) => part.type === "month")?.value ?? "00";
+  return `${year}-${month}`;
 }
 
 function getLastMonthBuckets(count: number, now = new Date()) {
+  const [currentYear, currentMonth] = getMonthKey(now)
+    .split("-")
+    .map(Number);
+
   return Array.from({ length: count }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - (count - 1 - index), 1);
+    const date = new Date(
+      Date.UTC(
+        currentYear,
+        currentMonth - 1 - (count - 1 - index),
+        15,
+        12,
+      ),
+    );
     return {
       key: getMonthKey(date),
       label: MONTH_FORMATTER.format(date),
@@ -90,14 +130,14 @@ function normalizeStatus(status: PaymentListItem["status"]): OwnerPaymentStatus 
 
 function toPaymentRow(payment: PaymentListItem): OwnerPaymentRow {
   return {
-    orderId: payment.orderId,
+    orderId: payment.midtransOrderId ?? payment.id,
     guestName: payment.reservation.guest.name,
     reservationDate: payment.reservation.date.toISOString(),
     sessionName: payment.reservation.session.name,
     partySize: payment.reservation.partySize,
     paymentType: payment.type,
     paymentMethod: payment.paymentMethod ?? "-",
-    amount: payment.amount ?? 0,
+    amount: Number(payment.amount),
     status: normalizeStatus(payment.status),
     paidAt: payment.paidAt?.toISOString() ?? null,
     createdAt: payment.createdAt.toISOString(),
@@ -105,17 +145,30 @@ function toPaymentRow(payment: PaymentListItem): OwnerPaymentRow {
 }
 
 export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics> {
-  const result = await listPayments({ page: 1, limit: 500 });
-  const payments = result.data;
+  const payments = await prisma.payment.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      reservation: {
+        include: {
+          guest: true,
+          session: true,
+        },
+      },
+    },
+  });
   const now = new Date();
   const currentMonthKey = getMonthKey(now);
   const monthlyBuckets = getLastMonthBuckets(6, now);
   const monthlyBucketMap = new Map(monthlyBuckets.map((bucket) => [bucket.key, bucket]));
-  const reservationMap = new Map<string, PaymentListItem["reservation"]>();
   const paidReservationMap = new Map<string, PaymentListItem["reservation"]>();
+  const currentMonthPaidReservationMap = new Map<
+    string,
+    PaymentListItem["reservation"]
+  >();
   const sessionMap = new Map<
     string,
     {
+      label: string;
       guests: number;
       capacity: number;
       reservationIds: Set<string>;
@@ -128,8 +181,14 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
       (status) => [status, { status, count: 0, amount: 0 }]
     )
   );
+  const currentMonthStatusSummary = new Map<OwnerPaymentStatus, OwnerStatusSummary>(
+    (["paid", "pending", "failed", "refunded"] as OwnerPaymentStatus[]).map(
+      (status) => [status, { status, count: 0, amount: 0 }]
+    )
+  );
 
   let currentMonthRevenue = 0;
+  let currentMonthPaidPaymentCount = 0;
   let totalPaidRevenue = 0;
   let pendingAmount = 0;
   let refundedAmount = 0;
@@ -137,16 +196,20 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
 
   for (const payment of payments) {
     const status = normalizeStatus(payment.status);
-    const amount = payment.amount ?? 0;
+    const amount = Number(payment.amount);
     const summary = statusSummary.get(status);
+    const date = getPaymentDate(payment);
+    const monthKey = getMonthKey(date);
+    const currentMonthSummary = currentMonthStatusSummary.get(status);
 
     if (summary) {
       summary.count += 1;
       summary.amount += amount;
     }
 
-    if (!reservationMap.has(payment.reservation.id)) {
-      reservationMap.set(payment.reservation.id, payment.reservation);
+    if (monthKey === currentMonthKey && currentMonthSummary) {
+      currentMonthSummary.count += 1;
+      currentMonthSummary.amount += amount;
     }
 
     if (status === "paid") {
@@ -154,8 +217,6 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
         paidReservationMap.set(payment.reservation.id, payment.reservation);
       }
 
-      const date = getPaymentDate(payment);
-      const monthKey = getMonthKey(date);
       const bucket = monthlyBucketMap.get(monthKey);
 
       paidPaymentCount += 1;
@@ -163,6 +224,13 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
 
       if (monthKey === currentMonthKey) {
         currentMonthRevenue += amount;
+        currentMonthPaidPaymentCount += 1;
+        if (!currentMonthPaidReservationMap.has(payment.reservation.id)) {
+          currentMonthPaidReservationMap.set(
+            payment.reservation.id,
+            payment.reservation
+          );
+        }
       }
 
       if (bucket) {
@@ -187,8 +255,9 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
   }
 
   for (const reservation of paidReservationMap.values()) {
-    const sessionName = reservation.session.name;
-    const current = sessionMap.get(sessionName) ?? {
+    const sessionId = reservation.session.id;
+    const current = sessionMap.get(sessionId) ?? {
+      label: reservation.session.name,
       guests: 0,
       capacity: 0,
       reservationIds: new Set<string>(),
@@ -209,12 +278,12 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
       current.capacity += reservation.session.maxCapacity;
     }
 
-    sessionMap.set(sessionName, current);
+    sessionMap.set(sessionId, current);
   }
 
   const paidBookingLoadBySession = Array.from(sessionMap.entries()).map(
-    ([label, value]) => ({
-      label,
+    ([, value]) => ({
+      label: value.label,
       guests: value.guests,
       capacity: value.capacity,
       loadRate:
@@ -230,25 +299,82 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
     (sum, reservation) => sum + reservation.partySize,
     0
   );
-  const guestCount = Array.from(reservationMap.values()).reduce(
-    (sum, reservation) => sum + reservation.partySize,
-    0
+  const guestCount = paidBookingGuestCount;
+
+  const paidReservationIds = new Set(paidReservationMap.keys());
+  const checkedInCount = await prisma.checkIn.count({
+    where: {
+      reservationId: { in: Array.from(paidReservationIds) },
+    },
+  });
+
+  const [currentYear, currentMonth] = currentMonthKey.split("-").map(Number);
+  const currentMonthStart = new Date(`${currentMonthKey}-01T00:00:00.000+07:00`);
+  const nextMonthDate = new Date(
+    Date.UTC(currentYear, currentMonth, 1, 12, 0, 0)
   );
+  const nextMonthKey = getMonthKey(nextMonthDate);
+  const currentMonthEnd = new Date(`${nextMonthKey}-01T00:00:00.000+07:00`);
+  const currentMonthReservationWhere = {
+    date: {
+      gte: currentMonthStart,
+      lt: currentMonthEnd,
+    },
+  };
+
+  const currentMonthPendingReservationCount = await prisma.reservation.count({
+    where: {
+      ...currentMonthReservationWhere,
+      status: "pending",
+    },
+  });
+
+  const cancellationCount = await prisma.reservation.count({
+    where: {
+      ...currentMonthReservationWhere,
+      status: "cancelled",
+    },
+  });
+
+  const noShowCount = await prisma.reservation.count({
+    where: {
+      ...currentMonthReservationWhere,
+      status: "no_show",
+    },
+  });
+
+  const checkInConversionRate =
+    paidReservationIds.size > 0
+      ? Math.round((checkedInCount / paidReservationIds.size) * 100)
+      : 0;
 
   return {
     generatedAt: now.toISOString(),
+    currentMonthLabel: MONTH_FORMATTER.format(now),
+    reportRangeLabel: `${monthlyBuckets[0]?.label ?? ""} - ${
+      monthlyBuckets[monthlyBuckets.length - 1]?.label ?? ""
+    }`,
     currentMonthRevenue,
+    currentMonthPaidPaymentCount,
+    currentMonthPaidReservationCount: currentMonthPaidReservationMap.size,
+    currentMonthPaidGuestCount: Array.from(
+      currentMonthPaidReservationMap.values()
+    ).reduce((sum, reservation) => sum + reservation.partySize, 0),
+    currentMonthPendingReservationCount,
     totalPaidRevenue,
     pendingAmount,
     refundedAmount,
     paidPaymentCount,
     totalPaymentCount: payments.length,
-    reservationCount: reservationMap.size,
+    reservationCount: paidReservationMap.size,
     guestCount,
     averagePaidBookingLoadRate:
       totalPaidBookingCapacity > 0
         ? Math.round((paidBookingGuestCount / totalPaidBookingCapacity) * 100)
         : 0,
+    checkInConversionRate,
+    cancellationCount,
+    noShowCount,
     monthlyMetrics: monthlyBuckets.map((bucket) => ({
       label: bucket.label,
       revenue: bucket.revenue,
@@ -262,6 +388,7 @@ export async function getOwnerPaymentAnalytics(): Promise<OwnerPaymentAnalytics>
     })),
     paidBookingLoadBySession,
     statusSummary: Array.from(statusSummary.values()),
+    currentMonthStatusSummary: Array.from(currentMonthStatusSummary.values()),
     paymentRows: payments.map(toPaymentRow),
   };
 }
