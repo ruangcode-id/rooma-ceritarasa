@@ -9,7 +9,7 @@ import {
 import { patchGuestSchema } from "@/validations/guest.validation";
 import { requireAdminApiSession } from "@/lib/require-admin-api";
 import {
-  countConfirmedVisitsForGuest,
+  countCompletedVisitsForGuest,
   findActiveGuestByPhone,
   findGuestByIdActive,
   softDeleteGuest,
@@ -45,7 +45,7 @@ export async function GET(_request: Request, context: RouteCtx) {
     return jsonError("Tamu tidak ditemukan.", 404);
   }
 
-  const totalVisits = await countConfirmedVisitsForGuest(guest.id);
+  const totalVisits = await countCompletedVisitsForGuest(guest.id);
 
   return jsonSuccess({
     ...guestListRowToJson({
@@ -120,7 +120,7 @@ export async function PATCH(request: Request, context: RouteCtx) {
       return jsonError("Tamu tidak ditemukan.", 404);
     }
 
-    const totalVisits = await countConfirmedVisitsForGuest(guest.id);
+    const totalVisits = await countCompletedVisitsForGuest(guest.id);
 
     return jsonSuccess(
       guestListRowToJson({

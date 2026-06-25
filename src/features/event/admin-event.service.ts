@@ -18,6 +18,25 @@ const ALLOWED_TRANSITIONS: Partial<Record<EventRequestStatus, EventRequestStatus
   [EventRequestStatus.offered]: [EventRequestStatus.rejected, EventRequestStatus.cancelled],
 };
 
+function getEventTrackingUrl(accessToken: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+  return `${appUrl.replace(/\/+$/, "")}/event/request/${accessToken}`;
+}
+
+function createOfferPdfPublicId(
+  eventRequestId: string,
+  originalName: string,
+) {
+  const fileStem =
+    originalName
+      .replace(/\.pdf$/i, "")
+      .replace(/[^a-zA-Z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "penawaran";
+
+  return `offer-${eventRequestId}-${Date.now()}-${fileStem}.pdf`;
+}
+
 // ─── List Event Requests ──────────────────────────────────────────────────────
 
 export async function getEventRequests(query: {
@@ -45,7 +64,6 @@ export async function getEventRequests(query: {
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
-        guest: { select: { id: true, name: true, phone: true, email: true } },
         eventOffers: {
           select: { id: true, price: true, documentUrl: true, status: true, createdAt: true },
           orderBy: { createdAt: "desc" },
@@ -59,7 +77,12 @@ export async function getEventRequests(query: {
   return {
     data: rows.map((r) => ({
       id: r.id,
-      guest: r.guest,
+      guest: {
+        id: r.guestId,
+        name: r.contactName,
+        phone: r.contactPhone,
+        email: r.contactEmail,
+      },
       eventType: r.eventType,
       eventDate: r.eventDate,
       partySize: r.partySize,
@@ -91,9 +114,6 @@ export async function submitEventOffer(
   // 1. Pastikan EventRequest ada dan statusnya 'pending'
   const eventRequest = await prisma.eventRequest.findUnique({
     where: { id: eventRequestId },
-    include: {
-      guest: { select: { name: true, phone: true, email: true } },
-    },
   });
 
   if (!eventRequest) {
@@ -111,11 +131,11 @@ export async function submitEventOffer(
   }
 
   // 2. Upload PDF ke Cloudinary
-  const uploadResult = await uploadToCloudinary(pdfBuffer, {
+  const pdfDataUri = `data:application/pdf;base64,${pdfBuffer.toString("base64")}`;
+  const uploadResult = await uploadToCloudinary(pdfDataUri, {
     folder: "events/offers",
     resourceType: "raw",
-    publicId: `offer-${eventRequestId}-${Date.now()}`,
-    use_filename: true,
+    publicId: createOfferPdfPublicId(eventRequestId, pdfOriginalName),
     unique_filename: false,
   });
 
@@ -142,12 +162,13 @@ export async function submitEventOffer(
     .triggerEventNotification({
       type: "event_offer_sent",
       eventRequestId,
-      picName: eventRequest.guest.name,
-      picPhone: eventRequest.guest.phone,
-      picEmail: eventRequest.guest.email ?? null,
+      picName: eventRequest.contactName,
+      picPhone: eventRequest.contactPhone,
+      picEmail: eventRequest.contactEmail,
       eventDate: eventRequest.eventDate,
       offerPdfUrl: uploadResult.secure_url,
       offerPrice: input.price,
+      trackingUrl: getEventTrackingUrl(eventRequest.accessToken),
     })
     .catch((err) => console.error("[event-admin] Notification trigger failed:", err));
 
@@ -167,9 +188,6 @@ export async function updateEventRequestStatus(
 ) {
   const eventRequest = await prisma.eventRequest.findUnique({
     where: { id: eventRequestId },
-    include: {
-      guest: { select: { name: true, phone: true, email: true } },
-    },
   });
 
   if (!eventRequest) {
@@ -197,9 +215,9 @@ export async function updateEventRequestStatus(
       .triggerEventNotification({
         type: "event_cancelled",
         eventRequestId,
-        picName: eventRequest.guest.name,
-        picPhone: eventRequest.guest.phone,
-        picEmail: eventRequest.guest.email ?? null,
+        picName: eventRequest.contactName,
+        picPhone: eventRequest.contactPhone,
+        picEmail: eventRequest.contactEmail,
         eventDate: eventRequest.eventDate,
       })
       .catch((err) => console.error("[event-admin] Notification trigger failed:", err));

@@ -24,8 +24,21 @@ export type DataTableProps<TData> = {
   initialPageSize?: number;
   pageSizeOptions?: number[];
   emptyState?: React.ReactNode;
+  loading?: boolean;
+  loadingState?: React.ReactNode;
+  pagination?: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+    onPageChange: (page: number) => void;
+  };
   caption?: string;
   className?: string;
+  tableClassName?: string;
+  embedded?: boolean;
 };
 
 function getCellValue<TData>(
@@ -55,31 +68,58 @@ export function DataTable<TData>({
   initialPageSize = 10,
   pageSizeOptions = [5, 10, 20, 50],
   emptyState = "Belum ada data.",
+  loading = false,
+  loadingState = "Memuat data...",
+  pagination,
   caption,
   className = "",
+  tableClassName = "min-w-[720px]",
+  embedded = false,
 }: DataTableProps<TData>) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(initialPageSize);
 
-  const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, data.length);
+  const total = pagination?.total ?? data.length;
+  const activePageSize = pagination?.pageSize ?? pageSize;
+  const totalPages = Math.max(
+    1,
+    pagination?.totalPages ?? Math.ceil(data.length / pageSize)
+  );
+  const currentPage = Math.min(pagination?.page ?? page, totalPages);
+  const startIndex = (currentPage - 1) * activePageSize;
+  const endIndex = pagination
+    ? Math.min(startIndex + data.length, total)
+    : Math.min(startIndex + pageSize, data.length);
 
   const visibleRows = useMemo(
-    () => data.slice(startIndex, endIndex),
-    [data, endIndex, startIndex]
+    () => (pagination ? data : data.slice(startIndex, endIndex)),
+    [data, endIndex, pagination, startIndex]
   );
 
-  const canGoBack = currentPage > 1;
-  const canGoForward = currentPage < totalPages;
+  const canGoBack = pagination?.hasPrev ?? currentPage > 1;
+  const canGoForward = pagination?.hasNext ?? currentPage < totalPages;
+
+  function changePage(nextPage: number) {
+    const safePage = Math.min(Math.max(1, nextPage), totalPages);
+
+    if (pagination) {
+      pagination.onPageChange(safePage);
+      return;
+    }
+
+    setPage(safePage);
+  }
 
   return (
     <section
-      className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}
+      className={`overflow-hidden ${
+        embedded
+          ? ""
+          : "rounded-2xl border border-slate-200 bg-white shadow-sm"
+      } ${className}`}
     >
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left text-sm">
+        <table className={`w-full text-left text-sm ${tableClassName}`}>
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <thead className="bg-slate-50 text-xs uppercase tracking-[0.15em] text-slate-500">
             <tr>
@@ -95,7 +135,16 @@ export function DataTable<TData>({
             </tr>
           </thead>
           <tbody>
-            {visibleRows.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-4 py-12 text-center text-sm text-slate-500"
+                >
+                  {loadingState}
+                </td>
+              </tr>
+            ) : visibleRows.length > 0 ? (
               visibleRows.map((row, rowIndex) => {
                 const absoluteIndex = startIndex + rowIndex;
 
@@ -132,38 +181,40 @@ export function DataTable<TData>({
       <div className="flex flex-col gap-4 border-t border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3 text-sm text-slate-600">
           <span>
-            {data.length > 0 ? startIndex + 1 : 0}-{endIndex} dari {data.length}
+            {total > 0 ? startIndex + 1 : 0}-{endIndex} dari {total}
           </span>
-          <label className="inline-flex items-center gap-2">
-            <span className="text-slate-500">Rows</span>
-            <select
-              value={pageSize}
-              onChange={(event) => {
-                setPageSize(Number(event.target.value));
-                setPage(1);
-              }}
-              className="h-9 rounded-xl border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none transition focus:ring-2 focus:ring-primary/30"
-            >
-              {pageSizeOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
+          {!pagination ? (
+            <label className="inline-flex items-center gap-2">
+              <span className="text-slate-500">Rows</span>
+              <select
+                value={pageSize}
+                onChange={(event) => {
+                  setPageSize(Number(event.target.value));
+                  setPage(1);
+                }}
+                className="h-9 rounded-xl border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none transition focus:ring-2 focus:ring-primary/30"
+              >
+                {pageSizeOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2">
           <PaginationButton
             label="Halaman pertama"
-            disabled={!canGoBack}
-            onClick={() => setPage(1)}
+            disabled={!canGoBack || loading}
+            onClick={() => changePage(1)}
             Icon={CaretDoubleLeft}
           />
           <PaginationButton
             label="Halaman sebelumnya"
-            disabled={!canGoBack}
-            onClick={() => setPage((value) => Math.max(1, value - 1))}
+            disabled={!canGoBack || loading}
+            onClick={() => changePage(currentPage - 1)}
             Icon={CaretLeft}
           />
           <span className="min-w-24 text-center text-sm font-semibold text-slate-700">
@@ -171,14 +222,14 @@ export function DataTable<TData>({
           </span>
           <PaginationButton
             label="Halaman berikutnya"
-            disabled={!canGoForward}
-            onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
+            disabled={!canGoForward || loading}
+            onClick={() => changePage(currentPage + 1)}
             Icon={CaretRight}
           />
           <PaginationButton
             label="Halaman terakhir"
-            disabled={!canGoForward}
-            onClick={() => setPage(totalPages)}
+            disabled={!canGoForward || loading}
+            onClick={() => changePage(totalPages)}
             Icon={CaretDoubleRight}
           />
         </div>

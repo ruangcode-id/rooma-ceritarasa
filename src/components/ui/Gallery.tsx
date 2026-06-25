@@ -40,7 +40,7 @@ const useRevealOnScroll = (sectionRef: React.RefObject<HTMLElement | null>) => {
 };
 
 const useParallaxScroll = (
-  scrollRef: React.RefObject<HTMLDivElement | null>, 
+  scrollRef: React.RefObject<HTMLDivElement | null>,
   cardRefs: React.MutableRefObject<(HTMLDivElement | null)[]>
 ) => {
   const updateParallax = useCallback(() => {
@@ -94,7 +94,7 @@ export default function Gallery() {
 
   return (
     <section ref={sectionRef} className="bg-white py-24 relative w-full overflow-hidden">
-      
+
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 reveal">
         <div className="flex justify-center">

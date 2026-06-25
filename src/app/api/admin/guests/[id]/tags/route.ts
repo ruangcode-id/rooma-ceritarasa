@@ -41,5 +41,6 @@ export async function PATCH(request: Request, context: RouteCtx) {
   return jsonSuccess({
     id: updated.id,
     tags: updated.tags,
+    isVip: updated.isVip,
   });
 }

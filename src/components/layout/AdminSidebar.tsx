@@ -6,6 +6,7 @@ import {
   SquaresFour,
   CalendarCheck,
   MapPinLine,
+  CreditCard,
   Armchair,
   Clock,
   CalendarX,
@@ -17,7 +18,7 @@ import {
   Star,
   Gear,
   SignOut,
-  X
+  X,
 } from "@phosphor-icons/react";
 
 const MENU_GROUPS = [
@@ -26,6 +27,7 @@ const MENU_GROUPS = [
     items: [
       { name: "Dashboard", href: "/admin/dashboard", icon: SquaresFour },
       { name: "Reservations", href: "/admin/reservations", icon: CalendarCheck },
+      { name: "Payments", href: "/admin/payments", icon: CreditCard },
       { name: "Check-in", href: "/admin/check-in", icon: MapPinLine },
     ],
   },
@@ -56,7 +58,10 @@ interface AdminSidebarProps {
   onClose?: () => void;
 }
 
-export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({
+  isOpen = false,
+  onClose,
+}: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -79,77 +84,88 @@ export default function AdminSidebar({ isOpen = false, onClose }: AdminSidebarPr
           <span className="font-sans text-xl font-semibold uppercase tracking-widest text-white">
             Admin Panel
           </span>
+
           {/* Close button for mobile drawer */}
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-rose-200/70 hover:bg-[#3a0d13] hover:text-white lg:hidden transition-colors"
+            className="rounded-lg p-1.5 text-rose-200/70 transition-colors hover:bg-[#3a0d13] hover:text-white lg:hidden"
             aria-label="Close sidebar"
           >
             <X size={20} />
           </button>
         </div>
 
-      {/* Navigation Links */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
-        {MENU_GROUPS.map((group, idx) => (
-          <div key={idx} className="mb-8">
-            <h3 className="mb-3 px-3 text-xs font-bold uppercase tracking-[0.2em] text-rose-300/60">
-              {group.title}
-            </h3>
-            <ul className="space-y-1">
-              {group.items.map((item) => {
-                const isActive = pathname === item.href;
-                const Icon = item.icon;
+        {/* Navigation Links */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
+          {MENU_GROUPS.map((group) => (
+            <div key={group.title} className="mb-8">
+              <h3 className="mb-3 px-3 text-xs font-bold uppercase tracking-[0.2em] text-rose-300/60">
+                {group.title}
+              </h3>
 
-                return (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className={`group flex items-center rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                        isActive
-                          ? "bg-primary/20 text-white border-r-2 border-primary"
-                          : "text-rose-200/70 hover:bg-[#3a0d13] hover:text-white"
-                      }`}
-                    >
-                      <Icon
-                        size={20}
-                        weight={isActive ? "fill" : "regular"}
-                        className={`mr-3 ${
-                          isActive ? "text-white" : "text-rose-300/50 group-hover:text-white"
+              <ul className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+
+                  return (
+                    <li key={item.name}>
+                      <Link
+                        href={item.href}
+                        className={`group flex items-center rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 ${
+                          isActive
+                            ? "border-r-2 border-primary bg-primary/20 text-white"
+                            : "text-rose-200/70 hover:bg-[#3a0d13] hover:text-white"
                         }`}
-                      />
-                      {item.name}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        ))}
-      </div>
+                      >
+                        <Icon
+                          size={20}
+                          weight={isActive ? "fill" : "regular"}
+                          className={`mr-3 ${
+                            isActive
+                              ? "text-white"
+                              : "text-rose-300/50 group-hover:text-white"
+                          }`}
+                        />
 
-      {/* Footer */}
-      <div className="border-t border-[#3a0d13] p-4">
-        {/* User Profile & Sign Out Unified */}
-        <div className="flex items-center justify-between rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
-          <div className="flex items-center min-w-0">
-            <div className="h-9 w-9 flex-shrink-0 rounded-full bg-rose-800 flex items-center justify-center text-white font-medium text-sm">
-              SA
+                        {item.name}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
-            <div className="ml-3 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">Staf Admin</p>
-              <p className="text-xs text-rose-300/60 truncate">admin@rooma.com</p>
-            </div>
-          </div>
-          <button 
-            title="Sign Out"
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-rose-200/70 hover:bg-[#4a1019] hover:text-white transition-all duration-200"
-          >
-            <SignOut size={20} />
-          </button>
+          ))}
         </div>
-      </div>
-    </aside>
+
+        {/* Footer */}
+        <div className="border-t border-[#3a0d13] p-4">
+          {/* User Profile & Sign Out Unified */}
+          <div className="flex items-center justify-between rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
+            <div className="flex min-w-0 items-center">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
+                SA
+              </div>
+
+              <div className="ml-3 min-w-0">
+                <p className="truncate text-sm font-semibold text-white">
+                  Staf Admin
+                </p>
+                <p className="truncate text-xs text-rose-300/60">
+                  admin@rooma.com
+                </p>
+              </div>
+            </div>
+
+            <button
+              title="Sign Out"
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-rose-200/70 transition-all duration-200 hover:bg-[#4a1019] hover:text-white"
+            >
+              <SignOut size={20} />
+            </button>
+          </div>
+        </div>
+      </aside>
     </>
   );
 }

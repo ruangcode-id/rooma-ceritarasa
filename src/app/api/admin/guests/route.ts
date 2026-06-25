@@ -1,7 +1,7 @@
+import { NextResponse } from "next/server";
 import {
   jsonError,
   jsonSuccess,
-  jsonSuccessList,
   jsonValidationError,
 } from "@/lib/api-envelope";
 import {
@@ -14,6 +14,7 @@ import {
   createGuest,
   findActiveGuestByPhone,
   findManyGuestsPaginated,
+  getGuestStats,
 } from "@/infrastructure/repositories/admin-guest.repository";
 import { guestListRowToJson } from "@/lib/guest-response";
 import { buildPaginationMeta } from "@/lib/pagination";
@@ -31,19 +32,25 @@ export async function GET(request: Request) {
   }
 
   const { page, limit, sortBy, sortOrder, phone, tag, q } = parsed.data;
-  const total = await countActiveGuests(phone, tag, q);
-  const rows = await findManyGuestsPaginated({
-    page,
-    limit,
-    sortBy,
-    sortOrder,
-    phone,
-    tag,
-    q,
-  });
+  const [total, rows, stats] = await Promise.all([
+    countActiveGuests(phone, tag, q),
+    findManyGuestsPaginated({
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      phone,
+      tag,
+      q,
+    }),
+    getGuestStats(),
+  ]);
 
-  return jsonSuccessList(rows.map(guestListRowToJson), {
-    ...buildPaginationMeta(total, page, limit),
+  return NextResponse.json({
+    success: true as const,
+    data: rows.map(guestListRowToJson),
+    meta: buildPaginationMeta(total, page, limit),
+    stats,
   });
 }
 

@@ -8,9 +8,18 @@ interface GuestReservationFormProps {
   sessionId: string;
   tableIds: string[];
   guestCount: number;
-  onSuccess: () => void;
+  onSuccess: (result: CreateReservationResult) => void | Promise<void>;
   onBack: () => void;
 }
+
+type CreateReservationResult = {
+  reservationId: string;
+  guestId: string;
+  status: string;
+  tableIds: string[];
+  expiresAt: string | null;
+  cancelToken: string;
+};
 
 export function GuestReservationForm({ date, sessionId, tableIds, guestCount, onSuccess, onBack }: GuestReservationFormProps) {
   const [loading, setLoading] = useState(false);
@@ -45,11 +54,11 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, on
 
       const data = await res.json();
       if (data.success) {
-        onSuccess();
+        await onSuccess(data.data as CreateReservationResult);
       } else {
         setError(data.error || "Gagal membuat reservasi.");
       }
-    } catch (err) {
+    } catch {
       setError("Terjadi kesalahan jaringan.");
     } finally {
       setLoading(false);

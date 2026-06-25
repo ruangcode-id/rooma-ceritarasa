@@ -17,7 +17,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const data = await submitEventRequestUseCase(body);
+    const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    const appUrl = configuredAppUrl || new URL(request.url).origin;
+    const data = await submitEventRequestUseCase(body, appUrl);
     return jsonSuccess(data, { status: 201 });
   } catch (e) {
     if (e instanceof ZodError) {

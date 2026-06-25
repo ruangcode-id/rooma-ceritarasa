@@ -7,7 +7,7 @@ export function guestListRowToJson(row: GuestListRow) {
     phone: row.phone,
     email: row.email,
     birthdate: row.birthdate ? row.birthdate.toISOString().slice(0, 10) : null,
-    isVip: row.isVip,
+    isVip: row.isVip || row.tags.includes("VIP"),
     notes: row.notes,
     tags: row.tags,
     totalVisits: row.totalVisits,

@@ -5,7 +5,9 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { id as localeId } from "date-fns/locale";
 import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle } from "@phosphor-icons/react";
 import Image from "next/image";
+import Script from "next/script";
 import { GuestReservationForm } from "../forms/GuestReservationForm";
+import { payWithSnap } from "@/lib/midtrans-snap-client";
 
 interface BlockedDate {
   date: string;
@@ -36,7 +38,53 @@ const HERO_IMAGES = [
 
 type ModalType = "guests" | "date" | "time" | null;
 
-export default function ReservationWizard() {
+type CreateReservationResult = {
+  reservationId: string;
+  guestId: string;
+  status: string;
+  tableIds: string[];
+  expiresAt: string | null;
+  cancelToken: string;
+};
+
+type ReservationPaymentResult = {
+  paymentRequired: boolean;
+  reservationId: string;
+  partySize: number;
+  amount: number;
+  minimumOrder: number | null;
+  token?: string;
+  orderId?: string;
+  redirectUrl?: string;
+  message?: string;
+};
+
+type PaymentState =
+  | "idle"
+  | "creating"
+  | "waiting_snap"
+  | "pending"
+  | "paid"
+  | "not_required"
+  | "failed";
+
+type ReservationWizardProps = {
+  snapClientKey: string;
+  snapScriptUrl: string;
+};
+
+function formatRupiah(amount: number) {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export default function ReservationWizard({
+  snapClientKey,
+  snapScriptUrl,
+}: ReservationWizardProps) {
   // --- States ---
   const [partySize, setPartySize] = useState<number>(2);
   const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()));
@@ -55,6 +103,13 @@ export default function ReservationWizard() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [snapReady, setSnapReady] = useState(false);
+  const [reservationResult, setReservationResult] =
+    useState<CreateReservationResult | null>(null);
+  const [paymentResult, setPaymentResult] =
+    useState<ReservationPaymentResult | null>(null);
+  const [paymentState, setPaymentState] = useState<PaymentState>("idle");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -86,7 +141,7 @@ export default function ReservationWizard() {
           });
           setBlockedDates(blocked);
         }
-      } catch (err) {
+      } catch {
         console.error("Failed to fetch blocked dates");
       } finally {
         setLoadingDates(false);
@@ -108,7 +163,7 @@ export default function ReservationWizard() {
         if (data.success) {
           setSessions(data.data);
         }
-      } catch (err) {
+      } catch {
         console.error("Failed to fetch sessions");
       } finally {
         setLoadingSessions(false);
@@ -130,7 +185,7 @@ export default function ReservationWizard() {
         if (data.success) {
           setTables(data.data);
         }
-      } catch (err) {
+      } catch {
         console.error("Failed to fetch tables");
       } finally {
         setLoadingTables(false);
@@ -172,7 +227,104 @@ export default function ReservationWizard() {
     });
   };
 
-  const isFormComplete = selectedDate && selectedSessionId && selectedTableIds.length > 0;
+  const openSnapPayment = (token: string) => {
+    try {
+      const opened = payWithSnap(token, {
+        onSuccess: () => {
+          setPaymentState("paid");
+          setPaymentError(null);
+        },
+        onPending: () => {
+          setPaymentState("pending");
+          setPaymentError(null);
+        },
+        onError: () => {
+          setPaymentState("failed");
+          setPaymentError("Pembayaran belum berhasil. Silakan coba lagi.");
+        },
+        onClose: () => {
+          setPaymentState("waiting_snap");
+        },
+      });
+
+      if (!opened) return;
+
+      setPaymentError(null);
+    } catch (error) {
+      setPaymentState("waiting_snap");
+      setPaymentError(
+        error instanceof Error ? error.message : "Midtrans Snap belum siap."
+      );
+    }
+  };
+
+  const createReservationPayment = async (reservationId: string) => {
+    setPaymentState("creating");
+    setPaymentError(null);
+
+    if (!snapClientKey) {
+      setPaymentState("failed");
+      setPaymentError("Konfigurasi Midtrans belum tersedia.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/public/payments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          reservationId,
+          paymentType: "deposit",
+        }),
+      });
+
+      const payload = (await response.json()) as
+        | { success: true; data: ReservationPaymentResult }
+        | { success: false; error?: string };
+
+      if (!response.ok || !payload.success) {
+        throw new Error(
+          payload.success
+            ? "Gagal membuat transaksi pembayaran."
+            : payload.error ?? "Gagal membuat transaksi pembayaran."
+        );
+      }
+
+      setPaymentResult(payload.data);
+
+      if (!payload.data.paymentRequired) {
+        setPaymentState("not_required");
+        return;
+      }
+
+      if (!payload.data.token) {
+        throw new Error("Token pembayaran tidak tersedia.");
+      }
+
+      if (!snapReady) {
+        setPaymentState("waiting_snap");
+        return;
+      }
+
+      setPaymentState("waiting_snap");
+      openSnapPayment(payload.data.token);
+    } catch (error) {
+      setPaymentState("failed");
+      setPaymentError(
+        error instanceof Error
+          ? error.message
+          : "Gagal membuat transaksi pembayaran."
+      );
+    }
+  };
+
+  const handleReservationSuccess = async (result: CreateReservationResult) => {
+    setReservationResult(result);
+    setStep(3);
+    await createReservationPayment(result.reservationId);
+  };
 
   // --- Calendar Helpers ---
   const monthStart = startOfMonth(currentMonth);
@@ -181,10 +333,20 @@ export default function ReservationWizard() {
   const startDayOfWeek = getDay(monthStart);
   const emptyDays = Array.from({ length: startDayOfWeek }, (_, i) => i);
 
-  const selectedSession = sessions.find(s => s.id === selectedSessionId);
-
   return (
     <div className="flex flex-col items-center w-full relative">
+      {snapClientKey ? (
+        <Script
+          src={snapScriptUrl}
+          strategy="afterInteractive"
+          data-client-key={snapClientKey}
+          onReady={() => setSnapReady(true)}
+          onError={() => {
+            setSnapReady(false);
+            setPaymentError("Gagal memuat Midtrans Snap.");
+          }}
+        />
+      ) : null}
       
       {/* 1. Hero Image */}
       {step !== 3 && (
@@ -209,10 +371,13 @@ export default function ReservationWizard() {
       {/* 2. Title & Address */}
       {step !== 3 && (
         <div className="text-center mb-10 px-4">
-          <img 
-            src="/assets/logo_no_background.png" 
-            alt="Rooma Ceritarasa" 
-            className="h-16 md:h-20 w-auto object-contain mx-auto mb-4 drop-shadow-sm"
+          <Image
+            src="/assets/logo_no_background.png"
+            alt="Rooma Ceritarasa"
+            width={160}
+            height={80}
+            className="mx-auto mb-4 h-16 w-auto object-contain drop-shadow-sm md:h-20"
+            style={{ width: "auto" }}
           />
           <p className="text-sm md:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
             Jl. Lawu No.2, Kotabaru, Kec. Gondokusuman, Kota Yogyakarta, DI Yogyakarta 55224
@@ -511,7 +676,7 @@ export default function ReservationWizard() {
             sessionId={selectedSessionId}
             tableIds={selectedTableIds}
             guestCount={partySize}
-            onSuccess={() => setStep(3)}
+            onSuccess={handleReservationSuccess}
             onBack={() => setStep(1)}
           />
         </div>
@@ -521,18 +686,83 @@ export default function ReservationWizard() {
       {step === 3 && (
          <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[60vh] py-10 px-4">
            <div className="w-full max-w-2xl bg-white border-2 border-slate-900 p-10 md:p-16 text-center shadow-sm animate-in zoom-in-95 duration-500">
+             
              <div className="relative inline-flex items-center justify-center mb-8 w-24 h-24">
                {/* Main icon without pop/ripple animation */}
                <CheckCircle size={80} weight="fill" className="text-[#1f0609] relative z-10" />
              </div>
              
              <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-widest mb-4 text-slate-900 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-               Reservation Sent!
+               {paymentState === "paid"
+                 ? "Payment Received"
+                 : paymentState === "not_required"
+                 ? "Reservation Sent"
+                 : "Complete Your Deposit"}
              </h2>
-             <p className="text-slate-600 mb-10 leading-relaxed animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
-               Terima kasih atas permintaan reservasi Anda. Tim kami akan segera menghubungi Anda melalui WhatsApp untuk mengonfirmasi ketersediaan dan detail pesanan.
+             <p className="text-slate-600 mb-8 leading-relaxed animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+               {paymentState === "paid"
+                 ? "Pembayaran deposit Anda sudah diterima. Tim kami akan mengonfirmasi detail reservasi melalui WhatsApp."
+                 : paymentState === "not_required"
+                 ? "Reservasi Anda tidak memerlukan deposit. Tim kami akan segera menghubungi Anda melalui WhatsApp."
+                 : "Reservasi sudah tercatat. Selesaikan pembayaran deposit melalui Midtrans agar reservasi dapat dikonfirmasi."}
              </p>
-             <div className="animate-fade-in-up" style={{ animationDelay: "0.6s" }}>
+
+             <div className="mb-8 border-y border-slate-200 py-5 text-left animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
+               <div className="grid gap-4 text-sm md:grid-cols-2">
+                 <div>
+                   <p className="text-xs uppercase tracking-widest text-slate-400">
+                     Reservation ID
+                   </p>
+                   <p className="mt-1 break-all font-semibold text-slate-900">
+                     {reservationResult?.reservationId ?? "-"}
+                   </p>
+                 </div>
+                 <div>
+                   <p className="text-xs uppercase tracking-widest text-slate-400">
+                     Deposit
+                   </p>
+                   <p className="mt-1 font-semibold text-slate-900">
+                     {paymentResult
+                       ? formatRupiah(paymentResult.amount)
+                       : paymentState === "creating"
+                       ? "Menyiapkan pembayaran"
+                       : "-"}
+                   </p>
+                 </div>
+               </div>
+
+               {paymentResult?.minimumOrder ? (
+                 <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                   Minimum order untuk reservasi ini:{" "}
+                   {formatRupiah(paymentResult.minimumOrder)}.
+                 </p>
+               ) : null}
+
+               {paymentError ? (
+                 <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                   {paymentError}
+                 </p>
+               ) : null}
+
+               {paymentState === "pending" ? (
+                 <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                   Pembayaran sedang menunggu penyelesaian. Ikuti instruksi dari
+                   Midtrans sampai selesai.
+                 </p>
+               ) : null}
+             </div>
+
+             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center animate-fade-in-up" style={{ animationDelay: "0.6s" }}>
+               {paymentResult?.paymentRequired && paymentResult.token ? (
+                 <button
+                   type="button"
+                   onClick={() => openSnapPayment(paymentResult.token!)}
+                   disabled={!snapReady || paymentState === "creating"}
+                   className="px-8 py-4 bg-slate-900 text-white font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                 >
+                   {paymentState === "paid" ? "Lihat Pembayaran" : "Bayar Deposit"}
+                 </button>
+               ) : null}
                <button onClick={() => window.location.href = '/'} className="px-8 py-4 border-2 border-slate-900 text-slate-900 font-bold uppercase tracking-widest hover:bg-slate-50 transition-colors">
                  Kembali ke Beranda
                </button>

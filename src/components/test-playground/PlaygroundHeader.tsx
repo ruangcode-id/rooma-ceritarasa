@@ -21,8 +21,8 @@ export function PlaygroundHeader<TTab extends string>({
           Component Testing
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Playground internal untuk melihat komponen dasar, state visual,
-          dan layout publik dalam satu route.
+          Playground internal untuk mengetes komponen dashboard, table, form,
+          state visual, dan layout publik dalam satu route.
         </p>
       </div>
 

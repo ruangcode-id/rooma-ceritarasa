@@ -260,3 +260,19 @@ export async function createPublicReservation(
 
   return result;
 }
+
+export async function getVipInvitationByToken(token: string) {
+  const vipCard = await prisma.vipCard.findUnique({
+    where: { token },
+    include: { guest: true },
+  });
+
+  if (!vipCard || !vipCard.isActive) return null;
+
+  return {
+    token: vipCard.token,
+    guestName: vipCard.guest.name,
+    vipTier: vipCard.tier,
+    benefits: vipCard.benefits,
+  };
+}

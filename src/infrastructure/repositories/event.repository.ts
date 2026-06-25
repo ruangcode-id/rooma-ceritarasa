@@ -6,6 +6,10 @@ import { EventRequestStatus } from "@/generated/prisma/client";
 
 export type CreateEventRequestInput = {
   guestId: string;
+  contactName: string;
+  contactPhone: string;
+  contactEmail?: string | null;
+  accessToken: string;
   eventType?: string | null;
   eventDate: Date;
   partySize?: number | null;
@@ -20,6 +24,10 @@ export async function createEventRequest(input: CreateEventRequestInput) {
   return prisma.eventRequest.create({
     data: {
       guestId: input.guestId,
+      contactName: input.contactName,
+      contactPhone: input.contactPhone,
+      contactEmail: input.contactEmail ?? null,
+      accessToken: input.accessToken,
       eventType: input.eventType ?? null,
       eventDate: input.eventDate,
       partySize: input.partySize ?? null,

@@ -131,6 +131,16 @@ export async function DELETE(
       );
     }
 
+    if (isPrismaError(error, "P2003")) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Meja ini tidak dapat dihapus karena sudah terkait dengan reservasi tamu.",
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
