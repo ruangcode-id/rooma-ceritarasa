@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfDay, getDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle, Info } from "@phosphor-icons/react";
 import Image from "next/image";
 import Script from "next/script";
 import { GuestReservationForm } from "../forms/GuestReservationForm";
@@ -632,12 +632,27 @@ export default function ReservationWizard({
                     Silakan pilih meja tambahan.
                   </p>
                 ) : (
-                  <button 
-                    onClick={() => setStep(2)}
-                    className="px-12 py-4 bg-[#1f0609] text-white font-semibold uppercase tracking-widest hover:bg-[#3a0d13] hover:shadow-lg transition-all"
-                  >
-                    Continue Request
-                  </button>
+                  <>
+                    {partySize === 2 && selectedDate && (selectedDate.getDay() === 0 || selectedDate.getDay() === 6) && (
+                      <div className="mb-8 w-full max-w-md flex items-start gap-4 rounded-2xl bg-[#fcfbf9] border border-amber-200/60 p-5 shadow-sm animate-in fade-in duration-500">
+                        <Info size={24} weight="fill" className="text-amber-600 shrink-0" />
+                        <div className="text-left">
+                          <p className="text-xs uppercase tracking-[0.25em] font-semibold text-amber-800 mb-1">
+                            Deposit Information
+                          </p>
+                          <p className="text-sm leading-relaxed text-slate-600">
+                            Khusus reservasi akhir pekan untuk 2 pax akan dikenakan deposit sebesar <span className="font-semibold text-slate-900">Rp 75.000</span> pada tahap pembayaran.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => setStep(2)}
+                      className="px-12 py-4 bg-[#1f0609] text-white font-semibold uppercase tracking-widest hover:bg-[#3a0d13] hover:shadow-lg transition-all"
+                    >
+                      Continue Request
+                    </button>
+                  </>
                 )}
               </div>
             )}

@@ -7,6 +7,7 @@ export type CreatePaymentRequest = {
 
 export type DepositPolicy = {
   noDepositMaxGuests: number;
+  depositForWeekendTwoGuests: number;
   depositForThreeToFourGuests: number;
   depositForFivePlusGuests: number;
   minimumOrderForTenPlusGuests: number;
