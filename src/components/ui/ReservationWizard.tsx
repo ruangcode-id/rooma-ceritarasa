@@ -395,8 +395,8 @@ export default function ReservationWizard({
           onClick={() => setActiveModal("guests")}
           className="flex-1 px-6 py-4 md:py-6 flex flex-col items-center justify-center hover:bg-slate-50 transition-colors border-b md:border-b-0 md:border-r border-slate-200 text-center"
         >
-          <span className="text-xs uppercase tracking-widest text-slate-400 mb-1">Guests</span>
-          <span className="text-base font-semibold text-slate-900">{partySize} Guests</span>
+          <span className="text-xs uppercase tracking-widest text-slate-400 mb-1">Pax</span>
+          <span className="text-base font-semibold text-slate-900">{partySize} Pax</span>
         </button>
 
         {/* Date Segment */}
@@ -441,7 +441,7 @@ export default function ReservationWizard({
               </button>
               <h2 className="text-xl font-semibold tracking-wide text-slate-900">Rooma Ceritarasa</h2>
               <p className="text-xs uppercase tracking-widest text-slate-500 mt-1">
-                {activeModal === "guests" ? "Select Guests" : activeModal === "date" ? "Select Date" : "Select Session"}
+                {activeModal === "guests" ? "Select Pax" : activeModal === "date" ? "Select Date" : "Select Session"}
               </p>
             </div>
 
@@ -458,7 +458,7 @@ export default function ReservationWizard({
                   </button>
                   <div className="text-center">
                     <span className="block text-3xl font-semibold text-slate-900">{partySize}</span>
-                    <span className="text-xs uppercase tracking-wider text-slate-500">Guests</span>
+                    <span className="text-xs uppercase tracking-wider text-slate-500">Pax</span>
                   </div>
                   <button 
                     onClick={() => setPartySize(partySize + 1)}
@@ -649,7 +649,7 @@ export default function ReservationWizard({
               <div className="mt-10 flex flex-col items-center animate-in fade-in duration-300">
                 {tables.filter(t => selectedTableIds.includes(t.id)).reduce((acc, t) => acc + t.capacity, 0) < partySize ? (
                   <p className="text-red-600 font-semibold mb-4 text-center">
-                    Kapasitas meja belum cukup untuk {partySize} Guests. <br/>
+                    Kapasitas meja belum cukup untuk {partySize} Pax. <br/>
                     Silakan pilih meja tambahan.
                   </p>
                 ) : (

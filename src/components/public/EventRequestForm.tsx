@@ -255,7 +255,7 @@ export function EventRequestForm({
             className={INPUT_CLASS}
           />
         </FormField>
-        <FormField label="Estimasi Tamu">
+        <FormField label="Estimasi Pax">
           <input
             type="number"
             min={1}
