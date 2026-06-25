@@ -42,7 +42,7 @@ export function ReservationSummaryModal<TStatus extends string>({
             <StatusBadge status={activeStatus} statuses={statuses} />
           </div>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-sm font-semibold text-slate-500">Guests</span>
+            <span className="text-sm font-semibold text-slate-500">Pax</span>
             <span className="text-sm font-semibold text-slate-950">
               {quantity} pax
             </span>

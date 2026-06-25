@@ -231,7 +231,7 @@ export function EventRequestPaymentClient({
               </div>
               <div className="py-4 sm:px-4">
                 <CheckCircle size={18} className="mb-2 text-primary" />
-                <p className="text-slate-500">Jumlah Tamu</p>
+                <p className="text-slate-500">Estimasi Pax</p>
                 <p className="mt-1 font-semibold text-slate-950">
                   {detail.partySize ?? "-"} pax
                 </p>
