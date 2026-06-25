@@ -8,12 +8,21 @@ import { ReservationPaymentType } from "@/features/payments/payment.types";
 
 const DEPOSIT_POLICY = {
   noDepositMaxGuests: 2,
+  depositForWeekendTwoGuests: 75_000,
   depositForThreeToFourGuests: 150_000,
   depositForFivePlusGuests: 300_000,
   minimumOrderForTenPlusGuests: 1_000_000,
 } as const;
 
-function getDepositAmountByPartySize(partySize: number) {
+function getDepositAmountByPartySize(partySize: number, date: Date) {
+  if (partySize === 2) {
+    const day = date.getUTCDay();
+    // 0 is Sunday, 6 is Saturday
+    if (day === 0 || day === 6) {
+      return DEPOSIT_POLICY.depositForWeekendTwoGuests;
+    }
+  }
+
   if (partySize <= DEPOSIT_POLICY.noDepositMaxGuests) {
     return 0;
   }
@@ -39,10 +48,18 @@ function getMinimumOrderByPartySize(partySize: number) {
 
 function getPaymentItemName(
   partySize: number,
-  paymentType: ReservationPaymentType
+  paymentType: ReservationPaymentType,
+  date: Date
 ) {
   if (paymentType === ReservationPaymentType.Full) {
     return "Pembayaran Reservasi";
+  }
+
+  if (partySize === 2) {
+    const day = date.getUTCDay();
+    if (day === 0 || day === 6) {
+      return "Deposit Reservasi Weekend 2 Tamu";
+    }
   }
 
   if (partySize <= 2) {
@@ -86,8 +103,9 @@ export async function POST(req: NextRequest) {
     }
 
     const partySize = reservation.partySize;
+    const reservationDate = reservation.date;
 
-    const depositAmount = getDepositAmountByPartySize(partySize);
+    const depositAmount = getDepositAmountByPartySize(partySize, reservationDate);
 
     const minimumOrder = getMinimumOrderByPartySize(partySize);
 
@@ -101,7 +119,7 @@ export async function POST(req: NextRequest) {
           minimumOrder,
           depositPolicy: DEPOSIT_POLICY,
           message:
-            "Reservasi untuk 2 tamu tidak memerlukan deposit.",
+            "Reservasi ini tidak memerlukan deposit.",
         },
         { status: 200 }
       );
@@ -125,7 +143,7 @@ export async function POST(req: NextRequest) {
       items: [
         {
           id: body.paymentType,
-          name: getPaymentItemName(partySize, body.paymentType),
+          name: getPaymentItemName(partySize, body.paymentType, reservationDate),
           price: amount,
           quantity: 1,
         },
