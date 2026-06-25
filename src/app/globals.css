@@ -8,6 +8,20 @@
   --color-dark: #1d3557;
   --color-light: #f8f9fa;
   --color-bg-dark: #0f172a;
+
+  --animate-pop: pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  --animate-ripple: ripple 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+
+  @keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes ripple {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
 }
 
 @custom-variant dark (&:is(.dark *));

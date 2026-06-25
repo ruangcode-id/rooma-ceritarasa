@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfDay, getDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle } from "@phosphor-icons/react";
@@ -56,6 +56,8 @@ export default function ReservationWizard() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
+  const formRef = useRef<HTMLDivElement>(null);
+
   const today = startOfDay(new Date());
 
   // --- Image Slider ---
@@ -78,8 +80,9 @@ export default function ReservationWizard() {
         
         if (data.success) {
           const blocked = new Set<string>();
-          data.data.forEach((b: BlockedDate) => {
-            blocked.add(b.date.split("T")[0]);
+          data.data.forEach((b: any) => {
+            const dateStr = typeof b === "string" ? b : b.date;
+            blocked.add(dateStr.split("T")[0]);
           });
           setBlockedDates(blocked);
         }
@@ -135,6 +138,19 @@ export default function ReservationWizard() {
     }
     fetchTables();
   }, [selectedDate, selectedSessionId]);
+
+  useEffect(() => {
+    if (step === 2) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    } else if (step === 3) {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
+  }, [step]);
 
   // --- Handlers ---
   const handleDateSelect = (day: Date) => {
@@ -489,7 +505,7 @@ export default function ReservationWizard() {
 
       {/* --- STEP 2: GUEST FORM --- */}
       {step === 2 && selectedDate && selectedSessionId && (
-        <div className="w-full px-4 mt-4 mb-20 animate-in fade-in duration-500">
+        <div ref={formRef} className="w-full px-4 mt-4 mb-20 animate-in fade-in duration-500">
           <GuestReservationForm
             date={selectedDate}
             sessionId={selectedSessionId}
@@ -505,14 +521,22 @@ export default function ReservationWizard() {
       {step === 3 && (
          <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[60vh] py-10 px-4">
            <div className="w-full max-w-2xl bg-white border-2 border-slate-900 p-10 md:p-16 text-center shadow-sm animate-in zoom-in-95 duration-500">
-             <CheckCircle size={64} weight="fill" className="mx-auto mb-6 text-[#1f0609]" />
-             <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-widest mb-4 text-slate-900">Reservation Sent!</h2>
-             <p className="text-slate-600 mb-10 leading-relaxed">
+             <div className="relative inline-flex items-center justify-center mb-8 w-24 h-24">
+               {/* Main icon without pop/ripple animation */}
+               <CheckCircle size={80} weight="fill" className="text-[#1f0609] relative z-10" />
+             </div>
+             
+             <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-widest mb-4 text-slate-900 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+               Reservation Sent!
+             </h2>
+             <p className="text-slate-600 mb-10 leading-relaxed animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
                Terima kasih atas permintaan reservasi Anda. Tim kami akan segera menghubungi Anda melalui WhatsApp untuk mengonfirmasi ketersediaan dan detail pesanan.
              </p>
-             <button onClick={() => window.location.href = '/'} className="px-8 py-4 border-2 border-slate-900 text-slate-900 font-bold uppercase tracking-widest hover:bg-slate-50 transition-colors">
-               Kembali ke Beranda
-             </button>
+             <div className="animate-fade-in-up" style={{ animationDelay: "0.6s" }}>
+               <button onClick={() => window.location.href = '/'} className="px-8 py-4 border-2 border-slate-900 text-slate-900 font-bold uppercase tracking-widest hover:bg-slate-50 transition-colors">
+                 Kembali ke Beranda
+               </button>
+             </div>
            </div>
          </div>
       )}

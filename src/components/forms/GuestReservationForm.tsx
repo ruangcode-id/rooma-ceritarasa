@@ -40,6 +40,9 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, on
         body: JSON.stringify(payload),
       });
 
+      // Add a simulated loading delay to improve UX
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       const data = await res.json();
       if (data.success) {
         onSuccess();
