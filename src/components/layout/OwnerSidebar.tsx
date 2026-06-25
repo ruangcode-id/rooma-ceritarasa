@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   ChartLineUp,
   CurrencyCircleDollar,
@@ -25,6 +28,7 @@ interface OwnerSidebarProps {
 
 export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarProps) {
   const pathname = usePathname();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
     <>
@@ -106,6 +110,7 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
           </div>
           <button 
             title="Sign Out"
+            onClick={() => setShowLogoutConfirm(true)}
             className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-rose-200/70 hover:bg-[#4a1019] hover:text-white transition-all duration-200"
           >
             <SignOut size={20} />
@@ -113,6 +118,16 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
         </div>
       </div>
     </aside>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Konfirmasi Keluar"
+        message="Apakah Anda yakin ingin keluar dari sesi ini? Anda harus login kembali untuk masuk ke dashboard owner."
+        confirmText="Ya, Keluar"
+        cancelText="Batal"
+        onConfirm={() => signOut({ callbackUrl: "/login" })}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
     </>
   );
 }
