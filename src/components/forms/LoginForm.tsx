@@ -19,7 +19,7 @@ export default function LoginForm() {
           htmlFor="email"
           className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2"
         >
-          Email Address
+          Email
         </label>
         <input
           id="email"

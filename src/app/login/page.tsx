@@ -46,7 +46,10 @@ export default function LoginPage() {
               Staff Portal
             </h1>
             <p className="mt-3 text-sm tracking-wider text-slate-500 uppercase">
-              Admin & Owner Access
+              Admin &amp; Owner Access
+            </p>
+            <p className="mt-2 text-xs text-slate-400">
+              Use your staff credentials to continue
             </p>
           </div>
 
