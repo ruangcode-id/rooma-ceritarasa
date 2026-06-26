@@ -19,7 +19,7 @@ const socialLinksSchema = z.record(
 );
 
 export const updateRestaurantSettingsSchema = z.object({
-  name: z.string({ required_error: "Nama restoran wajib diisi" }).trim().min(1, "Nama restoran tidak boleh kosong").max(100, "Nama maksimal 100 karakter").optional(),
+  name: z.string().trim().min(1, "Nama restoran wajib diisi").max(100, "Nama maksimal 100 karakter").optional(),
   address: z.string().trim().max(2000, "Alamat terlalu panjang").optional().nullable(),
   phone: z.string().trim().max(20, "Nomor telepon maksimal 20 karakter").optional().nullable(),
   email: z

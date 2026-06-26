@@ -243,9 +243,9 @@ export async function getAdminOperationalDashboard(
       expectedGuests,
       checkedInReservations,
       awaitingCheckInReservations: reservations.filter((reservation) =>
-        [ReservationStatus.pending, ReservationStatus.confirmed].includes(
-          reservation.status
-        )
+        (
+          [ReservationStatus.pending, ReservationStatus.confirmed] as ReservationStatus[]
+        ).includes(reservation.status)
       ).length,
       paidRevenue: Number(paidRevenue._sum.amount ?? 0),
     },
