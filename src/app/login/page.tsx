@@ -30,7 +30,6 @@ export default function LoginPage() {
         </div>
       </div>
 
-
       {/* Right side - Form */}
       <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 bg-white relative">
         <div className="w-full max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -54,11 +53,11 @@ export default function LoginPage() {
           </div>
 
           <LoginForm />
-          
+
           <div className="mt-12 text-center">
-             <p className="text-xs text-slate-400">
-               &copy; {new Date().getFullYear()} Rooma Ceritarasa. All rights reserved.
-             </p>
+            <p className="text-xs text-slate-400">
+              &copy; {new Date().getFullYear()} Rooma Ceritarasa. All rights reserved.
+            </p>
           </div>
         </div>
       </div>

@@ -3,87 +3,135 @@
 import { useState } from "react";
 import { useActionState } from "react";
 import { loginAction } from "@/application/use-cases/auth/login.action";
-import { Eye, EyeSlash, CircleNotch } from "@phosphor-icons/react";
+import {
+  Eye,
+  EyeSlash,
+  CircleNotch,
+  Envelope,
+  Lock,
+  Warning,
+} from "@phosphor-icons/react";
 
 const initialState = { error: null as string | null };
 
 export default function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passFocused, setPassFocused] = useState(false);
 
   return (
-    <form action={formAction} className="flex flex-col gap-8 w-full mt-8">
-      {/* Email field */}
-      <div>
+    <form action={formAction} className="flex flex-col gap-6 w-full">
+
+      {/* ── Email ── */}
+      <div className="group">
         <label
           htmlFor="email"
-          className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2"
+          className={`block text-[10px] font-bold uppercase tracking-widest mb-2 transition-colors duration-200 ${
+            emailFocused ? "text-[#1f0609]" : "text-slate-400"
+          }`}
         >
           Email
         </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          placeholder="admin@rooma.com"
-          className="w-full border-b-2 border-slate-200 bg-transparent px-0 py-2 text-base text-slate-900 outline-none transition-all duration-200 focus:border-[#1f0609] placeholder:text-slate-300"
-        />
+        <div
+          className={`flex items-center gap-3 border-b-2 pb-2 transition-all duration-200 ${
+            emailFocused ? "border-[#1f0609]" : "border-slate-200"
+          }`}
+        >
+          <Envelope
+            size={16}
+            className={`flex-shrink-0 transition-colors duration-200 ${
+              emailFocused ? "text-[#1f0609]" : "text-slate-300"
+            }`}
+          />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="Enter your email"
+            onFocus={() => setEmailFocused(true)}
+            onBlur={() => setEmailFocused(false)}
+            className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-300"
+          />
+        </div>
       </div>
 
-      {/* Password field with show/hide toggle */}
-      <div>
+      {/* ── Password ── */}
+      <div className="group">
         <label
           htmlFor="password"
-          className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2"
+          className={`block text-[10px] font-bold uppercase tracking-widest mb-2 transition-colors duration-200 ${
+            passFocused ? "text-[#1f0609]" : "text-slate-400"
+          }`}
         >
           Password
         </label>
-        <div className="relative flex items-center">
+        <div
+          className={`flex items-center gap-3 border-b-2 pb-2 transition-all duration-200 ${
+            passFocused ? "border-[#1f0609]" : "border-slate-200"
+          }`}
+        >
+          <Lock
+            size={16}
+            className={`flex-shrink-0 transition-colors duration-200 ${
+              passFocused ? "text-[#1f0609]" : "text-slate-300"
+            }`}
+          />
           <input
             id="password"
             name="password"
             type={showPassword ? "text" : "password"}
             required
             autoComplete="current-password"
-            placeholder="••••••••"
-            className="w-full border-b-2 border-slate-200 bg-transparent px-0 py-2 pr-10 text-base text-slate-900 outline-none transition-all duration-200 focus:border-[#1f0609] placeholder:text-slate-300"
+            placeholder="Enter your password"
+            onFocus={() => setPassFocused(true)}
+            onBlur={() => setPassFocused(false)}
+            className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-300"
           />
           <button
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
             aria-label={showPassword ? "Hide password" : "Show password"}
-            className="absolute right-0 bottom-2 text-slate-400 hover:text-[#1f0609] transition-colors"
+            className="flex-shrink-0 text-slate-300 hover:text-[#1f0609] transition-colors"
           >
-            {showPassword ? <EyeSlash size={20} /> : <Eye size={20} />}
+            {showPassword ? <EyeSlash size={16} /> : <Eye size={16} />}
           </button>
         </div>
       </div>
 
-      {/* Error message */}
+      {/* ── Error message ── */}
       {state.error ? (
-        <div className="p-4 bg-red-50 border border-red-100 rounded-lg animate-in fade-in duration-300">
-          <p className="text-sm text-red-600 text-center font-medium" role="alert">
+        <div
+          className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 animate-in fade-in slide-in-from-top-2 duration-300"
+          role="alert"
+        >
+          <Warning size={16} className="mt-0.5 flex-shrink-0 text-red-500" weight="fill" />
+          <p className="text-xs font-medium leading-relaxed text-red-600">
             {state.error}
           </p>
         </div>
       ) : null}
 
-      {/* Submit button with loading spinner */}
+      {/* ── Submit button ── */}
       <button
         type="submit"
         disabled={pending}
-        className="relative w-full flex items-center justify-center gap-3 bg-[#1f0609] text-white font-bold uppercase tracking-[0.2em] py-4 hover:bg-[#3a0d13] transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+        className="group relative mt-2 w-full overflow-hidden bg-[#1f0609] py-4 text-xs font-bold uppercase tracking-[0.25em] text-white shadow-lg transition-all duration-300 hover:bg-[#3a0d13] hover:shadow-rose-900/30 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {pending && (
-          <CircleNotch
-            size={18}
-            className="animate-spin"
-            aria-hidden="true"
-          />
-        )}
-        {pending ? "Authenticating..." : "Sign In"}
+        {/* Shine sweep effect on hover */}
+        <span
+          aria-hidden
+          className="absolute inset-0 -translate-x-full skew-x-12 bg-white/10 transition-transform duration-700 group-hover:translate-x-full"
+        />
+
+        <span className="relative flex items-center justify-center gap-2.5">
+          {pending && (
+            <CircleNotch size={15} className="animate-spin" aria-hidden="true" />
+          )}
+          {pending ? "Authenticating..." : "Sign In"}
+        </span>
       </button>
     </form>
   );
