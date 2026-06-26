@@ -12,6 +12,7 @@ export default function LoginPage() {
           src="/assets/slider2.webp"
           alt="Rooma Ceritarasa Interior"
           fill
+          sizes="(max-width: 768px) 0vw, 50vw"
           className="object-cover opacity-80"
           priority
         />
