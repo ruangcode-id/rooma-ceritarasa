@@ -9,10 +9,10 @@ export default function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
 
   return (
-    <form action={formAction} className="space-y-4">
-      <div className="space-y-1">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
+    <form action={formAction} className="flex flex-col gap-8 w-full mt-8">
+      <div>
+        <label htmlFor="email" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+          Email Address
         </label>
         <input
           id="email"
@@ -20,12 +20,13 @@ export default function LoginForm() {
           type="email"
           required
           autoComplete="email"
-          className="w-full rounded-lg border border-gray-300 bg-white/80 px-3 py-2 text-gray-900 outline-none focus:ring-2 focus:ring-primary dark:border-gray-700 dark:bg-bg-dark/60 dark:text-gray-100"
+          placeholder="admin@rooma.com"
+          className="w-full border-b-2 border-slate-200 bg-transparent px-0 py-2 text-base text-slate-900 outline-none transition-all focus:border-[#1f0609] placeholder:text-slate-300"
         />
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="password" className="text-sm font-medium">
+      <div>
+        <label htmlFor="password" className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
           Password
         </label>
         <input
@@ -34,22 +35,25 @@ export default function LoginForm() {
           type="password"
           required
           autoComplete="current-password"
-          className="w-full rounded-lg border border-gray-300 bg-white/80 px-3 py-2 text-gray-900 outline-none focus:ring-2 focus:ring-primary dark:border-gray-700 dark:bg-bg-dark/60 dark:text-gray-100"
+          placeholder="••••••••"
+          className="w-full border-b-2 border-slate-200 bg-transparent px-0 py-2 text-base text-slate-900 outline-none transition-all focus:border-[#1f0609] placeholder:text-slate-300"
         />
       </div>
 
       {state.error ? (
-        <p className="text-sm text-primary" role="alert">
-          {state.error}
-        </p>
+        <div className="p-4 bg-red-50 border border-red-100 rounded-lg animate-in fade-in">
+          <p className="text-sm text-red-600 text-center font-medium" role="alert">
+            {state.error}
+          </p>
+        </div>
       ) : null}
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-primary px-4 py-2 font-medium text-white disabled:opacity-70"
+        className="w-full bg-[#1f0609] text-white font-bold uppercase tracking-[0.2em] py-4 hover:bg-[#3a0d13] transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed mt-2"
       >
-        {pending ? "Memproses..." : "Masuk"}
+        {pending ? "Authenticating..." : "Sign In"}
       </button>
     </form>
   );
