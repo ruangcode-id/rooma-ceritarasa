@@ -40,7 +40,7 @@ function formatSessionTime(value: string) {
   const date = new Date(value);
 
   if (!Number.isNaN(date.getTime())) {
-    return date.toLocaleTimeString("id-ID", {
+    return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
@@ -64,7 +64,7 @@ function getApiError(payload: ApiErrorPayload) {
   return (
     payload.details?.find((detail) => detail.message)?.message ??
     payload.error ??
-    "Pengajuan event gagal dikirim."
+    "Failed to submit event request."
   );
 }
 
@@ -108,8 +108,8 @@ export function EventRequestForm({
         if (!response.ok || !payload.success) {
           throw new Error(
             payload.success
-              ? "Gagal mengambil sesi."
-              : payload.error ?? "Gagal mengambil sesi."
+              ? "Failed to load sessions."
+              : payload.error ?? "Failed to load sessions."
           );
         }
 
@@ -168,7 +168,7 @@ export function EventRequestForm({
       if (!response.ok || !payload.success) {
         throw new Error(
           payload.success
-            ? "Pengajuan event gagal dikirim."
+            ? "Failed to submit event request."
             : getApiError(payload)
         );
       }
@@ -178,7 +178,7 @@ export function EventRequestForm({
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Pengajuan event gagal dikirim."
+          : "Failed to submit event request."
       );
     } finally {
       setSubmitting(false);
@@ -191,17 +191,17 @@ export function EventRequestForm({
       className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8"
     >
       <div className="grid gap-5 sm:grid-cols-2">
-        <FormField label="Nama PIC" required>
+        <FormField label="PIC Name" required>
           <input
             required
             maxLength={100}
             value={form.name}
             onChange={(event) => updateForm("name", event.target.value)}
             className={INPUT_CLASS}
-            placeholder="Nama lengkap"
+            placeholder="Full name"
           />
         </FormField>
-        <FormField label="Nomor HP" required>
+        <FormField label="Phone Number" required>
           <input
             required
             type="tel"
@@ -220,14 +220,14 @@ export function EventRequestForm({
             placeholder="nama@email.com"
           />
         </FormField>
-        <FormField label="Jenis Acara">
+        <FormField label="Event Type">
           <input
             list="event-type-options"
             maxLength={100}
             value={form.eventType}
             onChange={(event) => updateForm("eventType", event.target.value)}
             className={INPUT_CLASS}
-            placeholder="Contoh: Birthday Celebration"
+            placeholder="e.g. Birthday Celebration"
           />
           <datalist id="event-type-options">
             {eventTypeOptions.map((option) => (
@@ -235,7 +235,7 @@ export function EventRequestForm({
             ))}
           </datalist>
         </FormField>
-        <FormField label="Tanggal Acara" required>
+        <FormField label="Event Date" required>
           <input
             required
             type="date"
@@ -255,7 +255,7 @@ export function EventRequestForm({
             className={INPUT_CLASS}
           />
         </FormField>
-        <FormField label="Estimasi Pax">
+        <FormField label="Estimated Pax">
           <input
             type="number"
             min={1}
@@ -263,10 +263,10 @@ export function EventRequestForm({
             value={form.partySize}
             onChange={(event) => updateForm("partySize", event.target.value)}
             className={INPUT_CLASS}
-            placeholder="Jumlah pax"
+            placeholder="Number of pax"
           />
         </FormField>
-        <FormField label="Preferensi Sesi">
+        <FormField label="Session Preference">
           <select
             value={form.sessionId}
             onChange={(event) => updateForm("sessionId", event.target.value)}
@@ -275,10 +275,10 @@ export function EventRequestForm({
           >
             <option value="">
               {sessionsLoading
-                ? "Memuat sesi..."
+                ? "Loading sessions..."
                 : sessions.length > 0
-                  ? "Fleksibel / pilih sesi"
-                  : "Fleksibel"}
+                  ? "Flexible / choose session"
+                  : "Flexible"}
             </option>
             {sessions.map((session) => (
               <option key={session.id} value={session.id}>
@@ -290,7 +290,7 @@ export function EventRequestForm({
         </FormField>
         <div className="hidden sm:block" />
         <div className="sm:col-span-2">
-          <FormField label="Ceritakan kebutuhan acara">
+          <FormField label="Tell us about your event needs">
             <textarea
               rows={5}
               maxLength={5000}
@@ -299,7 +299,7 @@ export function EventRequestForm({
                 updateForm("description", event.target.value)
               }
               className={INPUT_CLASS}
-              placeholder="Konsep acara, kebutuhan menu, dekorasi, atau catatan lainnya..."
+              placeholder="Event concept, menu requirements, decoration, or other notes..."
             />
           </FormField>
         </div>
@@ -320,12 +320,12 @@ export function EventRequestForm({
         {submitting ? (
           <>
             <LoadingSpinner className="size-4 border-white/40 border-t-white" />
-            Mengirim pengajuan...
+            Submitting request...
           </>
         ) : (
           <>
             <EnvelopeSimple size={18} weight="bold" />
-            Kirim Pengajuan Event
+            Submit Event Request
           </>
         )}
       </button>
@@ -335,8 +335,7 @@ export function EventRequestForm({
           weight="fill"
           className="mt-0.5 shrink-0 text-green-600"
         />
-        Dengan mengirim form ini, Anda bersedia dihubungi oleh tim Rooma
-        Ceritarasa mengenai pengajuan acara.
+        By submitting this form, you agree to be contacted by the Rooma Ceritarasa team regarding your event request.
       </p>
     </form>
   );
