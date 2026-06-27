@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle,
@@ -60,22 +59,16 @@ function getMinimumDate() {
   return `${year}-${month}-${day}`;
 }
 
-function getApiError(payload: ApiErrorPayload) {
-  return (
-    payload.details?.find((detail) => detail.message)?.message ??
-    payload.error ??
-    "Failed to submit event request."
-  );
-}
 
 export function EventRequestForm({
   initialEventType,
   eventTypeOptions,
+  whatsappNumber,
 }: {
   initialEventType: string;
   eventTypeOptions: string[];
+  whatsappNumber: string;
 }) {
-  const router = useRouter();
   const [form, setForm] = useState<RequestForm>({
     name: "",
     phone: "",
@@ -146,43 +139,37 @@ export function EventRequestForm({
     setSubmitting(true);
     setError(null);
 
-    try {
-      const response = await fetch("/api/events/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          phone: form.phone,
-          email: form.email,
-          eventType: form.eventType || null,
-          eventDate: form.eventDate,
-          partySize: form.partySize ? Number(form.partySize) : null,
-          sessionId: form.sessionId || null,
-          description: form.description || null,
-        }),
-      });
-      const payload = (await response.json()) as
-        | { success: true; data: { accessToken: string } }
-        | ApiErrorPayload;
-
-      if (!response.ok || !payload.success) {
-        throw new Error(
-          payload.success
-            ? "Failed to submit event request."
-            : getApiError(payload)
-        );
+    let sessionText = "Flexible";
+    if (form.sessionId) {
+      const selectedSession = sessions.find((s) => s.id === form.sessionId);
+      if (selectedSession) {
+        sessionText = `${selectedSession.name} (${formatSessionTime(selectedSession.startTime)} - ${formatSessionTime(selectedSession.endTime)})`;
       }
-
-      router.push(`/event/request/${payload.data.accessToken}`);
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Failed to submit event request."
-      );
-    } finally {
-      setSubmitting(false);
     }
+
+    const message = `Hello Rooma Ceritarasa team, I would like to request an event with the following details:
+
+*PIC Name:* ${form.name}
+*Phone Number:* ${form.phone}
+*Email:* ${form.email || "-"}
+
+*Event Type:* ${form.eventType || "-"}
+*Event Date:* ${form.eventDate}
+*Estimated Pax:* ${form.partySize || "-"}
+*Session Preference:* ${sessionText}
+
+*Additional Needs:*
+${form.description || "-"}
+
+Thank you.`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const cleanWaNumber = whatsappNumber.replace(/[^0-9]/g, "");
+    
+    // Open WhatsApp in a new tab
+    window.open(`https://wa.me/${cleanWaNumber}?text=${encodedMessage}`, "_blank");
+    
+    setSubmitting(false);
   }
 
   return (

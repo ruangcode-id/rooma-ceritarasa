@@ -4,6 +4,7 @@ import {
   type PublicEventItem,
 } from "@/components/public/PublicEventsClient";
 import { getPublishedEventsUseCase } from "@/application/use-cases/event/get-published-events.usecase";
+import { SettingsUseCase } from "@/application/use-cases/settings/settings.usecase";
 
 export const metadata: Metadata = {
   title: "Events | Rooma Ceritarasa",
@@ -30,6 +31,7 @@ async function getPublicEvents(): Promise<PublicEventItem[]> {
 
 export default async function EventsPage() {
   const events = await getPublicEvents();
+  const settings = await SettingsUseCase.getSettingsAction();
 
-  return <PublicEventsClient events={events} />;
+  return <PublicEventsClient events={events} whatsappNumber={settings.whatsappNumber || "6285725539262"} />;
 }

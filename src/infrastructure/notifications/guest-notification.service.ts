@@ -3,8 +3,8 @@ import { SettingsRepository } from "@/infrastructure/repositories/settings.repos
 import { sendWhatsAppMessage } from "@/infrastructure/whatsapp/fonnte";
 import { sendTransactionalEmail } from "@/infrastructure/email/resend";
 import { renderTemplate } from "@/lib/render-template";
-import type { EventNotificationTrigger } from "@/domain/event/notification.types";
-import { ReservationStatus, EventRequestStatus } from "@/generated/prisma/client";
+
+import { ReservationStatus } from "@/generated/prisma/client";
 
 type TemplateVars = Record<string, string | number | null | undefined>;
 
@@ -43,15 +43,6 @@ function formatTimeFromSession(startTime: Date): string {
     hour12: false,
     timeZone: "Asia/Jakarta",
   }).format(startTime);
-}
-
-function formatCurrency(value: number | null | undefined): string {
-  if (value == null || Number.isNaN(value)) return "-";
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 export async function sendWaFromTemplate(
@@ -194,134 +185,7 @@ export async function sendReservationReminder(reservationId: string) {
   return waResult;
 }
 
-export async function sendEventReminder(eventRequestId: string) {
-  const eventRequest = await prisma.eventRequest.findUnique({
-    where: { id: eventRequestId },
-  });
 
-  if (!eventRequest || eventRequest.status !== EventRequestStatus.accepted) {
-    return { sent: false as const, warning: "Event tidak eligible untuk reminder." };
-  }
-  if (eventRequest.reminderSentAt) {
-    return { sent: false as const, warning: "Reminder event sudah pernah dikirim." };
-  }
-
-  const vars: TemplateVars = {
-    nama: eventRequest.contactName,
-    tanggal: formatDateId(eventRequest.eventDate),
-    event_id: eventRequest.id.slice(0, 8),
-    detail: eventRequest.eventType ?? "Acara khusus",
-  };
-
-  const waResult = await sendWaFromTemplate(
-    eventRequest.contactPhone,
-    "reservasi_reminder_h1",
-    vars,
-    "Reminder: besok acara Anda di Rooma Cerita Rasa pada {{tanggal}}.",
-  );
-
-  if (waResult.sent) {
-    await prisma.eventRequest.update({
-      where: { id: eventRequestId },
-      data: { reminderSentAt: new Date() },
-    });
-  }
-
-  return waResult;
-}
-
-export async function dispatchEventGuestNotification(
-  payload: EventNotificationTrigger,
-): Promise<void> {
-  const vars: TemplateVars = {
-    nama: payload.picName,
-    tanggal: formatDateId(payload.eventDate),
-    event_id: payload.eventRequestId.slice(0, 8),
-    detail: payload.offerPdfUrl ?? "",
-    pdf_url: payload.offerPdfUrl ?? "",
-    harga: formatCurrency(payload.offerPrice),
-    valid_until: "",
-    tracking_url: payload.trackingUrl ?? "",
-  };
-
-  switch (payload.type) {
-    case "event_request_received":
-      await sendWaFromTemplate(
-        payload.picPhone,
-        "event_request_received",
-        vars,
-        "Halo {{nama}}, pengajuan acara Anda untuk {{tanggal}} sudah kami terima. Pantau statusnya di {{tracking_url}}",
-      );
-      if (payload.picEmail) {
-        await sendEmailFromTemplate(
-          payload.picEmail,
-          "event_request_received",
-          "Pengajuan Acara Diterima — Rooma Cerita Rasa",
-          vars,
-          "<p>Halo {{nama}},</p><p>Pengajuan acara Anda untuk <strong>{{tanggal}}</strong> sudah kami terima.</p><p><a href=\"{{tracking_url}}\">Pantau status pengajuan</a></p>",
-        );
-      }
-      break;
-
-    case "event_offer_sent":
-      await sendWaFromTemplate(
-        payload.picPhone,
-        "event_offer",
-        vars,
-        "Halo {{nama}}, kami kirim penawaran acara untuk {{tanggal}}. Pantau dan lanjutkan pembayaran di {{tracking_url}}. Dokumen: {{detail}}",
-      );
-      if (payload.picEmail) {
-        await sendEmailFromTemplate(
-          payload.picEmail,
-          "event_offer",
-          "Penawaran Acara — Rooma Cerita Rasa",
-          vars,
-          "<p>Halo {{nama}},</p><p>Berikut penawaran acara untuk tanggal {{tanggal}}.</p><p><a href=\"{{tracking_url}}\">Buka detail pengajuan dan pembayaran</a></p><p><a href=\"{{pdf_url}}\">Lihat penawaran (PDF)</a></p>",
-        );
-      }
-      break;
-
-    case "event_deposit_paid":
-    case "event_accepted":
-      await sendWaFromTemplate(
-        payload.picPhone,
-        "event_konfirmasi",
-        vars,
-        "Halo {{nama}}, acara Anda pada {{tanggal}} telah dikonfirmasi. ID: {{event_id}}",
-      );
-      if (payload.picEmail) {
-        await sendEmailFromTemplate(
-          payload.picEmail,
-          "event_konfirmasi",
-          "Konfirmasi Acara — Rooma Cerita Rasa",
-          vars,
-          "<p>Halo {{nama}},</p><p>Acara Anda pada {{tanggal}} telah dikonfirmasi.</p>",
-        );
-      }
-      break;
-
-    case "event_cancelled":
-      await sendWaFromTemplate(
-        payload.picPhone,
-        "event_cancelled",
-        vars,
-        "Halo {{nama}}, permintaan acara pada {{tanggal}} dibatalkan. Hubungi kami jika ada pertanyaan.",
-      );
-      if (payload.picEmail) {
-        await sendEmailFromTemplate(
-          payload.picEmail,
-          "event_cancelled",
-          "Pembatalan Acara — Rooma Cerita Rasa",
-          vars,
-          "<p>Halo {{nama}},</p><p>Permintaan acara pada {{tanggal}} telah dibatalkan.</p>",
-        );
-      }
-      break;
-
-    default:
-      console.warn("[guest-notify] Unknown event notification type:", payload.type);
-  }
-}
 
 export async function runDailyReminders() {
   const tomorrow = new Date();
@@ -329,7 +193,7 @@ export async function runDailyReminders() {
   const dateStr = tomorrow.toISOString().slice(0, 10);
   const targetDate = new Date(`${dateStr}T00:00:00.000Z`);
 
-  const [reservations, events] = await Promise.all([
+  const [reservations] = await Promise.all([
     prisma.reservation.findMany({
       where: {
         date: targetDate,
@@ -338,19 +202,10 @@ export async function runDailyReminders() {
       },
       select: { id: true },
     }),
-    prisma.eventRequest.findMany({
-      where: {
-        eventDate: targetDate,
-        status: EventRequestStatus.accepted,
-        reminderSentAt: null,
-      },
-      select: { id: true },
-    }),
   ]);
 
   const results = {
     reservations: { total: reservations.length, sent: 0, failed: 0 },
-    events: { total: events.length, sent: 0, failed: 0 },
   };
 
   for (const r of reservations) {
@@ -361,17 +216,6 @@ export async function runDailyReminders() {
     } catch (error) {
       console.error("[reminders] reservation:", r.id, error);
       results.reservations.failed++;
-    }
-  }
-
-  for (const e of events) {
-    try {
-      const result = await sendEventReminder(e.id);
-      if (result.sent) results.events.sent++;
-      else results.events.failed++;
-    } catch (error) {
-      console.error("[reminders] event:", e.id, error);
-      results.events.failed++;
     }
   }
 
