@@ -74,7 +74,7 @@ export function FeedbackDialog({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup notifikasi"
+            aria-label="Close notification"
             className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
             <X size={18} />
@@ -87,7 +87,7 @@ export function FeedbackDialog({
             onClick={onClose}
             className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            Tutup
+            Close
           </button>
         </div>
       </section>

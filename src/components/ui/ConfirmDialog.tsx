@@ -17,8 +17,8 @@ export function ConfirmDialog({
   open,
   title,
   message,
-  confirmText = "Konfirmasi",
-  cancelText = "Batal",
+  confirmText = "Confirm",
+  cancelText = "Cancel",
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {

@@ -121,10 +121,10 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
 
       <ConfirmDialog
         open={showLogoutConfirm}
-        title="Konfirmasi Keluar"
-        message="Apakah Anda yakin ingin keluar dari sesi ini? Anda harus login kembali untuk masuk ke dashboard owner."
-        confirmText="Ya, Keluar"
-        cancelText="Batal"
+        title="Sign Out Confirmation"
+        message="Are you sure you want to sign out of this session? You will need to log in again to access the owner dashboard."
+        confirmText="Yes, Sign Out"
+        cancelText="Cancel"
         onConfirm={() => signOut({ callbackUrl: "/login" })}
         onClose={() => setShowLogoutConfirm(false)}
       />
