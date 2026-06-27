@@ -26,7 +26,7 @@ import {
 
 const MENU_GROUPS = [
   {
-    title: "Operasional",
+    title: "Operations",
     items: [
       { name: "Dashboard", href: "/admin/dashboard", icon: SquaresFour },
       { name: "Reservations", href: "/admin/reservations", icon: CalendarCheck },
@@ -35,7 +35,7 @@ const MENU_GROUPS = [
     ],
   },
   {
-    title: "Setup Restoran",
+    title: "Restaurant Setup",
     items: [
       { name: "Tables", href: "/admin/tables", icon: Armchair },
       { name: "Sessions", href: "/admin/sessions", icon: Clock },
@@ -43,7 +43,7 @@ const MENU_GROUPS = [
     ],
   },
   {
-    title: "Konten & CRM",
+    title: "Content & CRM",
     items: [
       { name: "Guests", href: "/admin/guests", icon: UsersThree },
       { name: "Event Requests", href: "/admin/event-requests", icon: EnvelopeOpen },
@@ -153,7 +153,7 @@ export default function AdminSidebar({
 
               <div className="ml-3 min-w-0">
                 <p className="truncate text-sm font-semibold text-white">
-                  Staf Admin
+                  Admin Staff
                 </p>
                 <p className="truncate text-xs text-rose-300/60">
                   admin@rooma.com
@@ -174,10 +174,10 @@ export default function AdminSidebar({
 
       <ConfirmDialog
         open={showLogoutConfirm}
-        title="Konfirmasi Keluar"
-        message="Apakah Anda yakin ingin keluar dari sesi ini? Anda harus login kembali untuk masuk ke dashboard admin."
-        confirmText="Ya, Keluar"
-        cancelText="Batal"
+        title="Sign Out Confirmation"
+        message="Are you sure you want to sign out of this session? You will need to log in again to access the admin dashboard."
+        confirmText="Yes, Sign Out"
+        cancelText="Cancel"
         onConfirm={() => signOut({ callbackUrl: "/login" })}
         onClose={() => setShowLogoutConfirm(false)}
       />

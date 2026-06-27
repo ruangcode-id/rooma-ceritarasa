@@ -12,14 +12,14 @@ export function ActionButtonGallery({ onOpenModal }: ActionButtonGalleryProps) {
         className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/30"
       >
         <Play size={17} weight="fill" />
-        Reservasi
+        Reserve
       </button>
       <button
         type="button"
         className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-400"
       >
         <FloppyDisk size={17} />
-        Simpan
+        Save
       </button>
       <button
         type="button"
@@ -34,7 +34,7 @@ export function ActionButtonGallery({ onOpenModal }: ActionButtonGalleryProps) {
         className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-red-50 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
       >
         <XCircle size={17} />
-        Batalkan
+        Cancel
       </button>
     </div>
   );
