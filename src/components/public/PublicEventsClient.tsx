@@ -34,7 +34,7 @@ const FALLBACK_IMAGES = [
 ];
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("id-ID", {
+  return new Date(value).toLocaleDateString("en-US", {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -85,19 +85,18 @@ export function PublicEventsClient({
               Gather at Rooma
             </p>
             <h1 className="mt-5 text-5xl font-semibold leading-[1.05] sm:text-6xl lg:text-7xl">
-              Momen istimewa,
+              Special moments,
               <br />
-              dirancang lebih personal.
+              designed more personally.
             </h1>
             <p className="mt-6 max-w-2xl text-base leading-7 text-white/80 sm:text-lg">
-              Dari intimate dinner hingga corporate gathering, ceritakan acara
-              yang Anda bayangkan dan tim kami akan menyiapkan penawaran khusus.
+              From intimate dinners to corporate gatherings, tell us the event you envision and our team will prepare a special offer.
             </p>
             <a
               href="#event-request"
               className="mt-8 inline-flex items-center gap-3 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-all duration-300 hover:scale-105 hover:bg-primary hover:text-white"
             >
-              Ajukan Event
+              Request Event
               <ArrowRight size={18} weight="bold" />
             </a>
           </div>
@@ -113,8 +112,7 @@ export function PublicEventsClient({
             Events at Rooma
           </h2>
           <p className="mt-4 text-base leading-7 text-slate-600">
-            Temukan agenda terbaru kami atau gunakan inspirasinya untuk
-            merancang pengalaman Anda sendiri.
+            Discover our latest agenda or use it as inspiration to design your own experience.
           </p>
         </div>
 
@@ -153,14 +151,14 @@ export function PublicEventsClient({
                   </h3>
                   <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-600">
                     {event.description ??
-                      "Pengalaman bersantap dan berkumpul yang dirancang khusus di Rooma Ceritarasa."}
+                      "Special dining and gathering experiences designed at Rooma Ceritarasa."}
                   </p>
                   <button
                     type="button"
                     onClick={() => selectEvent(event.title)}
                     className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary transition-colors hover:text-primary-dark"
                   >
-                    Tanyakan event ini
+                    Inquire about this event
                     <ArrowRight size={16} weight="bold" />
                   </button>
                 </div>
@@ -171,11 +169,10 @@ export function PublicEventsClient({
           <div className="mt-12 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <Sparkle size={30} className="mx-auto text-primary" />
             <h3 className="mt-4 text-2xl font-semibold text-slate-950">
-              Agenda terbaru segera hadir
+              Latest agenda coming soon
             </h3>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">
-              Anda tetap dapat mengajukan private event. Ceritakan kebutuhan
-              Anda dan tim kami akan menghubungi Anda dengan penawaran khusus.
+              You can still request a private event. Tell us your needs and our team will contact you with a special offer.
             </p>
           </div>
         )}
@@ -186,21 +183,21 @@ export function PublicEventsClient({
           {[
             {
               number: "01",
-              title: "Ceritakan kebutuhan",
+              title: "Tell us your needs",
               description:
-                "Isi tanggal, jumlah tamu, dan konsep acara yang Anda inginkan.",
+                "Fill in the date, pax, and the event concept you want.",
             },
             {
               number: "02",
-              title: "Terima penawaran",
+              title: "Receive offer",
               description:
-                "Tim Rooma meninjau request dan mengirim harga serta dokumen penawaran.",
+                "The Rooma team reviews the request and sends pricing and offer documents.",
             },
             {
               number: "03",
-              title: "Konfirmasi dengan DP",
+              title: "Confirm with Down Payment",
               description:
-                "Setujui penawaran dengan menyelesaikan DP aman melalui Midtrans.",
+                "Approve the offer by securely completing the Down Payment via Midtrans.",
             },
           ].map((step) => (
             <article key={step.number}>
@@ -228,23 +225,22 @@ export function PublicEventsClient({
               Private Events
             </p>
             <h2 className="mt-3 text-4xl font-semibold leading-tight text-slate-950 sm:text-5xl">
-              Mulai rencanakan acara Anda.
+              Start planning your event.
             </h2>
             <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">
-              Pengajuan ini belum merupakan booking final. Tim kami akan
-              menghubungi Anda dan mengirim penawaran melalui detail request.
+              This request is not a final booking. Our team will contact you and send an offer via the request details.
             </p>
 
             <div className="mt-10 space-y-5">
               <EventBenefit
                 Icon={ForkKnife}
-                title="Menu dan pengalaman fleksibel"
-                description="Sesuaikan format makan dan kebutuhan acara bersama tim kami."
+                title="Flexible menu and experience"
+                description="Customize the dining format and event needs with our team."
               />
               <EventBenefit
                 Icon={UsersThree}
-                title="Pendampingan khusus"
-                description="Satu PIC membantu proses dari penawaran hingga konfirmasi."
+                title="Dedicated assistance"
+                description="One PIC assists the process from offer to confirmation."
               />
             </div>
           </div>
