@@ -43,8 +43,10 @@ function formatDate(value: string) {
 
 export function PublicEventsClient({
   events,
+  whatsappNumber,
 }: {
   events: PublicEventItem[];
+  whatsappNumber: string;
 }) {
   const [selectedEventType, setSelectedEventType] = useState("");
 
@@ -249,6 +251,7 @@ export function PublicEventsClient({
             key={selectedEventType || "general-event-request"}
             initialEventType={selectedEventType}
             eventTypeOptions={eventTypeOptions}
+            whatsappNumber={whatsappNumber}
           />
         </div>
       </section>

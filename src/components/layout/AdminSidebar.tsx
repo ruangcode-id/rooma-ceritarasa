@@ -46,7 +46,6 @@ const MENU_GROUPS = [
     title: "Content & CRM",
     items: [
       { name: "Guests", href: "/admin/guests", icon: UsersThree },
-      { name: "Event Requests", href: "/admin/event-requests", icon: EnvelopeOpen },
       { name: "Gallery", href: "/admin/gallery", icon: Image },
       { name: "Careers", href: "/admin/careers", icon: Briefcase },
       { name: "Notifications", href: "/admin/notifications", icon: BellRinging },
