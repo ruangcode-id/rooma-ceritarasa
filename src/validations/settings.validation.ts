@@ -19,17 +19,17 @@ const socialLinksSchema = z.record(
 );
 
 export const updateRestaurantSettingsSchema = z.object({
-  name: z.string().trim().min(1).max(100).optional(),
-  address: z.string().trim().max(2000).optional().nullable(),
-  phone: z.string().trim().max(20).optional().nullable(),
+  name: z.string().trim().min(1, "Nama restoran wajib diisi").max(100, "Nama maksimal 100 karakter").optional(),
+  address: z.string().trim().max(2000, "Alamat terlalu panjang").optional().nullable(),
+  phone: z.string().trim().max(20, "Nomor telepon maksimal 20 karakter").optional().nullable(),
   email: z
-    .union([z.literal(""), z.string().trim().email()])
+    .union([z.literal(""), z.string().trim().email("Format alamat email tidak valid")])
     .optional()
     .nullable()
     .transform((v) => (v === "" ? null : v)),
-  whatsappNumber: z.string().trim().max(20).optional().nullable(),
-  logoUrl: z.string().url().max(2000).optional().nullable(),
-  tagline: z.string().trim().max(255).optional().nullable(),
+  whatsappNumber: z.string().trim().max(20, "Nomor WhatsApp maksimal 20 karakter").optional().nullable(),
+  logoUrl: z.string().url("Format URL logo tidak valid").max(2000).optional().nullable(),
+  tagline: z.string().trim().max(255, "Tagline maksimal 255 karakter").optional().nullable(),
   socialLinks: socialLinksSchema.optional().nullable(),
   operatingHours: operatingHoursSchema.optional().nullable(),
   maxGuestsPerDay: z.coerce.number().int().positive().optional().nullable(),

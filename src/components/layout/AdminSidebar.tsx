@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   SquaresFour,
   CalendarCheck,
@@ -23,7 +26,7 @@ import {
 
 const MENU_GROUPS = [
   {
-    title: "Operasional",
+    title: "Operations",
     items: [
       { name: "Dashboard", href: "/admin/dashboard", icon: SquaresFour },
       { name: "Reservations", href: "/admin/reservations", icon: CalendarCheck },
@@ -32,7 +35,7 @@ const MENU_GROUPS = [
     ],
   },
   {
-    title: "Setup Restoran",
+    title: "Restaurant Setup",
     items: [
       { name: "Tables", href: "/admin/tables", icon: Armchair },
       { name: "Sessions", href: "/admin/sessions", icon: Clock },
@@ -40,10 +43,9 @@ const MENU_GROUPS = [
     ],
   },
   {
-    title: "Konten & CRM",
+    title: "Content & CRM",
     items: [
       { name: "Guests", href: "/admin/guests", icon: UsersThree },
-      { name: "Event Requests", href: "/admin/event-requests", icon: EnvelopeOpen },
       { name: "Gallery", href: "/admin/gallery", icon: Image },
       { name: "Careers", href: "/admin/careers", icon: Briefcase },
       { name: "Notifications", href: "/admin/notifications", icon: BellRinging },
@@ -63,6 +65,7 @@ export default function AdminSidebar({
   onClose,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
     <>
@@ -149,7 +152,7 @@ export default function AdminSidebar({
 
               <div className="ml-3 min-w-0">
                 <p className="truncate text-sm font-semibold text-white">
-                  Staf Admin
+                  Admin Staff
                 </p>
                 <p className="truncate text-xs text-rose-300/60">
                   admin@rooma.com
@@ -159,6 +162,7 @@ export default function AdminSidebar({
 
             <button
               title="Sign Out"
+              onClick={() => setShowLogoutConfirm(true)}
               className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-rose-200/70 transition-all duration-200 hover:bg-[#4a1019] hover:text-white"
             >
               <SignOut size={20} />
@@ -166,6 +170,16 @@ export default function AdminSidebar({
           </div>
         </div>
       </aside>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Sign Out Confirmation"
+        message="Are you sure you want to sign out of this session? You will need to log in again to access the admin dashboard."
+        confirmText="Yes, Sign Out"
+        cancelText="Cancel"
+        onConfirm={() => signOut({ callbackUrl: "/login" })}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
     </>
   );
 }

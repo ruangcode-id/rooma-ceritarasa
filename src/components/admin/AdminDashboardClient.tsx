@@ -169,7 +169,7 @@ export function AdminDashboardClient({
     labels: dashboard.sessions.map((session) => session.name),
     datasets: [
       {
-        label: "Guests",
+        label: "Pax",
         data: dashboard.sessions.map((session) => session.guests),
         backgroundColor: chartPalette.primarySoft,
         borderColor: chartPalette.primary,
@@ -177,7 +177,7 @@ export function AdminDashboardClient({
         borderRadius: 8,
       },
       {
-        label: "Checked-in guests",
+        label: "Checked-in Pax",
         data: dashboard.sessions.map((session) => session.checkedIn),
         backgroundColor: chartPalette.darkSoft,
         borderColor: chartPalette.dark,
@@ -296,7 +296,7 @@ export function AdminDashboardClient({
           Icon={CalendarCheck}
         />
         <MetricCard
-          label="Expected Guests"
+          label="Expected Pax"
           value={String(dashboard.metrics.expectedGuests)}
           Icon={UsersThree}
         />

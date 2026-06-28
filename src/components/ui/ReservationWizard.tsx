@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfDay, getDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle, Info } from "@phosphor-icons/react";
 import Image from "next/image";
 import Script from "next/script";
 import { GuestReservationForm } from "../forms/GuestReservationForm";
@@ -111,6 +111,8 @@ export default function ReservationWizard({
   const [paymentState, setPaymentState] = useState<PaymentState>("idle");
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
+  const formRef = useRef<HTMLDivElement>(null);
+
   const today = startOfDay(new Date());
 
   // --- Image Slider ---
@@ -133,8 +135,9 @@ export default function ReservationWizard({
         
         if (data.success) {
           const blocked = new Set<string>();
-          data.data.forEach((b: BlockedDate) => {
-            blocked.add(b.date.split("T")[0]);
+          data.data.forEach((b: any) => {
+            const dateStr = typeof b === "string" ? b : b.date;
+            blocked.add(dateStr.split("T")[0]);
           });
           setBlockedDates(blocked);
         }
@@ -190,6 +193,19 @@ export default function ReservationWizard({
     }
     fetchTables();
   }, [selectedDate, selectedSessionId]);
+
+  useEffect(() => {
+    if (step === 2) {
+      setTimeout(() => {
+        formRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    } else if (step === 3) {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
+  }, [step]);
 
   // --- Handlers ---
   const handleDateSelect = (day: Date) => {
@@ -361,6 +377,7 @@ export default function ReservationWizard({
             width={160}
             height={80}
             className="mx-auto mb-4 h-16 w-auto object-contain drop-shadow-sm md:h-20"
+            style={{ width: "auto" }}
           />
           <p className="text-sm md:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
             Jl. Lawu No.2, Kotabaru, Kec. Gondokusuman, Kota Yogyakarta, DI Yogyakarta 55224
@@ -378,8 +395,8 @@ export default function ReservationWizard({
           onClick={() => setActiveModal("guests")}
           className="flex-1 px-6 py-4 md:py-6 flex flex-col items-center justify-center hover:bg-slate-50 transition-colors border-b md:border-b-0 md:border-r border-slate-200 text-center"
         >
-          <span className="text-xs uppercase tracking-widest text-slate-400 mb-1">Guests</span>
-          <span className="text-base font-semibold text-slate-900">{partySize} Guests</span>
+          <span className="text-xs uppercase tracking-widest text-slate-400 mb-1">Pax</span>
+          <span className="text-base font-semibold text-slate-900">{partySize} Pax</span>
         </button>
 
         {/* Date Segment */}
@@ -424,7 +441,7 @@ export default function ReservationWizard({
               </button>
               <h2 className="text-xl font-semibold tracking-wide text-slate-900">Rooma Ceritarasa</h2>
               <p className="text-xs uppercase tracking-widest text-slate-500 mt-1">
-                {activeModal === "guests" ? "Select Guests" : activeModal === "date" ? "Select Date" : "Select Session"}
+                {activeModal === "guests" ? "Select Pax" : activeModal === "date" ? "Select Date" : "Select Session"}
               </p>
             </div>
 
@@ -441,7 +458,7 @@ export default function ReservationWizard({
                   </button>
                   <div className="text-center">
                     <span className="block text-3xl font-semibold text-slate-900">{partySize}</span>
-                    <span className="text-xs uppercase tracking-wider text-slate-500">Guests</span>
+                    <span className="text-xs uppercase tracking-wider text-slate-500">Pax</span>
                   </div>
                   <button 
                     onClick={() => setPartySize(partySize + 1)}
@@ -632,16 +649,31 @@ export default function ReservationWizard({
               <div className="mt-10 flex flex-col items-center animate-in fade-in duration-300">
                 {tables.filter(t => selectedTableIds.includes(t.id)).reduce((acc, t) => acc + t.capacity, 0) < partySize ? (
                   <p className="text-red-600 font-semibold mb-4 text-center">
-                    Kapasitas meja belum cukup untuk {partySize} Guests. <br/>
+                    Kapasitas meja belum cukup untuk {partySize} Pax. <br/>
                     Silakan pilih meja tambahan.
                   </p>
                 ) : (
-                  <button 
-                    onClick={() => setStep(2)}
-                    className="px-12 py-4 bg-[#1f0609] text-white font-semibold uppercase tracking-widest hover:bg-[#3a0d13] hover:shadow-lg transition-all"
-                  >
-                    Continue Request
-                  </button>
+                  <>
+                    {partySize === 2 && selectedDate && (selectedDate.getDay() === 0 || selectedDate.getDay() === 6) && (
+                      <div className="mb-8 w-full max-w-md flex items-start gap-4 rounded-2xl bg-[#fcfbf9] border border-amber-200/60 p-5 shadow-sm animate-in fade-in duration-500">
+                        <Info size={24} weight="fill" className="text-amber-600 shrink-0" />
+                        <div className="text-left">
+                          <p className="text-xs uppercase tracking-[0.25em] font-semibold text-amber-800 mb-1">
+                            Deposit Information
+                          </p>
+                          <p className="text-sm leading-relaxed text-slate-600">
+                            Khusus reservasi akhir pekan untuk 2 pax akan dikenakan deposit sebesar <span className="font-semibold text-slate-900">Rp 75.000</span> pada tahap pembayaran.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <button 
+                      onClick={() => setStep(2)}
+                      className="px-12 py-4 bg-[#1f0609] text-white font-semibold uppercase tracking-widest hover:bg-[#3a0d13] hover:shadow-lg transition-all"
+                    >
+                      Continue Request
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -653,7 +685,7 @@ export default function ReservationWizard({
 
       {/* --- STEP 2: GUEST FORM --- */}
       {step === 2 && selectedDate && selectedSessionId && (
-        <div className="w-full px-4 mt-4 mb-20 animate-in fade-in duration-500">
+        <div ref={formRef} className="w-full px-4 mt-4 mb-20 animate-in fade-in duration-500">
           <GuestReservationForm
             date={selectedDate}
             sessionId={selectedSessionId}
@@ -669,15 +701,20 @@ export default function ReservationWizard({
       {step === 3 && (
          <div className="flex-1 flex flex-col items-center justify-center w-full min-h-[60vh] py-10 px-4">
            <div className="w-full max-w-2xl bg-white border-2 border-slate-900 p-10 md:p-16 text-center shadow-sm animate-in zoom-in-95 duration-500">
-             <CheckCircle size={64} weight="fill" className="mx-auto mb-6 text-[#1f0609]" />
-             <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-widest mb-4 text-slate-900">
+             
+             <div className="relative inline-flex items-center justify-center mb-8 w-24 h-24">
+               {/* Main icon without pop/ripple animation */}
+               <CheckCircle size={80} weight="fill" className="text-[#1f0609] relative z-10" />
+             </div>
+             
+             <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-widest mb-4 text-slate-900 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
                {paymentState === "paid"
                  ? "Payment Received"
                  : paymentState === "not_required"
                  ? "Reservation Sent"
                  : "Complete Your Deposit"}
              </h2>
-             <p className="text-slate-600 mb-8 leading-relaxed">
+             <p className="text-slate-600 mb-8 leading-relaxed animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
                {paymentState === "paid"
                  ? "Pembayaran deposit Anda sudah diterima. Tim kami akan mengonfirmasi detail reservasi melalui WhatsApp."
                  : paymentState === "not_required"
@@ -685,7 +722,7 @@ export default function ReservationWizard({
                  : "Reservasi sudah tercatat. Selesaikan pembayaran deposit melalui Midtrans agar reservasi dapat dikonfirmasi."}
              </p>
 
-             <div className="mb-8 border-y border-slate-200 py-5 text-left">
+             <div className="mb-8 border-y border-slate-200 py-5 text-left animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
                <div className="grid gap-4 text-sm md:grid-cols-2">
                  <div>
                    <p className="text-xs uppercase tracking-widest text-slate-400">
@@ -730,7 +767,7 @@ export default function ReservationWizard({
                ) : null}
              </div>
 
-             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center animate-fade-in-up" style={{ animationDelay: "0.6s" }}>
                {paymentResult?.paymentRequired && paymentResult.token ? (
                  <button
                    type="button"

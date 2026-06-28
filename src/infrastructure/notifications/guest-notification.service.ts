@@ -44,15 +44,6 @@ function formatTimeFromSession(startTime: Date): string {
   }).format(startTime);
 }
 
-function formatCurrency(value: number | null | undefined): string {
-  if (value == null || Number.isNaN(value)) return "-";
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 export async function sendWaFromTemplate(
   phone: string,
   templateKey: string,

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, X, UserCircle, Crown, Trash, PencilSimple } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
-import { id } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 
 type UserRole = "admin" | "owner";
 
@@ -39,7 +39,7 @@ export default function OwnerUsersClient() {
     try {
       const res = await fetch("/api/owner/users?page=1&limit=50", { cache: "no-store" });
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || "Gagal memuat staf");
+      if (!res.ok || !payload.success) throw new Error(payload.error || "Failed to load staff");
       
       setUsers(payload.data || []);
     } catch (err) {
@@ -83,7 +83,7 @@ export default function OwnerUsersClient() {
     try {
       const res = await fetch(`/api/owner/users/${deleteUserPrompt.id}`, { method: "DELETE" });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || "Gagal menghapus staf");
+      if (!res.ok || !data.success) throw new Error(data.error || "Failed to delete staff");
       
       setUsers(users.filter(u => u.id !== deleteUserPrompt.id));
       setDeleteUserPrompt(null);
@@ -99,7 +99,7 @@ export default function OwnerUsersClient() {
     e.preventDefault();
     if (!name || !email) return;
     if (!editingUser && !password) {
-      setError("Password wajib diisi untuk pengguna baru.");
+      setError("Password is required for new users.");
       return;
     }
     
@@ -113,7 +113,7 @@ export default function OwnerUsersClient() {
       let res;
       if (editingUser) {
         res = await fetch(`/api/owner/users/${editingUser.id}`, {
-          method: "PUT",
+          method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
@@ -128,7 +128,7 @@ export default function OwnerUsersClient() {
       const data = await res.json();
       
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Gagal menyimpan akun staf");
+        throw new Error(data.error || "Failed to save staff account");
       }
       
       if (editingUser) {
@@ -148,10 +148,10 @@ export default function OwnerUsersClient() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Konfigurasi Owner</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Daftar Akun Staf</h1>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Owner Configuration</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Staff Accounts</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-xl">
-            Kelola akun Admin yang memiliki akses ke panel operasional restoran.
+            Manage Admin accounts that have access to the restaurant operations panel.
           </p>
         </div>
         <div>
@@ -160,7 +160,7 @@ export default function OwnerUsersClient() {
             className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-slate-800"
           >
             <Plus weight="bold" />
-            Tambah Akun
+            Add Account
           </button>
         </div>
       </header>
@@ -176,7 +176,7 @@ export default function OwnerUsersClient() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="text-lg font-bold text-slate-900">{editingUser ? "Edit Akun" : "Buat Akun Baru"}</h3>
+              <h3 className="text-lg font-bold text-slate-900">{editingUser ? "Edit Account" : "Create New Account"}</h3>
               <button onClick={resetForm} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X size={20} weight="bold" />
               </button>
@@ -186,17 +186,17 @@ export default function OwnerUsersClient() {
               {error && <div className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-600 border border-red-200">{error}</div>}
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Nama Lengkap *</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Full Name *</label>
                 <input 
                   type="text" required
-                  placeholder="Misal: John Doe"
+                  placeholder="e.g. John Doe"
                   value={name} onChange={e => setName(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Alamat Email *</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Email Address *</label>
                 <input 
                   type="email" required
                   placeholder="admin@rooma.com"
@@ -206,17 +206,17 @@ export default function OwnerUsersClient() {
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">{editingUser ? "Ganti Password (Opsional)" : "Password *"}</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">{editingUser ? "Change Password (Optional)" : "Password *"}</label>
                 <input 
                   type="password" required={!editingUser}
-                  placeholder={editingUser ? "Kosongkan jika tidak ingin diubah" : "Minimal 8 karakter"}
+                  placeholder={editingUser ? "Leave empty to keep current password" : "Min. 8 characters"}
                   value={password} onChange={e => setPassword(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Hak Akses *</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Access Role *</label>
                 <div className="grid grid-cols-2 gap-3">
                   <label className={`border rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${role === 'admin' ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 text-slate-500 hover:border-primary/50 hover:bg-slate-50'}`}>
                     <input type="radio" name="role" value="admin" checked={role === "admin"} onChange={() => setRole("admin")} className="hidden" />
@@ -233,13 +233,13 @@ export default function OwnerUsersClient() {
             </form>
 
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
-              <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">Batal</button>
+              <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">Cancel</button>
               <button 
                 onClick={handleFormSubmit} 
                 disabled={isSaving} 
                 className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-md disabled:opacity-50 transition-colors"
               >
-                {isSaving ? "Menyimpan..." : "Simpan Akun"}
+                {isSaving ? "Saving..." : "Save Account"}
               </button>
             </div>
           </div>
@@ -248,12 +248,12 @@ export default function OwnerUsersClient() {
 
       {/* User Grid */}
       {isLoading ? (
-        <div className="text-center py-12 text-slate-400 font-medium">Memuat data staf...</div>
+        <div className="text-center py-12 text-slate-400 font-medium">Loading staff data...</div>
       ) : users.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
           <UserCircle size={48} className="mx-auto text-slate-300 mb-4" weight="light" />
-          <h3 className="text-lg font-bold text-slate-900 mb-2">Belum Ada Staf</h3>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto">Tambahkan akun admin agar staf Anda bisa mengelola reservasi restoran.</p>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">No Staff Found</h3>
+          <p className="text-slate-500 text-sm max-w-sm mx-auto">Add an admin account so your staff can manage restaurant reservations.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -291,12 +291,12 @@ export default function OwnerUsersClient() {
               
               <div className="space-y-2 text-sm text-slate-600 mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="w-16 font-medium text-xs uppercase tracking-wider text-slate-400">Email</span>
+                  <span className="w-24 shrink-0 font-medium text-xs uppercase tracking-wider text-slate-400">Email</span>
                   <span className="truncate text-slate-900 font-medium">{user.email}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="w-16 font-medium text-xs uppercase tracking-wider text-slate-400">Bergabung</span>
-                  <span>{format(parseISO(user.createdAt), "dd MMM yyyy", { locale: id })}</span>
+                  <span className="w-24 shrink-0 font-medium text-xs uppercase tracking-wider text-slate-400">Joined</span>
+                  <span className="truncate text-slate-900 font-medium">{format(parseISO(user.createdAt), "dd MMM yyyy", { locale: enUS })}</span>
                 </div>
               </div>
             </div>
@@ -312,9 +312,9 @@ export default function OwnerUsersClient() {
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
                 <Trash size={32} weight="fill" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Hapus Akun Staf?</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Staff Account?</h3>
               <p className="text-sm text-slate-500">
-                Apakah Anda yakin ingin menghapus <strong>"{deleteUserPrompt.name}"</strong>? Akun ini tidak akan bisa lagi mengakses panel admin.
+                Are you sure you want to delete <strong>"{deleteUserPrompt.name}"</strong>? This account will no longer be able to access the admin panel.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">
@@ -323,14 +323,14 @@ export default function OwnerUsersClient() {
                 disabled={isSaving}
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
               >
-                Batal
+                Cancel
               </button>
               <button 
                 onClick={executeDeleteUser} 
                 disabled={isSaving} 
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-md disabled:opacity-50 transition-colors"
               >
-                {isSaving ? "Menghapus..." : "Ya, Hapus Akun"}
+                {isSaving ? "Deleting..." : "Yes, Delete Account"}
               </button>
             </div>
           </div>

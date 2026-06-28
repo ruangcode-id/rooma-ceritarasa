@@ -44,9 +44,9 @@ async function main() {
   if (sessionCount === 0) {
     await prisma.restaurantSession.createMany({
       data: [
-        { name: "Session one", startTime: "15:00", endTime: "17:00", isActive: true },
-        { name: "Session two", startTime: "17:30", endTime: "19:30", isActive: true },
-        { name: "Session three", startTime: "20:00", endTime: "22:00", isActive: true },
+        { name: "Session one",   startTime: new Date("1970-01-01T15:00:00Z"), endTime: new Date("1970-01-01T17:00:00Z"), maxCapacity: 40, isActive: true, dayOfWeek: [1, 2, 3, 4, 5, 6, 7] },
+        { name: "Session two",   startTime: new Date("1970-01-01T17:30:00Z"), endTime: new Date("1970-01-01T19:30:00Z"), maxCapacity: 40, isActive: true, dayOfWeek: [1, 2, 3, 4, 5, 6, 7] },
+        { name: "Session three", startTime: new Date("1970-01-01T20:00:00Z"), endTime: new Date("1970-01-01T22:00:00Z"), maxCapacity: 40, isActive: true, dayOfWeek: [1, 2, 3, 4, 5, 6, 7] },
       ],
     });
     console.log("✅ 3 Sesi Bawaan (15.00, 17.30, 20.00) berhasil dibuat.");
