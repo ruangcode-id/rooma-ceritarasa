@@ -41,7 +41,12 @@ export default function AdminSessionsClient() {
       const payload = await res.json();
       if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Gagal memuat sesi");
       
-      setSessions(payload.data || []);
+      const sessions = (payload.data || []).map((session: any) => ({
+        ...session,
+        startTime: typeof session.startTime === "string" ? session.startTime.substring(11, 16) : session.startTime,
+        endTime: typeof session.endTime === "string" ? session.endTime.substring(11, 16) : session.endTime,
+      }));
+      setSessions(sessions);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

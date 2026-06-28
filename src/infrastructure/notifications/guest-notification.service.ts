@@ -3,7 +3,6 @@ import { SettingsRepository } from "@/infrastructure/repositories/settings.repos
 import { sendWhatsAppMessage } from "@/infrastructure/whatsapp/fonnte";
 import { sendTransactionalEmail } from "@/infrastructure/email/resend";
 import { renderTemplate } from "@/lib/render-template";
-
 import { ReservationStatus } from "@/generated/prisma/client";
 
 type TemplateVars = Record<string, string | number | null | undefined>;
