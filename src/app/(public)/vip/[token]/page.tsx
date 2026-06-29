@@ -24,16 +24,14 @@ export default async function VipPage({
   // Determine VIP card styling based on tier
   let cardGradient = "from-black via-[#111] to-black"; // PLATINUM default
   let accentColor = "text-slate-300";
-  let tierLabel = "PLATINUM MEMBER";
+  let tierLabel = "VIP MEMBER";
 
   if (invitation.vipTier === "GOLD") {
     cardGradient = "from-black via-[#111] to-black";
     accentColor = "text-yellow-500";
-    tierLabel = "GOLD MEMBER";
   } else if (invitation.vipTier === "SILVER") {
     cardGradient = "from-black via-[#111] to-black";
     accentColor = "text-slate-100";
-    tierLabel = "SILVER MEMBER";
   }
 
   return (
@@ -151,13 +149,37 @@ export default async function VipPage({
             </div>
 
             {/* Card Content (Bottom) */}
-            <div className="relative z-10 mt-auto">
-              <p className="text-[8px] sm:text-[10px] tracking-widest uppercase text-white/50 mb-0.5 sm:mb-1">
-                Specially Issued To
-              </p>
-              <h2 className="text-base sm:text-2xl font-bold text-white tracking-wider drop-shadow-md truncate">
-                {invitation.guestName}
-              </h2>
+            <div className="relative z-10 mt-auto flex justify-between items-end gap-2">
+              <div className="min-w-0">
+                <p className="text-[8px] sm:text-[10px] tracking-widest uppercase text-white/50 mb-0.5 sm:mb-1">
+                  Specially Issued To
+                </p>
+                <h2 className="text-base sm:text-2xl font-bold text-white tracking-wider drop-shadow-md truncate">
+                  {invitation.guestName}
+                </h2>
+              </div>
+              
+              <div className="bg-white p-1 sm:p-2 rounded flex-shrink-0">
+                {invitation.qrCodeUrl ? (
+                  <Image 
+                    src={invitation.qrCodeUrl}
+                    alt="VIP QR Code"
+                    width={80}
+                    height={80}
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+                    unoptimized
+                  />
+                ) : (
+                  <Image 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${invitation.token}&margin=0`}
+                    alt="VIP QR Code Fallback"
+                    width={80}
+                    height={80}
+                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+                    unoptimized
+                  />
+                )}
+              </div>
             </div>
           </div>
         </div>

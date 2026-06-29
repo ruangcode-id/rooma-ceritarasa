@@ -1,5 +1,7 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
+
 import { useState, useEffect, useRef } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfDay, getDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
@@ -85,6 +87,9 @@ export default function ReservationWizard({
   snapClientKey,
   snapScriptUrl,
 }: ReservationWizardProps) {
+  const searchParams = useSearchParams();
+  const vipToken = searchParams.get("vipToken");
+
   // --- States ---
   const [partySize, setPartySize] = useState<number>(2);
   const [currentMonth, setCurrentMonth] = useState<Date>(startOfMonth(new Date()));
@@ -691,6 +696,7 @@ export default function ReservationWizard({
             sessionId={selectedSessionId}
             tableIds={selectedTableIds}
             guestCount={partySize}
+            vipToken={vipToken || undefined}
             onSuccess={handleReservationSuccess}
             onBack={() => setStep(1)}
           />

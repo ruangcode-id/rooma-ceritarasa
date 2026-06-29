@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
       date: parsed.data.date,
       partySize: parsed.data.partySize,
       specialRequest: parsed.data.specialRequest,
+      vipToken: parsed.data.vipToken,
     });
 
     return NextResponse.json(
