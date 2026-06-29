@@ -3,6 +3,44 @@ import { requireRole } from "@/lib/auth";
 import { z } from "zod";
 import { ReservationStatus } from "@/generated/prisma/client";
 import { AdminReservationUseCase } from "@/application/use-cases/reservation/reservation.usecase";
+import { prisma } from "@/infrastructure/database/prisma";
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    await requireRole(["admin", "owner"]);
+
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Reservation ID is required" }, { status: 400 });
+    }
+
+    const reservation = await prisma.reservation.findUnique({
+      where: { id },
+      include: {
+        guest: { select: { id: true, name: true, phone: true, email: true } },
+        session: { select: { id: true, name: true, startTime: true, endTime: true } },
+        reservationTables: {
+          include: { table: { select: { id: true, tableNumber: true, capacity: true } } }
+        }
+      }
+    });
+
+    if (!reservation) {
+      return NextResponse.json({ success: false, error: "Reservation not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: reservation });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("Unauthorized") || message.includes("Forbidden")) {
+      return NextResponse.json({ success: false, error: message }, { status: 401 });
+    }
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
+  }
+}
 
 const patchBodySchema = z
   .object({

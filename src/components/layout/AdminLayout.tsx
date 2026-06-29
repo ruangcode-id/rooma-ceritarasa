@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AdminSidebar from "./AdminSidebar";
+import GlobalNotificationToast from "../admin/GlobalNotificationToast";
 import { List } from "@phosphor-icons/react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -9,6 +10,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex min-h-screen bg-[#fcfbf9]">
+      <GlobalNotificationToast />
       {/* Mobile Top Bar */}
       <div className="fixed top-0 left-0 right-0 z-30 flex h-16 items-center justify-between border-b border-[#3a0d13] bg-[#1f0609] px-4 text-white lg:hidden">
         <span className="font-sans text-sm font-semibold uppercase tracking-widest">

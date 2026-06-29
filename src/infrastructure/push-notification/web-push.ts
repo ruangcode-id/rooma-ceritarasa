@@ -31,6 +31,8 @@ export function getVapidPublicKeyAndSubject(): { publicKey: string; subject: str
 export type WebPushPayload = {
   title: string;
   body: string;
+  type?: string;
+  relatedId?: string | null;
   /** Opsional: path relatif untuk deep-link di PWA */
   url?: string;
 };
@@ -39,6 +41,8 @@ function buildPayloadString(payload: WebPushPayload): string {
   return JSON.stringify({
     title: payload.title,
     body: payload.body,
+    type: payload.type,
+    relatedId: payload.relatedId,
     url: payload.url ?? "/admin/dashboard",
   });
 }
