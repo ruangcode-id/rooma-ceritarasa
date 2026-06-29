@@ -1,60 +1,99 @@
-import {
-  jsonError,
-  jsonSuccess,
-  jsonValidationError,
-} from "@/lib/api-envelope";
-import { requireAdminApiSession } from "@/lib/require-admin-api";
-import { assignVipCardSchema } from "@/features/vip/vip.validation";
-import { assignVipCard } from "@/features/vip/vip.service";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/infrastructure/database/prisma";
+import { requireRole } from "@/lib/auth";
+import { z } from "zod";
+import QRCode from "qrcode";
+import { uploadToCloudinary } from "@/lib/cloudinary";
+import crypto from "crypto";
+import { VipTier } from "@/generated/prisma/client";
 
-function isPrismaUniqueViolation(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code: string }).code === "P2002"
-  );
+const assignVipSchema = z.object({
+  guestId: z.string().uuid("Invalid Guest ID"),
+  benefits: z.string().optional(),
+});
+
+function generateUniqueToken() {
+  // Generates something like RVIP-A8B9C2
+  const randomStr = crypto.randomBytes(3).toString("hex").toUpperCase();
+  return `RVIP-${randomStr}`;
 }
 
-export async function POST(request: Request) {
-  const authResult = await requireAdminApiSession();
-  if (!authResult.ok) return authResult.response;
-
-  let json: unknown;
+export async function POST(req: NextRequest) {
   try {
-    json = await request.json();
-  } catch {
-    return jsonError("Body harus berupa JSON.", 400);
-  }
+    await requireRole(["admin", "owner"]);
 
-  const parsed = assignVipCardSchema.safeParse(json);
-  if (!parsed.success) {
-    return jsonValidationError(parsed.error);
-  }
+    const body = await req.json().catch(() => null);
+    const parsed = assignVipSchema.safeParse(body);
 
-  try {
-    const card = await assignVipCard(parsed.data);
-    return jsonSuccess(card, { status: 201 });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues[0]?.message || "Invalid payload" },
+        { status: 400 }
+      );
+    }
+
+    const { guestId, benefits } = parsed.data;
+
+    // Check if guest exists and not already VIP
+    const guest = await prisma.guest.findUnique({ where: { id: guestId }, include: { vipCard: true } });
+    if (!guest) {
+      return NextResponse.json({ success: false, error: "Tamu tidak ditemukan" }, { status: 404 });
+    }
+    if (guest.isVip || guest.vipCard) {
+      return NextResponse.json({ success: false, error: "Tamu ini sudah menjadi VIP" }, { status: 400 });
+    }
+
+    // 1. Generate token
+    const token = generateUniqueToken();
+
+    // 2. Generate QR Code Buffer
+    const qrBuffer = await QRCode.toBuffer(token, {
+      errorCorrectionLevel: "H",
+      margin: 2,
+      width: 400,
+      color: {
+        dark: "#1F0609", // Deep red/black
+        light: "#FFFFFF",
+      },
+    });
+
+    // 3. Upload to Cloudinary
+    const uploaded = await uploadToCloudinary(qrBuffer, {
+      folder: "rooma_vip_qrcodes",
+      publicId: token,
+    });
+    
+    const qrCodeUrl = uploaded.secureUrl;
+
+    // 4. Save to DB atomically
+    const result = await prisma.$transaction(async (tx) => {
+      // Create VipCard
+      const vipCard = await tx.vipCard.create({
+        data: {
+          guestId,
+          tier: VipTier.SILVER, // Default fallback backend
+          token,
+          qrCodeUrl,
+          benefits: benefits || null,
+        },
+      });
+
+      // Update Guest
+      await tx.guest.update({
+        where: { id: guestId },
+        data: { isVip: true },
+      });
+
+      return vipCard;
+    });
+
+    return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      if (error.message === "GUEST_NOT_FOUND") {
-        return jsonError("Tamu tidak ditemukan.", 404);
-      }
-
-      if (error.message === "ACTIVE_VIP_CARD_EXISTS") {
-        return jsonError("Tamu sudah memiliki VIP card aktif.", 409);
-      }
-
-      if (error.message === "VIP_CARD_EXISTS") {
-        return jsonError("Tamu sudah memiliki VIP card.", 409);
-      }
+    console.error("[VIP ASSIGN ERROR]", error);
+    const message = error instanceof Error ? error.message : "Internal Error";
+    if (message.includes("Unauthorized") || message.includes("Forbidden")) {
+      return NextResponse.json({ success: false, error: message }, { status: 401 });
     }
-
-    if (isPrismaUniqueViolation(error)) {
-      return jsonError("VIP card untuk tamu atau token ini sudah ada.", 409);
-    }
-
-    console.error("/api/admin/vip/assign POST error:", error);
-    return jsonError("Internal Server Error", 500);
+    return NextResponse.json({ success: false, error: "Gagal mendaftarkan VIP. Coba lagi." }, { status: 500 });
   }
 }

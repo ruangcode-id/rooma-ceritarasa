@@ -38,6 +38,10 @@ export const publicReservationSchema = z.object({
     .trim()
     .max(1000, "Permintaan khusus maksimal 1000 karakter.")
     .optional(),
+  vipToken: z
+    .string()
+    .trim()
+    .optional(),
 });
 
 export const cancelReservationSchema = z.object({

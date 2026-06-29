@@ -20,6 +20,7 @@ export type CreateReservationInput = {
   date: string;
   partySize: number;
   specialRequest?: string;
+  vipToken?: string;
 };
 
 export type CreateReservationResult = {
@@ -89,33 +90,49 @@ export async function createPublicReservation(
       throw new Error("Session tidak ditemukan atau tidak aktif.");
     }
 
-    let guest = await tx.guest.findFirst({
-      where: {
-        phone: input.guestPhone,
-        deletedAt: null,
-      },
-    });
+    let guest = null;
+    let isVipValid = false;
 
-    if (!guest) {
-      guest = await tx.guest.create({
-        data: {
-          name: input.guestName,
-          phone: input.guestPhone,
-          email: input.guestEmail ?? null,
-          isVip: false,
-          tags: [],
-        },
+    if (input.vipToken) {
+      const vipCard = await tx.vipCard.findUnique({
+        where: { token: input.vipToken },
+        include: { guest: true },
       });
+      if (vipCard && vipCard.isActive) {
+        guest = vipCard.guest;
+        isVipValid = true;
+      } else {
+        throw new Error("Token VIP tidak valid atau sudah tidak aktif.");
+      }
     } else {
-      guest = await tx.guest.update({
+      guest = await tx.guest.findFirst({
         where: {
-          id: guest.id,
-        },
-        data: {
-          name: input.guestName,
-          email: input.guestEmail ?? guest.email,
+          phone: input.guestPhone,
+          deletedAt: null,
         },
       });
+
+      if (!guest) {
+        guest = await tx.guest.create({
+          data: {
+            name: input.guestName,
+            phone: input.guestPhone,
+            email: input.guestEmail ?? null,
+            isVip: false,
+            tags: [],
+          },
+        });
+      } else {
+        guest = await tx.guest.update({
+          where: {
+            id: guest.id,
+          },
+          data: {
+            name: input.guestName,
+            email: input.guestEmail ?? guest.email,
+          },
+        });
+      }
     }
 
     const activeReservations = await tx.reservation.findMany({
@@ -215,11 +232,11 @@ export async function createPublicReservation(
     }
 
     const reservationStatus =
-      input.partySize <= 2
+      isVipValid || input.partySize <= 2
         ? ReservationStatus.confirmed
         : ReservationStatus.pending;
 
-    const expiresAt = getReservationExpiry(input.partySize);
+    const expiresAt = isVipValid ? null : getReservationExpiry(input.partySize);
     const cancelToken = crypto.randomBytes(16).toString("hex");
 
     const reservation = await tx.reservation.create({
@@ -274,5 +291,6 @@ export async function getVipInvitationByToken(token: string) {
     guestName: vipCard.guest.name,
     vipTier: vipCard.tier,
     benefits: vipCard.benefits,
+    qrCodeUrl: vipCard.qrCodeUrl,
   };
 }
