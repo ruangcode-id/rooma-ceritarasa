@@ -65,7 +65,7 @@ function getUrlFromType(type, relatedId) {
     case "new_reservation":
     case "cancellation":
     case "check_in":
-      return baseUrl + "/admin/reservations";
+      return baseUrl + `/admin/reservations${relatedId ? `?detail=${relatedId}` : ""}`;
     case "payment_confirmed":
       return baseUrl + "/admin/payments";
     default:

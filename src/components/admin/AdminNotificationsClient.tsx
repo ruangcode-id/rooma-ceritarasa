@@ -34,12 +34,12 @@ function getNotificationIcon(type: string) {
   }
 }
 
-function getNotificationLink(type: string) {
+function getNotificationLink(type: string, relatedId?: string | null) {
   switch (type) {
     case "new_reservation":
     case "cancellation":
     case "check_in":
-      return "/admin/reservations";
+      return relatedId ? `/admin/reservations?detail=${relatedId}` : "/admin/reservations";
     case "payment_confirmed":
       return "/admin/payments";
     default:
@@ -79,22 +79,6 @@ export default function AdminNotificationsClient() {
 
   return (
     <div className="space-y-6">
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-start gap-3 rounded-xl bg-slate-900 p-4 text-white shadow-2xl animate-in slide-in-from-bottom-5">
-          <Bell size={24} weight="fill" className="text-primary mt-0.5" />
-          <div className="pr-4">
-            <h4 className="text-sm font-semibold">{toastMessage.title}</h4>
-            <p className="mt-1 text-sm text-slate-300">{toastMessage.body}</p>
-          </div>
-          <button
-            onClick={clearToast}
-            className="absolute top-4 right-4 text-slate-400 hover:text-white"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-
       {/* Push Notification Settings Card */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center justify-between">
@@ -200,7 +184,7 @@ export default function AdminNotificationsClient() {
                   </p>
                   <div className="mt-3 flex items-center gap-4">
                     <Link
-                      href={getNotificationLink(notif.type)}
+                      href={getNotificationLink(notif.type, notif.relatedId)}
                       className="text-xs font-semibold text-primary hover:underline"
                     >
                       Lihat Detail

@@ -35,7 +35,12 @@ export async function dispatchAdminNotification(
   if (shouldPush) {
     const title = params.title?.trim() || "Rooma Ceritarasa";
     const body = params.body?.trim() || "";
-    await sendWebPushToUser(params.userId, { title, body });
+    await sendWebPushToUser(params.userId, { 
+      title, 
+      body, 
+      type: params.type,
+      relatedId: params.relatedId,
+    });
   }
 
   return row;

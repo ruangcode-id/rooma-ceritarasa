@@ -18,6 +18,8 @@ import {
 } from "@/components/tables/DataTable";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SectionTitle } from "@/components/ui/SectionTitle";
+import { useSearchParams } from "next/navigation";
+import AdminReservationDetailModal from "@/components/modals/AdminReservationDetailModal";
 import {
   StatusBadge,
   type StatusBadgeOption,
@@ -142,6 +144,9 @@ export default function AdminReservationClient() {
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
+
+  const searchParams = useSearchParams();
+  const detailId = searchParams?.get("detail");
 
   async function load() {
     setIsLoading(true);
@@ -417,7 +422,8 @@ export default function AdminReservationClient() {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 relative">
+      {detailId && <AdminReservationDetailModal reservationId={detailId} />}
       <header>
         <SectionTitle
           eyebrow="Operasional"
