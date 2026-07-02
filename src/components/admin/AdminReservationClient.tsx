@@ -70,19 +70,19 @@ type ConfirmDialog = {
 const reservationStatuses: Array<StatusBadgeOption<ReservationStatus>> = [
   {
     id: "pending",
-    label: "Menunggu",
+    label: "Pending",
     className: "bg-amber-100 text-amber-700",
     Icon: Clock,
   },
   {
     id: "confirmed",
-    label: "Terkonfirmasi",
+    label: "Confirmed",
     className: "bg-blue-100 text-blue-700",
     Icon: CalendarCheck,
   },
   {
     id: "checked_in",
-    label: "Hadir",
+    label: "Checked in",
     className: "bg-green-100 text-green-700",
     Icon: CheckCircle,
   },
@@ -94,7 +94,7 @@ const reservationStatuses: Array<StatusBadgeOption<ReservationStatus>> = [
   },
   {
     id: "cancelled",
-    label: "Batal",
+    label: "Cancelled",
     className: "bg-red-100 text-red-700",
     Icon: XCircle,
   },
@@ -126,7 +126,7 @@ async function requestReservations({
   const payload = await response.json();
 
   if (!response.ok || !payload.success) {
-    throw new Error(payload.error ?? "Gagal mengambil data reservasi.");
+    throw new Error(payload.error ?? "Failed to fetch reservation data.");
   }
 
   return payload.data as ReservationRow[];
@@ -229,7 +229,7 @@ export default function AdminReservationClient() {
       const payload = await response.json();
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.error ?? "Gagal mengubah status.");
+        throw new Error(payload.error ?? "Failed to update status.");
       }
 
       setConfirmDialog(null);
@@ -267,7 +267,7 @@ export default function AdminReservationClient() {
   const reservationColumns: Array<DataTableColumn<ReservationRow>> = [
     {
       id: "session",
-      header: "Sesi / Jam",
+      header: "Session / Time",
       headerClassName: "w-[19%] text-left",
       className: "w-[19%] align-middle text-left",
       cell: (reservation) => (
@@ -283,7 +283,7 @@ export default function AdminReservationClient() {
     },
     {
       id: "guest",
-      header: "Tamu",
+      header: "Guest",
       headerClassName: "w-[23%] text-left",
       className: "w-[23%] align-middle text-left",
       cell: (reservation) => (
@@ -298,12 +298,12 @@ export default function AdminReservationClient() {
             type="button"
             onClick={() => copyCheckInToken(reservation)}
             className="mt-1 inline-flex max-w-full items-center gap-1 text-left font-mono text-[10px] text-slate-400 transition-colors hover:text-primary"
-            title="Klik untuk menyalin token check-in"
+            title="Click to copy check-in token"
           >
             {copiedToken === reservation.id ? (
               <span className="inline-flex items-center gap-1 font-semibold text-green-600">
                 <CheckCircle size={12} weight="bold" />
-                Tersalin
+                Copied
               </span>
             ) : (
               <span className="truncate">
@@ -324,7 +324,7 @@ export default function AdminReservationClient() {
     },
     {
       id: "tables",
-      header: "Meja",
+      header: "Tables",
       headerClassName: "w-[13%] text-center",
       className: "w-[13%] align-middle text-center",
       cell: (reservation) =>
@@ -340,7 +340,7 @@ export default function AdminReservationClient() {
             ))}
           </div>
         ) : (
-          <span className="text-xs text-slate-400">Belum ada</span>
+          <span className="text-xs text-slate-400">None</span>
         ),
     },
     {
@@ -357,7 +357,7 @@ export default function AdminReservationClient() {
     },
     {
       id: "actions",
-      header: "Aksi",
+      header: "Action",
       headerClassName: "w-[23%] text-center",
       className: "w-[23%] align-middle text-center",
       cell: (reservation) => {
@@ -426,31 +426,31 @@ export default function AdminReservationClient() {
       {detailId && <AdminReservationDetailModal reservationId={detailId} />}
       <header>
         <SectionTitle
-          eyebrow="Operasional"
-          title="Daftar Reservasi"
+          eyebrow="Operations"
+          title="Reservation List"
           level={1}
-          description="Pantau tamu yang akan datang, konfirmasi reservasi, dan kelola absensi (No-Show)."
+          description="Monitor upcoming guests, confirm reservations, and manage attendance (No-Show)."
         />
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Total Reservasi"
+          label="Total Reservations"
           value={String(totalReservations)}
           Icon={CalendarCheck}
         />
         <MetricCard
-          label="Menunggu Konfirmasi"
+          label="Awaiting Confirmation"
           value={String(pendingCount)}
           Icon={Clock}
         />
         <MetricCard
-          label="Sudah Hadir"
+          label="Checked In"
           value={String(checkedInCount)}
           Icon={CheckCircle}
         />
         <MetricCard
-          label="Batal / No-Show"
+          label="Cancelled / No-Show"
           value={String(cancelledCount)}
           Icon={XCircle}
         />
@@ -461,23 +461,23 @@ export default function AdminReservationClient() {
           <div className="flex flex-wrap gap-3">
             <input
               type="date"
-              aria-label="Filter tanggal reservasi"
+              aria-label="Filter reservation date"
               value={filterDate}
               onChange={(event) => setFilterDate(event.target.value)}
               className="h-10 rounded-lg border border-slate-300 px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
             />
             <select
-              aria-label="Filter status reservasi"
+              aria-label="Filter reservation status"
               value={filterStatus}
               onChange={(event) => setFilterStatus(event.target.value)}
               className="h-10 min-w-44 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
             >
-              <option value="">Semua Status</option>
-              <option value="pending">Menunggu</option>
-              <option value="confirmed">Terkonfirmasi</option>
-              <option value="checked_in">Sudah Hadir</option>
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="checked_in">Checked in</option>
               <option value="no_show">No Show</option>
-              <option value="cancelled">Dibatalkan</option>
+              <option value="cancelled">Cancelled</option>
             </select>
           </div>
 
@@ -487,8 +487,8 @@ export default function AdminReservationClient() {
             </span>
             <input
               type="search"
-              aria-label="Cari nama atau nomor telepon tamu"
-              placeholder="Cari nama atau telepon..."
+              aria-label="Search guest name or phone number"
+              placeholder="Search name or phone..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               className="min-w-0 flex-1 rounded-lg bg-transparent py-2 pr-3 text-sm outline-none"
@@ -506,16 +506,16 @@ export default function AdminReservationClient() {
           columns={reservationColumns}
           data={rows}
           rowKey="id"
-          caption="Daftar reservasi tamu"
+          caption="Guest reservation list"
           initialPageSize={10}
           loading={isLoading}
           loadingState={
             <span className="inline-flex items-center gap-2">
               <LoadingSpinner className="size-4" />
-              Memuat data...
+              Loading data...
             </span>
           }
-          emptyState="Tidak ada reservasi ditemukan."
+          emptyState="No reservations found."
           tableClassName="min-w-[1200px] table-fixed"
           embedded
         />
@@ -535,27 +535,27 @@ export default function AdminReservationClient() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                  Konfirmasi Aksi
+                  Action Confirmation
                 </p>
                 <h2
                   id="reservation-status-dialog-title"
                   className="mt-2 text-2xl font-semibold text-slate-950"
                 >
-                  Ubah status reservasi?
+                  Change reservation status?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Status reservasi atas nama{" "}
+                  Reservation status for{" "}
                   <span className="font-semibold text-slate-900">
                     {confirmDialog.guestName}
                   </span>{" "}
-                  akan diubah.
+                  will be changed.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setConfirmDialog(null)}
                 disabled={isUpdating !== null}
-                aria-label="Tutup konfirmasi status"
+                aria-label="Close status confirmation"
                 className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
               >
                 <X size={18} />
@@ -563,7 +563,7 @@ export default function AdminReservationClient() {
             </div>
 
             <div className="mt-6 flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-4">
-              <span className="text-sm text-slate-600">Status baru</span>
+              <span className="text-sm text-slate-600">New status</span>
               <StatusBadge
                 status={confirmDialog.status}
                 statuses={reservationStatuses}
@@ -577,7 +577,7 @@ export default function AdminReservationClient() {
                 disabled={isUpdating !== null}
                 className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
@@ -588,10 +588,10 @@ export default function AdminReservationClient() {
                 {isUpdating ? (
                   <>
                     <LoadingSpinner className="size-4 border-white/40 border-t-white" />
-                    Memproses...
+                    Processing...
                   </>
                 ) : (
-                  "Ya, Ubah Status"
+                  "Yes, Change Status"
                 )}
               </button>
             </div>
