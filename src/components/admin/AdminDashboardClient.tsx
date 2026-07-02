@@ -218,10 +218,10 @@ export function AdminDashboardClient({
             <LoadingSpinner />
             <div>
               <p className="text-sm font-semibold text-slate-900">
-                Memperbarui dashboard
+                Refreshing dashboard
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Mengambil data operasional terbaru...
+                Fetching the latest operational data...
               </p>
             </div>
           </div>
@@ -231,18 +231,18 @@ export function AdminDashboardClient({
       <section>
         <SectionTitle
           eyebrow="Daily Operations"
-          title="Dashboard Operasional Harian"
+          title="Daily Operational Dashboard"
           level={1}
           description={
             <>
-              Ringkasan operasional staf untuk {dashboard.dateLabel},
-              berdasarkan tanggal reservasi yang dipilih.
+              Staff operational summary for {dashboard.dateLabel},
+              based on the selected reservation date.
             </>
           }
           actions={
             <div className="flex flex-wrap items-end gap-3">
               <label className="text-sm font-semibold text-slate-700">
-                Tanggal reservasi
+                Reservation date
                 <input
                   type="date"
                   value={dashboard.date}
@@ -282,7 +282,7 @@ export function AdminDashboardClient({
                       : undefined
                   }
                 />
-                {isRefreshing ? "Memuat..." : "Refresh"}
+                {isRefreshing ? "Loading..." : "Refresh"}
               </button>
             </div>
           }
@@ -316,7 +316,7 @@ export function AdminDashboardClient({
         <DashboardChart
           type="doughnut"
           title="Reservation Status"
-          description="Distribusi status reservasi pada tanggal yang dipilih."
+          description="Distribution of reservation statuses for the selected date."
           data={statusChartData}
           height={300}
           footer={`Paid revenue: ${formatCurrency(
@@ -327,7 +327,7 @@ export function AdminDashboardClient({
         <DashboardChart
           type="bar"
           title="Session Load"
-          description="Jumlah expected guests dan tamu yang sudah check-in per sesi."
+          description="Expected guests and checked-in guests per session."
           data={sessionChartData}
           options={sessionOptions}
           height={300}
@@ -392,7 +392,7 @@ export function AdminDashboardClient({
           rowKey="id"
           initialPageSize={8}
           pageSizeOptions={[8, 12, 20]}
-          emptyState={`Belum ada reservasi pada ${dashboard.dateLabel}.`}
+          emptyState={`No reservations found for ${dashboard.dateLabel}.`}
         />
       </section>
     </div>
