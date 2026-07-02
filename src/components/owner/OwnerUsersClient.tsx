@@ -314,7 +314,7 @@ export default function OwnerUsersClient() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Staff Account?</h3>
               <p className="text-sm text-slate-500">
-                Are you sure you want to delete <strong>"{deleteUserPrompt.name}"</strong>? This account will no longer be able to access the admin panel.
+                Are you sure you want to delete <strong>&quot;{deleteUserPrompt.name}&quot;</strong>? This account will no longer be able to access the admin panel.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">
