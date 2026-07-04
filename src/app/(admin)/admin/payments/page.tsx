@@ -183,7 +183,7 @@ function formatTime(value: string) {
 }
 
 function getPaymentMethodLabel(method: string | null) {
-  if (!method) return "Belum tercatat";
+  if (!method) return "Not recorded";
 
   return method.replaceAll("_", " ");
 }
@@ -193,7 +193,7 @@ async function parseApiError(response: Response) {
     | ApiErrorResponse
     | null;
 
-  return payload?.error ?? "Request gagal diproses.";
+  return payload?.error ?? "Request failed to process.";
 }
 
 async function requestPayments({
@@ -228,7 +228,7 @@ async function requestPayments({
   const payload = (await response.json()) as ApiListResponse | ApiErrorResponse;
 
   if (!payload.success) {
-    throw new Error(payload.error ?? "Gagal mengambil data pembayaran.");
+    throw new Error(payload.error ?? "Failed to fetch payment data.");
   }
 
   return payload;
@@ -280,11 +280,11 @@ export default function AdminPaymentsPage() {
       setMeta(payload.data.meta);
     } catch (err) {
       setFeedback({
-        title: "Data payments gagal dimuat",
+        title: "Failed to load payment data",
         message:
           err instanceof Error
             ? err.message
-            : "Gagal mengambil data pembayaran.",
+            : "Failed to fetch payment data.",
         variant: "error",
       });
     } finally {
@@ -312,11 +312,11 @@ export default function AdminPaymentsPage() {
         if (err instanceof DOMException && err.name === "AbortError") return;
 
         setFeedback({
-          title: "Data payments gagal dimuat",
+          title: "Failed to load payment data",
           message:
             err instanceof Error
               ? err.message
-              : "Gagal mengambil data pembayaran.",
+              : "Failed to fetch payment data.",
           variant: "error",
         });
       } finally {
@@ -369,16 +369,16 @@ export default function AdminPaymentsPage() {
 
       if (!payload.success) {
         throw new Error(
-          payload.error ?? "Gagal menyinkronkan status pembayaran."
+          payload.error ?? "Failed to sync payment status."
         );
       }
 
       setFeedback({
-        title: "Sinkronisasi Midtrans selesai",
+        title: "Midtrans sync completed",
         message:
           payload.data.total === 0
-            ? "Tidak ada transaksi pending atau failed yang perlu disinkronkan."
-            : `${payload.data.synced} dari ${payload.data.total} transaksi diperbarui dari Midtrans.${payload.data.notStarted > 0 ? ` ${payload.data.notStarted} pembayaran belum dimulai oleh pelanggan sehingga status lokalnya tidak diubah.` : ""}${payload.data.failed > 0 ? ` ${payload.data.failed} transaksi mengalami gangguan sinkronisasi dan perlu dicoba kembali.` : ""}`,
+            ? "No pending or failed transactions to sync."
+            : `${payload.data.synced} out of ${payload.data.total} transactions updated from Midtrans.${payload.data.notStarted > 0 ? ` ${payload.data.notStarted} payments not yet started by customer so local status is unchanged.` : ""}${payload.data.failed > 0 ? ` ${payload.data.failed} transactions encountered sync issues and need to be retried.` : ""}`,
         variant:
           payload.data.notStarted > 0 || payload.data.failed > 0
             ? "warning"
@@ -387,11 +387,11 @@ export default function AdminPaymentsPage() {
       await fetchPayments(meta.page);
     } catch (err) {
       setFeedback({
-        title: "Sinkronisasi Midtrans gagal",
+        title: "Midtrans sync failed",
         message:
           err instanceof Error
             ? err.message
-            : "Gagal menyinkronkan status pembayaran.",
+            : "Failed to sync payment status.",
         variant: "error",
       });
     } finally {
@@ -428,21 +428,21 @@ export default function AdminPaymentsPage() {
         | ApiErrorResponse;
 
       if (!payload.success) {
-        throw new Error(payload.error ?? "Gagal memproses refund.");
+        throw new Error(payload.error ?? "Failed to process refund.");
       }
 
       setFeedback({
-        title: "Refund berhasil dikirim",
-        message: `Refund untuk ${confirmRefund.orderId} berhasil dikirim ke Midtrans.`,
+        title: "Refund successfully sent",
+        message: `Refund for ${confirmRefund.orderId} was successfully sent to Midtrans.`,
         variant: "success",
       });
       setConfirmRefund(null);
       await fetchPayments(meta.page);
     } catch (err) {
       setFeedback({
-        title: "Refund gagal",
+        title: "Refund failed",
         message:
-          err instanceof Error ? err.message : "Gagal memproses refund.",
+          err instanceof Error ? err.message : "Failed to process refund.",
         variant: "error",
       });
     } finally {
@@ -486,7 +486,7 @@ export default function AdminPaymentsPage() {
     },
     {
       id: "reservation",
-      header: "Reservasi",
+      header: "Reservation",
       cell: (payment) => (
         <>
           <p>{formatDate(payment.reservation.date)}</p>
@@ -496,7 +496,7 @@ export default function AdminPaymentsPage() {
             {formatTime(payment.reservation.session.endTime)}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            {payment.reservation.partySize} tamu
+            {payment.reservation.partySize} guests
           </p>
         </>
       ),
@@ -570,7 +570,7 @@ export default function AdminPaymentsPage() {
           eyebrow="Payment Operations"
           title="Midtrans Payments & Refund"
           level={1}
-          description="Rekap transaksi reservasi, sinkronisasi status langsung dari Midtrans, dan konfirmasi refund dana tamu."
+          description="Summary of reservation transactions, live status sync from Midtrans, and guest refund confirmation."
         />
       </header>
 
@@ -601,12 +601,12 @@ export default function AdminPaymentsPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <select
-              aria-label="Filter status pembayaran"
+              aria-label="Filter payment status"
               value={status}
               onChange={(event) => applyStatusFilter(event.target.value)}
               className="h-10 min-w-44 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
             >
-              <option value="">Semua Status</option>
+              <option value="">All Statuses</option>
               {paymentStatuses.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
@@ -617,7 +617,7 @@ export default function AdminPaymentsPage() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <p className="text-sm text-slate-500">
-              {meta.total} transaksi ditemukan
+              {meta.total} transactions found
             </p>
             <div className="flex min-w-0 flex-1 rounded-lg border border-slate-300 bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary sm:w-72">
               <span className="grid size-10 shrink-0 place-items-center text-slate-400">
@@ -625,13 +625,13 @@ export default function AdminPaymentsPage() {
               </span>
               <input
                 type="search"
-                aria-label="Cari transaksi pembayaran"
+                aria-label="Search payment transactions"
                 value={orderId}
                 onChange={(event) => setOrderId(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") void applyFilters();
                 }}
-                placeholder="Cari Order ID atau Reservation ID..."
+                placeholder="Search Order ID or Reservation ID..."
                 className="min-w-0 flex-1 rounded-lg bg-transparent py-2 pr-3 text-sm outline-none"
               />
             </div>
@@ -639,8 +639,8 @@ export default function AdminPaymentsPage() {
               type="button"
               onClick={() => void syncPayments()}
               disabled={isSyncing || isLoading}
-              aria-label="Refresh status pembayaran dari Midtrans"
-              title="Refresh status pembayaran"
+              aria-label="Refresh payment status from Midtrans"
+              title="Refresh payment status"
               className="grid size-10 shrink-0 place-items-center text-slate-600 transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-wait disabled:opacity-50"
             >
               {isSyncing ? (
@@ -656,10 +656,10 @@ export default function AdminPaymentsPage() {
           columns={paymentColumns}
           data={payments}
           rowKey="id"
-          caption="Daftar transaksi pembayaran reservasi"
+          caption="Reservation payment transaction list"
           loading={isLoading}
-          loadingState="Memuat data pembayaran..."
-          emptyState="Belum ada pembayaran yang sesuai filter."
+          loadingState="Loading payment data..."
+          emptyState="No payments match the filter."
           tableClassName="min-w-300"
           embedded
           pagination={{
@@ -686,14 +686,14 @@ export default function AdminPaymentsPage() {
                   Confirm Refund
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                  Refund dana ke tamu?
+                  Refund to guest?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
-                  Request full refund akan dikirim ke Midtrans untuk order{" "}
+                  A full refund request will be sent to Midtrans for order{" "}
                   <span className="break-all font-semibold text-slate-900">
                     {confirmRefund.orderId}
                   </span>{" "}
-                  senilai {formatRupiah(confirmRefund.amount)}.
+                  amounting to {formatRupiah(confirmRefund.amount)}.
                 </p>
               </div>
             </div>
@@ -715,7 +715,7 @@ export default function AdminPaymentsPage() {
                 disabled={actionKey === `refund-${confirmRefund.id}`}
                 className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
@@ -724,8 +724,8 @@ export default function AdminPaymentsPage() {
                 className="rounded-xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {actionKey === `refund-${confirmRefund.id}`
-                  ? "Memproses refund"
-                  : "Konfirmasi Refund"}
+                  ? "Processing refund"
+                  : "Confirm Refund"}
               </button>
             </div>
           </section>
