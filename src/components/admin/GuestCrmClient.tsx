@@ -109,25 +109,25 @@ const tagOptions: GuestTag[] = [
 const visitStatuses: Array<StatusBadgeOption<ReservationStatus>> = [
   {
     id: "confirmed",
-    label: "Terkonfirmasi",
+    label: "Confirmed",
     className: "bg-blue-100 text-blue-700",
     Icon: CalendarCheck,
   },
   {
     id: "pending",
-    label: "Menunggu",
+    label: "Pending",
     className: "bg-amber-100 text-amber-700",
     Icon: CalendarCheck,
   },
   {
     id: "checked_in",
-    label: "Hadir",
+    label: "Checked in",
     className: "bg-green-100 text-green-700",
     Icon: CheckCircle,
   },
   {
     id: "cancelled",
-    label: "Batal",
+    label: "Cancelled",
     className: "bg-red-100 text-red-700",
     Icon: CalendarCheck,
   },
@@ -139,7 +139,7 @@ const visitStatuses: Array<StatusBadgeOption<ReservationStatus>> = [
   },
 ];
 
-const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "2-digit",
   month: "short",
   year: "numeric",
@@ -174,7 +174,7 @@ async function readJson<T>(response: Response): Promise<T> {
 const visitColumns: Array<DataTableColumn<GuestVisit>> = [
   {
     id: "date",
-    header: "Tanggal",
+    header: "Date",
     headerClassName: "w-[30%] text-left",
     className: "w-[30%] align-middle text-left",
     cell: (visit) => formatDate(visit.date),
@@ -197,7 +197,7 @@ const visitColumns: Array<DataTableColumn<GuestVisit>> = [
   },
   {
     id: "created",
-    header: "Dibuat",
+    header: "Created",
     headerClassName: "w-[25%] text-left",
     className: "w-[25%] align-middle text-left",
     cell: (visit) => formatDate(visit.createdAt),
@@ -244,7 +244,7 @@ export function GuestCrmClient() {
       const payload = await readJson<ApiItemResponse<GuestDetail>>(response);
 
       if (!response.ok || !payload.success) {
-        throw new Error(payload.success ? "Gagal memuat detail." : payload.error);
+        throw new Error(payload.success ? "Failed to load detail." : payload.error);
       }
 
       setGuestDetail(payload.data);
@@ -266,7 +266,7 @@ export function GuestCrmClient() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Gagal memuat detail tamu.",
+          : "Failed to load guest detail.",
       );
     } finally {
       setLoadingDetail(false);
@@ -296,7 +296,7 @@ export function GuestCrmClient() {
           const payload = await readJson<ApiListResponse>(response);
           if (!response.ok || !payload.success) {
             throw new Error(
-              payload.success ? "Gagal memuat tamu." : payload.error,
+              payload.success ? "Failed to load guests." : payload.error,
             );
           }
 
@@ -314,7 +314,7 @@ export function GuestCrmClient() {
           setError(
             requestError instanceof Error
               ? requestError.message
-              : "Gagal memuat tamu.",
+              : "Failed to load guests.",
           );
         })
         .finally(() => {
@@ -358,7 +358,7 @@ export function GuestCrmClient() {
 
       if (!response.ok || !payload.success) {
         throw new Error(
-          payload.success ? "Gagal menyimpan catatan." : payload.error,
+          payload.success ? "Failed to save note." : payload.error,
         );
       }
 
@@ -368,7 +368,7 @@ export function GuestCrmClient() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Gagal menyimpan catatan.",
+          : "Failed to save note.",
       );
     } finally {
       setSubmittingNote(false);
@@ -397,7 +397,7 @@ export function GuestCrmClient() {
 
       if (!response.ok || !payload.success) {
         throw new Error(
-          payload.success ? "Gagal mengubah label." : payload.error,
+          payload.success ? "Failed to update label." : payload.error,
         );
       }
 
@@ -435,7 +435,7 @@ export function GuestCrmClient() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Gagal mengubah label.",
+          : "Failed to update label.",
       );
     } finally {
       setUpdatingTag(null);
@@ -445,7 +445,7 @@ export function GuestCrmClient() {
   const guestColumns: Array<DataTableColumn<GuestListItem>> = [
     {
       id: "guest",
-      header: "Tamu",
+      header: "Guest",
       headerClassName: "w-[24%] text-left",
       className: "w-[24%] align-middle text-left",
       cell: (guest) => (
@@ -454,35 +454,35 @@ export function GuestCrmClient() {
             {guest.name}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Bergabung {formatDate(guest.createdAt)}
+            Joined {formatDate(guest.createdAt)}
           </p>
         </div>
       ),
     },
     {
       id: "contact",
-      header: "Kontak",
+      header: "Contact",
       headerClassName: "w-[25%] text-left",
       className: "w-[25%] align-middle text-left",
       cell: (guest) => (
         <div className="min-w-0">
           <p className="break-all text-sm text-slate-700">{guest.phone}</p>
           <p className="mt-1 break-all text-xs text-slate-500">
-            {guest.email ?? "Email belum tersedia"}
+            {guest.email ?? "Email not available"}
           </p>
         </div>
       ),
     },
     {
       id: "visits",
-      header: "Kunjungan",
+      header: "Visits",
       accessor: "totalVisits",
       headerClassName: "w-[11%] text-center",
       className: "w-[11%] align-middle text-center font-semibold",
     },
     {
       id: "labels",
-      header: "Label",
+      header: "Labels",
       headerClassName: "w-[25%] text-left",
       className: "w-[25%] align-middle text-left",
       cell: (guest) =>
@@ -498,12 +498,12 @@ export function GuestCrmClient() {
             ))}
           </div>
         ) : (
-          <span className="text-xs text-slate-400">Belum ada label</span>
+          <span className="text-xs text-slate-400">No labels</span>
         ),
     },
     {
       id: "actions",
-      header: "Aksi",
+      header: "Action",
       headerClassName: "w-[15%] text-center",
       className: "w-[15%] align-middle text-center",
       cell: (guest) => (
@@ -526,28 +526,28 @@ export function GuestCrmClient() {
           eyebrow="Guest Management"
           title="Guest CRM"
           level={1}
-          description="Kelola profil tamu, label, catatan internal, dan riwayat kunjungan berdasarkan data reservasi."
+          description="Manage guest profiles, labels, internal notes, and visit history based on reservation data."
         />
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Total Tamu"
+          label="Total Guests"
           value={String(stats.totalGuests)}
           Icon={UsersThree}
         />
         <MetricCard
-          label="Tamu VIP"
+          label="VIP Guests"
           value={String(stats.vipGuests)}
           Icon={Crown}
         />
         <MetricCard
-          label="Tamu Kembali"
+          label="Returning Guests"
           value={String(stats.returningGuests)}
           Icon={ClockCounterClockwise}
         />
         <MetricCard
-          label="Total Kunjungan"
+          label="Total Visits"
           value={String(stats.totalVisits)}
           Icon={CalendarCheck}
         />
@@ -556,7 +556,7 @@ export function GuestCrmClient() {
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <select
-            aria-label="Filter label tamu"
+            aria-label="Filter guest labels"
             value={tagFilter}
             onChange={(event) => {
               setTagFilter(event.target.value as GuestTag | "all");
@@ -564,7 +564,7 @@ export function GuestCrmClient() {
             }}
             className="h-10 min-w-44 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
           >
-            <option value="all">Semua Label</option>
+            <option value="all">All Labels</option>
             {tagOptions.map((tag) => (
               <option key={tag} value={tag}>
                 {tag}
@@ -578,8 +578,8 @@ export function GuestCrmClient() {
             </span>
             <input
               type="search"
-              aria-label="Cari nama, telepon, atau email tamu"
-              placeholder="Cari nama, telepon, atau email..."
+              aria-label="Search guest name, phone, or email"
+              placeholder="Search name, phone, or email..."
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -600,15 +600,15 @@ export function GuestCrmClient() {
           columns={guestColumns}
           data={guests}
           rowKey="id"
-          caption="Daftar tamu restoran"
+          caption="Restaurant guest list"
           loading={loadingGuests}
           loadingState={
             <span className="inline-flex items-center gap-2">
               <LoadingSpinner className="size-4" />
-              Memuat data tamu...
+              Loading guests...
             </span>
           }
-          emptyState="Tidak ada tamu sesuai pencarian atau filter."
+          emptyState="No guests found matching the search or filter."
           tableClassName="min-w-[1050px] table-fixed"
           embedded
           pagination={{
@@ -653,7 +653,7 @@ export function GuestCrmClient() {
               <button
                 type="button"
                 onClick={closeGuestDetail}
-                aria-label="Tutup detail tamu"
+                aria-label="Close guest detail"
                 className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30"
               >
                 <X size={18} />
@@ -664,26 +664,26 @@ export function GuestCrmClient() {
               <div className="grid min-h-72 place-items-center text-sm text-slate-500">
                 <span className="inline-flex items-center gap-2">
                   <LoadingSpinner className="size-4" />
-                  Memuat detail tamu...
+                  Loading guest detail...
                 </span>
               </div>
             ) : guestDetail ? (
               <div className="mt-6 max-h-[70vh] space-y-6 overflow-y-auto pr-1">
                 <div className="grid gap-3 rounded-xl bg-slate-50 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
                   <ProfileValue
-                    label="Kunjungan"
+                    label="Visits"
                     value={String(guestDetail.totalVisits)}
                   />
                   <ProfileValue
                     label="VIP"
-                    value={guestDetail.isVip ? "Ya" : "Tidak"}
+                    value={guestDetail.isVip ? "Yes" : "No"}
                   />
                   <ProfileValue
-                    label="Tanggal Lahir"
+                    label="Date of Birth"
                     value={formatDate(guestDetail.birthdate)}
                   />
                   <ProfileValue
-                    label="Terdaftar Sejak"
+                    label="Registered Since"
                     value={formatDate(guestDetail.createdAt)}
                   />
                 </div>
@@ -727,18 +727,18 @@ export function GuestCrmClient() {
                           weight="fill"
                         />
                         <h3 className="text-xl font-semibold text-slate-950">
-                          Catatan Internal
+                          Internal Notes
                         </h3>
                       </div>
                       <span className="text-sm text-slate-500">
-                        {guestDetail.guestNotes.length} catatan
+                        {guestDetail.guestNotes.length} notes
                       </span>
                     </div>
                     <form onSubmit={handleAddNote} className="mt-4">
                       <textarea
                         value={noteContent}
                         onChange={(event) => setNoteContent(event.target.value)}
-                        placeholder="Tambahkan catatan untuk staf..."
+                        placeholder="Add a note for staff..."
                         rows={3}
                         className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary/30"
                       />
@@ -753,14 +753,14 @@ export function GuestCrmClient() {
                           ) : (
                             <Plus size={16} weight="bold" />
                           )}
-                          Tambah Catatan
+                          Add Note
                         </button>
                       </div>
                     </form>
                     <div className="mt-4 max-h-48 divide-y divide-slate-100 overflow-y-auto border-t border-slate-100">
                       {guestDetail.guestNotes.length === 0 ? (
                         <p className="py-4 text-sm text-slate-500">
-                          Belum ada catatan internal.
+                          No internal notes yet.
                         </p>
                       ) : null}
                       {guestDetail.guestNotes.map((note) => (
@@ -783,24 +783,24 @@ export function GuestCrmClient() {
                       Visit History
                     </p>
                     <h3 className="mt-2 text-2xl font-semibold text-slate-950">
-                      Riwayat Reservasi
+                      Reservation History
                     </h3>
                   </div>
                   <DataTable
-                    caption="Riwayat reservasi tamu"
+                    caption="Guest reservation history"
                     columns={visitColumns}
                     data={guestDetail.visitHistory}
                     rowKey="id"
                     initialPageSize={5}
                     pageSizeOptions={[5, 10]}
-                    emptyState="Belum ada riwayat reservasi."
+                    emptyState="No reservation history yet."
                     tableClassName="min-w-[680px] table-fixed"
                   />
                 </article>
               </div>
             ) : (
               <div className="grid min-h-72 place-items-center text-sm text-red-600">
-                Detail tamu tidak dapat dimuat.
+                Guest detail could not be loaded.
               </div>
             )}
           </section>
