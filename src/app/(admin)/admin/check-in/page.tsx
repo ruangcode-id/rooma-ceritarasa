@@ -35,11 +35,11 @@ export default function AdminCheckInPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error ?? "Gagal check-in. Kode tidak valid atau sudah digunakan.");
+        throw new Error(data.error ?? "Check-in failed. Code is invalid or already used.");
       }
 
       setStatus("success");
-      setMessage(`Check-in berhasil! Reservasi ${data.data.reservationId.slice(0, 8).toUpperCase()} telah ditandai hadir.`);
+      setMessage(`Check-in successful! Reservation ${data.data.reservationId.slice(0, 8).toUpperCase()} has been marked as present.`);
       
       // Auto reset after 3.5 seconds
       setTimeout(() => {
@@ -73,7 +73,7 @@ export default function AdminCheckInPage() {
       <div className="text-center">
         <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Front Desk</p>
         <h1 className="mt-2 text-4xl font-semibold text-slate-950">Guest Check-In</h1>
-        <p className="mt-2 text-slate-600">Pindai QR tamu atau masukkan kode reservasi secara manual.</p>
+        <p className="mt-2 text-slate-600">Scan the guest QR code or enter the reservation code manually.</p>
       </div>
 
       <div className="flex w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-1">
@@ -84,7 +84,7 @@ export default function AdminCheckInPage() {
           }`}
         >
           <Keyboard size={20} />
-          Input Manual
+          Manual Input
         </button>
         <button
           onClick={() => {
@@ -105,13 +105,13 @@ export default function AdminCheckInPage() {
         {/* State Overlays */}
         <div className={`absolute inset-0 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 z-10 ${status === "success" ? "translate-y-0 bg-green-500 text-white" : "translate-y-full"} ${status === "idle" ? "hidden" : ""}`}>
           <CheckCircle size={80} weight="fill" className="mb-4 text-green-100 animate-bounce" />
-          <h2 className="text-3xl font-bold mb-2">Check-in Berhasil!</h2>
+          <h2 className="text-3xl font-bold mb-2">Check-in Successful!</h2>
           <p className="text-green-50 text-lg">{message}</p>
         </div>
 
         <div className={`absolute inset-0 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 z-10 ${status === "error" ? "translate-y-0 bg-red-500 text-white" : "translate-y-full"} ${status === "idle" ? "hidden" : ""}`}>
           <XCircle size={80} weight="fill" className="mb-4 text-red-100 animate-pulse" />
-          <h2 className="text-3xl font-bold mb-2">Check-in Gagal</h2>
+          <h2 className="text-3xl font-bold mb-2">Check-in Failed</h2>
           <p className="text-red-50 text-lg">{message}</p>
         </div>
 
@@ -119,12 +119,12 @@ export default function AdminCheckInPage() {
         {mode === "manual" && status === "idle" && (
           <form onSubmit={handleSubmit} className="w-full flex flex-col items-center max-w-sm">
             <label className="text-sm font-semibold text-slate-700 mb-4 block w-full text-center">
-              Masukkan Kode atau ID Reservasi:
+              Enter Reservation Code or ID:
             </label>
             <input
               ref={inputRef}
               type="text"
-              placeholder="Contoh: a1b2c3d4"
+              placeholder="Example: a1b2c3d4"
               value={lookupCode}
               onChange={(e) => setLookupCode(e.target.value)}
               className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-6 py-5 text-center text-3xl font-bold tracking-widest text-slate-900 uppercase focus:border-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/20 transition-all placeholder:text-slate-300 placeholder:font-normal placeholder:tracking-normal"
@@ -136,7 +136,7 @@ export default function AdminCheckInPage() {
               disabled={!lookupCode || isLoading}
               className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-4 font-semibold text-white shadow-lg transition-all hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-primary/30"
             >
-              {isLoading ? "Memproses..." : "Konfirmasi Hadir"}
+              {isLoading ? "Processing..." : "Confirm Attendance"}
               {!isLoading && <ArrowRight weight="bold" />}
             </button>
           </form>
@@ -148,16 +148,16 @@ export default function AdminCheckInPage() {
               <QrCode size={64} className="text-slate-300 group-hover:text-primary/50 transition-colors" />
               <div className="absolute inset-x-6 top-1/2 h-0.5 bg-primary/40 shadow-[0_0_8px_rgba(255,255,255,0.8)] -translate-y-1/2 animate-[pulse_2s_ease-in-out_infinite]" />
             </div>
-            <h3 className="font-semibold text-slate-900 text-lg">Scanner Aktif</h3>
+            <h3 className="font-semibold text-slate-900 text-lg">Scanner Active</h3>
             <p className="text-slate-500 text-sm mt-1 max-w-xs leading-relaxed">
-              Fitur akses kamera untuk <span className="italic">scan</span> otomatis sedang dalam tahap simulasi.
-              Gunakan mode Input Manual.
+              Camera access for automatic <span className="italic">scan</span> is currently in simulation mode.
+              Please use Manual Input mode.
             </p>
             <button 
               onClick={() => setMode("manual")}
               className="mt-5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
             >
-              Kembali ke Input Manual
+              Back to Manual Input
             </button>
           </div>
         )}
