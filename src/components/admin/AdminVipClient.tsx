@@ -5,7 +5,7 @@ import { MagnifyingGlass, Crown, CheckCircle } from "@phosphor-icons/react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { format } from "date-fns";
-import { id as localeId } from "date-fns/locale";
+import { enUS as localeId } from "date-fns/locale";
 import VipAssignModal from "@/components/modals/VipAssignModal";
 
 export type VipCardData = {
@@ -53,7 +53,7 @@ export default function AdminVipClient() {
         const payload = await res.json();
         
         if (!res.ok || !payload.success) {
-          throw new Error(payload.error || "Gagal mengambil data tamu");
+          throw new Error(payload.error || "Failed to fetch guest data");
         }
         
         const formattedData = payload.data.map((g: GuestRow) => ({
@@ -94,9 +94,9 @@ export default function AdminVipClient() {
       <header>
         <SectionTitle
           eyebrow="Loyalty Program"
-          title="Manajemen VIP"
+          title="VIP Management"
           level={1}
-          description="Daftarkan pelanggan reguler Anda ke program VIP untuk memberikan kartu member digital eksklusif."
+          description="Enroll your regular customers into the VIP program to provide an exclusive digital membership card."
         />
       </header>
 
@@ -110,7 +110,7 @@ export default function AdminVipClient() {
                 filter === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              Semua Tamu
+              All Guests
             </button>
             <button
               onClick={() => setFilter("vip")}
@@ -118,7 +118,7 @@ export default function AdminVipClient() {
                 filter === "vip" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              Member VIP
+              VIP Members
             </button>
           </div>
 
@@ -128,7 +128,7 @@ export default function AdminVipClient() {
             </span>
             <input
               type="search"
-              placeholder="Cari nama atau nomor..."
+              placeholder="Search name or number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="min-w-0 flex-1 rounded-lg bg-transparent py-2 pr-3 text-sm outline-none"
@@ -145,11 +145,11 @@ export default function AdminVipClient() {
           <table className="w-full min-w-[600px] text-left text-sm">
             <thead className="bg-slate-50 font-semibold text-slate-600">
               <tr>
-                <th className="px-4 py-3">Nama Tamu</th>
-                <th className="px-4 py-3">Kontak</th>
-                <th className="px-4 py-3">Terdaftar Sejak</th>
+                <th className="px-4 py-3">Guest Name</th>
+                <th className="px-4 py-3">Contact</th>
+                <th className="px-4 py-3">Registered Since</th>
                 <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-right">Aksi</th>
+                <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
@@ -162,7 +162,7 @@ export default function AdminVipClient() {
               ) : guests.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="py-12 text-center text-slate-500">
-                    Tidak ada tamu yang ditemukan.
+                    No guests found.
                   </td>
                 </tr>
               ) : (
@@ -184,7 +184,7 @@ export default function AdminVipClient() {
                         </span>
                       ) : (
                         <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
-                          Reguler
+                          Regular
                         </span>
                       )}
                     </td>
@@ -194,14 +194,14 @@ export default function AdminVipClient() {
                           onClick={() => handleActionClick(guest)}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                         >
-                          Lihat Kartu
+                          View Card
                         </button>
                       ) : (
                         <button
                           onClick={() => handleActionClick(guest)}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
                         >
-                          Jadikan VIP
+                          Make VIP
                         </button>
                       )}
                     </td>

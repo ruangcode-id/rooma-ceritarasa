@@ -13,7 +13,7 @@ type SessionData = {
   dayOfWeek: number[];
 };
 
-const DAYS = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function AdminSessionsClient() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
@@ -39,7 +39,7 @@ export default function AdminSessionsClient() {
     try {
       const res = await fetch("/api/admin/sessions", { cache: "no-store" });
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Gagal memuat sesi");
+      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Failed to load sessions");
       
       const sessions = (payload.data || []).map((session: any) => ({
         ...session,
@@ -93,7 +93,7 @@ export default function AdminSessionsClient() {
       const data = await res.json();
       
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Gagal menghapus sesi. Mungkin ada reservasi aktif.");
+        throw new Error(data.error || "Failed to delete session. There might be active reservations.");
       }
       
       setDeleteSessionId(null);
@@ -117,7 +117,7 @@ export default function AdminSessionsClient() {
   const handleAddSession = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newStartTime || !newEndTime || !newCapacity || newDays.length === 0) {
-      setError("Mohon lengkapi semua field dan pilih minimal satu hari.");
+      setError("Please fill all fields and select at least one day.");
       return;
     }
     
@@ -144,7 +144,7 @@ export default function AdminSessionsClient() {
       const data = await res.json();
       
       if (!res.ok || !data.success) {
-        throw new Error(data.error || data.message || `Gagal ${editSessionId ? 'mengubah' : 'menambah'} sesi`);
+        throw new Error(data.error || data.message || `Failed to ${editSessionId ? 'update' : 'add'} session`);
       }
       
       resetForm();
@@ -161,10 +161,10 @@ export default function AdminSessionsClient() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Setup Restoran</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Sesi Operasional</h1>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Restaurant Setup</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Operational Sessions</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-xl">
-            Atur jam buka operasional per sesi (misal: Sesi Siang, Sesi Malam) agar tamu dapat memilih waktu reservasi dengan tepat.
+            Manage operational hours per session (e.g., Lunch Session, Dinner Session) so guests can choose appropriate reservation times.
           </p>
         </div>
         <div>
@@ -173,7 +173,7 @@ export default function AdminSessionsClient() {
             className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-slate-800"
           >
             <Plus weight="bold" />
-            Tambah Sesi
+            Add Session
           </button>
         </div>
       </header>
@@ -183,7 +183,7 @@ export default function AdminSessionsClient() {
       {isAdding && (
         <form onSubmit={handleAddSession} className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-5 animate-in slide-in-from-top-4">
           <div className="flex justify-between items-center mb-2">
-            <h2 className="text-lg font-bold text-slate-900">{editSessionId ? "Edit Sesi Operasional" : "Tambah Sesi Baru"}</h2>
+            <h2 className="text-lg font-bold text-slate-900">{editSessionId ? "Edit Operational Session" : "Add New Session"}</h2>
             {editSessionId && (
               <label className="flex items-center gap-2 cursor-pointer">
                 <input 
@@ -192,31 +192,31 @@ export default function AdminSessionsClient() {
                   onChange={(e) => setIsActive(e.target.checked)}
                   className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
                 />
-                <span className="text-sm font-semibold text-slate-700">Sesi Aktif</span>
+                <span className="text-sm font-semibold text-slate-700">Active Session</span>
               </label>
             )}
           </div>
           <div className="grid gap-5 md:grid-cols-2">
             <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Nama Sesi</label>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Session Name</label>
               <input 
                 type="text" required 
-                placeholder="Misal: Sesi Siang"
+                placeholder="Example: Lunch Session"
                 value={newName} onChange={e => setNewName(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Kapasitas Maksimal (Pax)</label>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Maximum Capacity (Pax)</label>
               <input 
                 type="number" required min="1"
-                placeholder="Misal: 50"
+                placeholder="Example: 50"
                 value={newCapacity} onChange={e => setNewCapacity(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Jam Mulai</label>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Start Time</label>
               <input 
                 type="time" required
                 value={newStartTime} onChange={e => setNewStartTime(e.target.value)}
@@ -224,7 +224,7 @@ export default function AdminSessionsClient() {
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Jam Selesai</label>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">End Time</label>
               <input 
                 type="time" required
                 value={newEndTime} onChange={e => setNewEndTime(e.target.value)}
@@ -234,7 +234,7 @@ export default function AdminSessionsClient() {
           </div>
           
           <div>
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Berlaku Pada Hari</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Available On Days</label>
             <div className="flex flex-wrap gap-2">
               {DAYS.map((day, idx) => (
                 <button
@@ -254,21 +254,21 @@ export default function AdminSessionsClient() {
           </div>
           
           <div className="pt-2 flex justify-end gap-3">
-            <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">Batal</button>
+            <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancel</button>
             <button type="submit" disabled={isSaving} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-primary hover:bg-primary/90 shadow-sm disabled:opacity-50">
-              {isSaving ? "Menyimpan..." : (editSessionId ? "Simpan Perubahan" : "Simpan Sesi")}
+              {isSaving ? "Saving..." : (editSessionId ? "Save Changes" : "Save Session")}
             </button>
           </div>
         </form>
       )}
 
       {isLoading ? (
-        <div className="text-center py-12 text-slate-400 font-medium">Memuat data sesi...</div>
+        <div className="text-center py-12 text-slate-400 font-medium">Loading session data...</div>
       ) : sessions.length === 0 && !isAdding ? (
         <div className="text-center py-12 border-2 border-dashed border-slate-200 rounded-2xl">
           <CalendarBlank size={48} className="mx-auto text-slate-300 mb-3" />
-          <h3 className="text-lg font-bold text-slate-900 mb-1">Belum ada sesi</h3>
-          <p className="text-slate-500 text-sm">Tambahkan sesi operasional pertama Anda untuk mulai menerima reservasi.</p>
+          <h3 className="text-lg font-bold text-slate-900 mb-1">No sessions yet</h3>
+          <p className="text-slate-500 text-sm">Add your first operational session to start accepting reservations.</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -278,7 +278,7 @@ export default function AdminSessionsClient() {
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-bold text-slate-900">{session.name}</h3>
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase ${session.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                  {session.isActive ? 'Aktif' : 'Non-Aktif'}
+                  {session.isActive ? 'Active' : 'Inactive'}
                 </span>
               </div>
               
@@ -289,12 +289,12 @@ export default function AdminSessionsClient() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                   <Users size={16} className="text-slate-400" />
-                  <span className="font-medium">Maks. {session.maxCapacity} Pax</span>
+                  <span className="font-medium">Max. {session.maxCapacity} Pax</span>
                 </div>
               </div>
               
               <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Hari Aktif</p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Active Days</p>
                 <div className="flex flex-wrap gap-1">
                   {session.dayOfWeek.sort().map(d => (
                     <span key={d} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-medium rounded">
@@ -315,7 +315,7 @@ export default function AdminSessionsClient() {
                   onClick={() => setDeleteSessionId(session)}
                   className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                 >
-                  Hapus
+                  Delete
                 </button>
               </div>
             </div>
@@ -328,10 +328,10 @@ export default function AdminSessionsClient() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Hapus Sesi</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Session</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-5">
-                Apakah Anda yakin ingin menghapus sesi <span className="font-bold text-slate-900">{deleteSessionId.name}</span>? 
-                Aksi ini tidak dapat dibatalkan dan akan ditolak jika ada reservasi yang terkait.
+                Are you sure you want to delete session <span className="font-bold text-slate-900">{deleteSessionId.name}</span>? 
+                This action cannot be undone and will be rejected if there are related reservations.
               </p>
               
               <div className="flex gap-3 justify-end">
@@ -340,14 +340,14 @@ export default function AdminSessionsClient() {
                   onClick={() => setDeleteSessionId(null)}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
-                  Batal
+                  Cancel
                 </button>
                 <button
                   onClick={executeDelete}
                   disabled={isSaving}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-md disabled:opacity-50"
                 >
-                  {isSaving ? "Memproses..." : "Ya, Hapus"}
+                  {isSaving ? "Processing..." : "Yes, Delete"}
                 </button>
               </div>
             </div>

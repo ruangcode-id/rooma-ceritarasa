@@ -38,7 +38,7 @@ export default function AdminGalleryClient() {
     try {
       const res = await fetch("/api/admin/gallery", { cache: "no-store" });
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Gagal memuat galeri");
+      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Failed to load gallery");
       
       setImages(payload.data || []);
     } catch (err) {
@@ -83,7 +83,7 @@ export default function AdminGalleryClient() {
     try {
       const res = await fetch(`/api/admin/gallery/${deleteImagePrompt.id}`, { method: "DELETE" });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || data.message || "Gagal menghapus foto");
+      if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to delete photo");
       
       setImages(images.filter(i => i.id !== deleteImagePrompt.id));
       setDeleteImagePrompt(null);
@@ -99,7 +99,7 @@ export default function AdminGalleryClient() {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        alert("Pilih berkas berupa gambar.");
+        alert("Please select an image file.");
         return;
       }
       setSelectedFile(file);
@@ -111,7 +111,7 @@ export default function AdminGalleryClient() {
     e.preventDefault();
     
     if (!title || !category) {
-      setError("Judul dan Kategori wajib diisi.");
+      setError("Title and Category are required.");
       return;
     }
     
@@ -148,7 +148,7 @@ export default function AdminGalleryClient() {
       } else {
         // Adding Mode (POST)
         if (!selectedFile) {
-          setError("Silakan pilih gambar terlebih dahulu.");
+          setError("Please select an image first.");
           setIsSaving(false);
           return;
         }
@@ -167,7 +167,7 @@ export default function AdminGalleryClient() {
       data = await res.json();
       
       if (!res.ok || !data.success) {
-        throw new Error(data.error || data.message || "Gagal menyimpan foto");
+        throw new Error(data.error || data.message || "Failed to save photo");
       }
       
       if (editingImage) {
@@ -188,10 +188,10 @@ export default function AdminGalleryClient() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Konten & CRM</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Galeri Foto</h1>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Content & CRM</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Photo Gallery</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-xl">
-            Unggah foto terbaru restoran Anda. Foto ini akan tampil secara publik di halaman Galeri tamu.
+            Upload the latest photos of your restaurant. These photos will be displayed publicly on the guest Gallery page.
           </p>
         </div>
         <div>
@@ -200,7 +200,7 @@ export default function AdminGalleryClient() {
             className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-slate-800"
           >
             <Plus weight="bold" />
-            Unggah Foto
+            Upload Photo
           </button>
         </div>
       </header>
@@ -216,7 +216,7 @@ export default function AdminGalleryClient() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="text-lg font-bold text-slate-900">{editingImage ? "Edit Foto" : "Unggah Foto Baru"}</h3>
+              <h3 className="text-lg font-bold text-slate-900">{editingImage ? "Edit Photo" : "Upload New Photo"}</h3>
               <button onClick={resetForm} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X size={20} weight="bold" />
               </button>
@@ -227,7 +227,7 @@ export default function AdminGalleryClient() {
 
               {/* Image Picker */}
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">{editingImage ? "Ganti Foto (Opsional)" : "Pilih Foto *"}</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">{editingImage ? "Change Photo (Optional)" : "Select Photo *"}</label>
                 <div 
                   className={`relative border-2 border-dashed rounded-xl overflow-hidden group cursor-pointer transition-colors ${
                     previewUrl ? 'border-primary/50' : 'border-slate-300 hover:border-primary hover:bg-slate-50'
@@ -246,7 +246,7 @@ export default function AdminGalleryClient() {
                     <div className="relative aspect-video w-full">
                       <Image src={previewUrl} alt="Preview" fill className="object-cover" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <p className="text-white font-semibold flex items-center gap-2"><UploadSimple weight="bold" /> Ganti Foto</p>
+                        <p className="text-white font-semibold flex items-center gap-2"><UploadSimple weight="bold" /> Change Photo</p>
                       </div>
                     </div>
                   ) : (
@@ -254,38 +254,38 @@ export default function AdminGalleryClient() {
                       <div className="w-12 h-12 bg-slate-100 group-hover:bg-primary/10 rounded-full flex items-center justify-center mb-3">
                         <ImageIcon size={24} className="text-slate-400 group-hover:text-primary" />
                       </div>
-                      <p className="text-sm font-medium">Klik untuk memilih gambar</p>
-                      <p className="text-xs text-slate-400 mt-1">Mendukung JPG, PNG, WEBP</p>
+                      <p className="text-sm font-medium">Click to select an image</p>
+                      <p className="text-xs text-slate-400 mt-1">Supports JPG, PNG, WEBP</p>
                     </div>
                   )}
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Judul Foto *</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Photo Title *</label>
                 <input 
                   type="text" required
-                  placeholder="Misal: Suasana Sore Hari"
+                  placeholder="Example: Afternoon Ambience"
                   value={title} onChange={e => setTitle(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Kategori *</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Category *</label>
                 <input 
                   type="text" required
-                  placeholder="Misal: ambience, food, interior"
+                  placeholder="Example: ambience, food, interior"
                   value={category} onChange={e => setCategory(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Deskripsi Singkat (Opsional)</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Short Description (Optional)</label>
                 <textarea 
                   rows={3}
-                  placeholder="Tambahkan sedikit cerita tentang foto ini..."
+                  placeholder="Add a short story about this photo..."
                   value={description} onChange={e => setDescription(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
                 />
@@ -293,13 +293,13 @@ export default function AdminGalleryClient() {
             </form>
 
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
-              <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">Batal</button>
+              <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">Cancel</button>
               <button 
                 onClick={handleUploadSubmit} 
                 disabled={isSaving} 
                 className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-md disabled:opacity-50 transition-colors"
               >
-                {isSaving ? "Menyimpan..." : (editingImage ? "Simpan Perubahan" : "Mulai Unggah")}
+                {isSaving ? "Saving..." : (editingImage ? "Save Changes" : "Start Upload")}
               </button>
             </div>
           </div>
@@ -308,12 +308,12 @@ export default function AdminGalleryClient() {
 
       {/* Gallery Grid */}
       {isLoading ? (
-        <div className="text-center py-12 text-slate-400 font-medium">Memuat galeri...</div>
+        <div className="text-center py-12 text-slate-400 font-medium">Loading gallery...</div>
       ) : images.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
           <ImageIcon size={48} className="mx-auto text-slate-300 mb-4" weight="light" />
-          <h3 className="text-lg font-bold text-slate-900 mb-2">Galeri Kosong</h3>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto">Belum ada foto yang diunggah. Tambahkan foto terbaik restoran Anda untuk menarik perhatian tamu.</p>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">Empty Gallery</h3>
+          <p className="text-slate-500 text-sm max-w-sm mx-auto">No photos uploaded yet. Add the best photos of your restaurant to attract guests.</p>
         </div>
       ) : (
         <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
@@ -337,7 +337,7 @@ export default function AdminGalleryClient() {
                     )}
                     <div className="flex gap-1 bg-white/20 backdrop-blur-md rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity translate-y-[-10px] group-hover:translate-y-0">
                       <button onClick={() => handleEditClick(img)} className="text-white hover:text-primary px-1.5 py-0.5 rounded transition-colors text-xs font-bold">Edit</button>
-                      <button onClick={() => handleDeleteClick(img)} className="text-red-300 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors text-xs font-bold">Hapus</button>
+                      <button onClick={() => handleDeleteClick(img)} className="text-red-300 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors text-xs font-bold">Delete</button>
                     </div>
                   </div>
                   {img.title && <h4 className="text-white font-bold text-sm leading-tight drop-shadow-md">{img.title}</h4>}
@@ -357,9 +357,9 @@ export default function AdminGalleryClient() {
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <ImageIcon size={32} weight="fill" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Hapus Foto?</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Photo?</h3>
               <p className="text-sm text-slate-500">
-                Apakah Anda yakin ingin menghapus foto <strong>"{deleteImagePrompt.title || 'Tanpa Judul'}"</strong>? Foto ini akan dihapus permanen.
+                Are you sure you want to delete the photo <strong>"{deleteImagePrompt.title || 'Untitled'}"</strong>? This photo will be permanently deleted.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">
@@ -368,14 +368,14 @@ export default function AdminGalleryClient() {
                 disabled={isSaving}
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
               >
-                Batal
+                Cancel
               </button>
               <button 
                 onClick={executeDeleteImage} 
                 disabled={isSaving} 
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-md disabled:opacity-50 transition-colors"
               >
-                {isSaving ? "Menghapus..." : "Ya, Hapus Foto"}
+                {isSaving ? "Deleting..." : "Yes, Delete Photo"}
               </button>
             </div>
           </div>

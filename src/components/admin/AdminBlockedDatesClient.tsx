@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isBefore, startOfDay, parseISO } from "date-fns";
-import { id } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { CaretLeft, CaretRight, Prohibit, CalendarX } from "@phosphor-icons/react";
 
 type BlockedDate = {
@@ -32,7 +32,7 @@ export default function AdminBlockedDatesClient() {
     try {
       const res = await fetch("/api/admin/blocked-dates", { cache: "no-store" });
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || "Gagal memuat blocked dates");
+      if (!res.ok || !payload.success) throw new Error(payload.error || "Failed to load blocked dates");
       
       setBlockedDates(payload.data || []);
     } catch (err) {
@@ -49,7 +49,7 @@ export default function AdminBlockedDatesClient() {
   const handleToggleBlock = (date: Date) => {
     // Jangan izinkan blokir tanggal yang sudah lewat
     if (isBefore(date, startOfDay(new Date()))) {
-      setError("Tidak dapat mengubah status tanggal yang sudah berlalu.");
+      setError("Cannot change the status of past dates.");
       setTimeout(() => setError(""), 4000);
       return;
     }
@@ -75,7 +75,7 @@ export default function AdminBlockedDatesClient() {
       const dateStr = format(selectedDate, "yyyy-MM-dd");
       const payload = {
         date: dateStr,
-        reason: blockReason || "Tutup",
+        reason: blockReason || "Closed",
       };
 
       const res = await fetch("/api/admin/blocked-dates", {
@@ -86,7 +86,7 @@ export default function AdminBlockedDatesClient() {
       const data = await res.json();
       
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Gagal memblokir tanggal. Pastikan tidak ada reservasi aktif.");
+        throw new Error(data.error || "Failed to block date. Make sure there are no active reservations.");
       }
       
       setSelectedDate(null);
@@ -110,7 +110,7 @@ export default function AdminBlockedDatesClient() {
       const data = await res.json();
       
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Gagal membuka blokir tanggal.");
+        throw new Error(data.error || "Failed to unblock date.");
       }
       
       setUnblockDialog(null);
@@ -136,10 +136,10 @@ export default function AdminBlockedDatesClient() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Setup Restoran</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Kalender Libur</h1>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Restaurant Setup</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Holiday Calendar</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-xl">
-            Pilih tanggal untuk menutup restoran. Tanggal yang diblokir tidak akan bisa dipilih oleh tamu saat reservasi.
+            Select dates to close the restaurant. Blocked dates cannot be chosen by guests during reservation.
           </p>
         </div>
       </header>
@@ -150,7 +150,7 @@ export default function AdminBlockedDatesClient() {
         {/* Calendar Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
           <h2 className="text-lg font-bold text-slate-900 capitalize">
-            {format(currentMonth, "MMMM yyyy", { locale: id })}
+            {format(currentMonth, "MMMM yyyy", { locale: enUS })}
           </h2>
           <div className="flex items-center gap-2">
             <button 
@@ -163,7 +163,7 @@ export default function AdminBlockedDatesClient() {
               onClick={() => setCurrentMonth(new Date())}
               className="px-3 py-1.5 text-xs font-semibold hover:bg-slate-100 rounded-lg text-slate-600 transition-colors"
             >
-              Hari Ini
+              Today
             </button>
             <button 
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
@@ -177,7 +177,7 @@ export default function AdminBlockedDatesClient() {
         {/* Calendar Grid */}
         <div className="p-6">
           <div className="grid grid-cols-7 gap-px mb-2">
-            {["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"].map(day => (
+            {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map(day => (
               <div key={day} className="text-center text-[10px] font-bold uppercase tracking-wider text-slate-400 py-2">
                 {day}
               </div>
@@ -235,17 +235,17 @@ export default function AdminBlockedDatesClient() {
               <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4">
                 <CalendarX size={24} weight="bold" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Blokir Tanggal</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Block Date</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-5">
-                Anda akan menutup restoran pada <span className="font-bold text-slate-900">{format(selectedDate, "dd MMMM yyyy", { locale: id })}</span>. Tamu tidak akan bisa membuat reservasi.
+                You are about to close the restaurant on <span className="font-bold text-slate-900">{format(selectedDate, "MMMM do, yyyy", { locale: enUS })}</span>. Guests will not be able to make reservations.
               </p>
               
               <form onSubmit={submitBlockDate}>
                 <div className="mb-6">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Alasan (Opsional)</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Reason (Optional)</label>
                   <input 
                     type="text" 
-                    placeholder="Misal: Renovasi, Libur Nasional"
+                    placeholder="Example: Renovation, National Holiday"
                     value={blockReason} onChange={e => setBlockReason(e.target.value)}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2.5 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 outline-none"
                   />
@@ -257,14 +257,14 @@ export default function AdminBlockedDatesClient() {
                     onClick={() => setSelectedDate(null)}
                     className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                   >
-                    Batal
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isUpdating}
                     className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-md disabled:opacity-50"
                   >
-                    {isUpdating ? "Memproses..." : "Ya, Blokir Tanggal"}
+                    {isUpdating ? "Processing..." : "Yes, Block Date"}
                   </button>
                 </div>
               </form>
@@ -278,9 +278,9 @@ export default function AdminBlockedDatesClient() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Buka Blokir Tanggal</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Unblock Date</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-5">
-                Apakah Anda yakin ingin membuka kembali restoran pada <span className="font-bold text-slate-900">{format(parseISO(unblockDialog.date), "dd MMMM yyyy", { locale: id })}</span>? Tamu akan bisa melakukan reservasi lagi.
+                Are you sure you want to reopen the restaurant on <span className="font-bold text-slate-900">{format(parseISO(unblockDialog.date), "MMMM do, yyyy", { locale: enUS })}</span>? Guests will be able to make reservations again.
               </p>
               
               <div className="flex gap-3 justify-end">
@@ -289,14 +289,14 @@ export default function AdminBlockedDatesClient() {
                   onClick={() => setUnblockDialog(null)}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
-                  Batal
+                  Cancel
                 </button>
                 <button
                   onClick={executeUnblockDate}
                   disabled={isUpdating}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors shadow-md disabled:opacity-50"
                 >
-                  {isUpdating ? "Memproses..." : "Ya, Buka Tanggal"}
+                  {isUpdating ? "Processing..." : "Yes, Unblock Date"}
                 </button>
               </div>
             </div>
