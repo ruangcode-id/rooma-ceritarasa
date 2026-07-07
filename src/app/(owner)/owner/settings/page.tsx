@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import OwnerSettingsClient from "@/components/owner/OwnerSettingsClient";
 
 export const metadata: Metadata = {
-  title: "Pengaturan Master Restoran | Rooma Ceritarasa Owner",
-  description: "Manajemen pengaturan operasional restoran",
+  title: "Master Settings | Rooma Ceritarasa Owner",
+  description: "Restaurant operational settings management",
 };
 
 export default function OwnerSettingsPage() {

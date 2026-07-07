@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Owner Analytics | Rooma Ceritarasa",
-  description: "Ringkasan pendapatan dan reservasi untuk owner",
+  description: "Revenue and reservation summary for the owner",
 };
 
 export default async function OwnerDashboardPage() {
