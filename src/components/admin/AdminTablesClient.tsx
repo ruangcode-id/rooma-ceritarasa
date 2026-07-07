@@ -35,7 +35,7 @@ export default function AdminTablesClient() {
     try {
       const res = await fetch("/api/admin/tables", { cache: "no-store" });
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.message || "Gagal memuat meja");
+      if (!res.ok || !payload.success) throw new Error(payload.message || "Failed to load tables");
       
       // Berikan posisi default jika null
       const processed = (payload.data as TableData[]).map((t, idx) => ({
@@ -83,7 +83,7 @@ export default function AdminTablesClient() {
       const data = await res.json();
       
       if (!res.ok || !data.success) {
-        throw new Error(data.message || data.error || "Gagal menghapus meja.");
+        throw new Error(data.message || data.error || "Failed to delete table.");
       }
       
       setDeleteTableId(null);
@@ -125,7 +125,7 @@ export default function AdminTablesClient() {
         // Since the API might return the object directly for PATCH instead of { success: true, data } 
         // We need to be careful based on the route implementation.
         // Wait, POST returns { success: true, data }, PATCH returns updatedTable directly? Let's assume it throws on error.
-        throw new Error(data.message || data.error || `Gagal ${editTableId ? 'mengubah' : 'menambah'} meja`);
+        throw new Error(data.message || data.error || `Failed to ${editTableId ? 'update' : 'add'} table`);
       }
       
       resetForm();
@@ -155,9 +155,9 @@ export default function AdminTablesClient() {
       });
       
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Gagal menyimpan tata letak");
+      if (!res.ok || !data.success) throw new Error(data.message || "Failed to save layout");
       
-      alert("Tata letak meja berhasil disimpan!");
+      alert("Table layout saved successfully!");
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setTimeout(() => setError(""), 4000);
@@ -215,10 +215,10 @@ export default function AdminTablesClient() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Setup Restoran</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Floor Plan Meja</h1>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Restaurant Setup</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Table Floor Plan</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-xl">
-            Tarik dan lepas meja untuk mengatur tata letak 2D restoran Anda. Jangan lupa klik Simpan setelah mengatur letak.
+            Drag and drop tables to arrange your restaurant's 2D layout. Don't forget to click Save after arranging.
           </p>
         </div>
         <div className="flex gap-3">
@@ -227,7 +227,7 @@ export default function AdminTablesClient() {
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
           >
             <Plus weight="bold" />
-            Tambah Meja
+            Add Table
           </button>
           <button
             onClick={handleSaveLayout}
@@ -235,7 +235,7 @@ export default function AdminTablesClient() {
             className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-slate-800 disabled:opacity-50"
           >
             <FloppyDisk weight="bold" />
-            {isSaving ? "Menyimpan..." : "Simpan Layout"}
+            {isSaving ? "Saving..." : "Save Layout"}
           </button>
         </div>
       </header>
@@ -245,30 +245,30 @@ export default function AdminTablesClient() {
       {isAdding && (
         <form onSubmit={handleAddOrEditTable} className="flex flex-col sm:flex-row gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm items-end animate-in slide-in-from-top-4">
           <div className="flex-1 w-full">
-            <h2 className="text-sm font-bold text-slate-900 mb-2">{editTableId ? "Edit Meja" : "Tambah Meja"}</h2>
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Nomor Meja</label>
+            <h2 className="text-sm font-bold text-slate-900 mb-2">{editTableId ? "Edit Table" : "Add Table"}</h2>
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Table Number</label>
             <input 
               type="text" required 
-              placeholder="Misal: T1"
+              placeholder="Example: T1"
               value={newTableNumber} onChange={e => setNewTableNumber(e.target.value)}
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
             />
           </div>
           <div className="flex-1 w-full">
-            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Kapasitas (Pax)</label>
+            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Capacity (Pax)</label>
             <input 
               type="number" required min="1"
-              placeholder="Misal: 4"
+              placeholder="Example: 4"
               value={newCapacity} onChange={e => setNewCapacity(e.target.value)}
               className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
             />
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
             <button type="button" onClick={resetForm} className="px-4 py-2 border border-slate-200 rounded-lg font-semibold text-sm hover:bg-slate-50 text-slate-600">
-              Batal
+              Cancel
             </button>
             <button type="submit" disabled={isSaving} className="px-6 py-2 bg-primary text-white rounded-lg font-semibold text-sm hover:bg-primary/90 disabled:opacity-50 shadow-sm">
-              {editTableId ? "Simpan Perubahan" : "Simpan Meja"}
+              {editTableId ? "Save Changes" : "Save Table"}
             </button>
           </div>
         </form>
@@ -284,9 +284,9 @@ export default function AdminTablesClient() {
         }}
       >
         {isLoading ? (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-semibold">Memuat denah...</div>
+          <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-semibold">Loading floor plan...</div>
         ) : tables.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-semibold">Belum ada meja. Tambahkan meja pertama.</div>
+          <div className="absolute inset-0 flex items-center justify-center text-slate-400 font-semibold">No tables yet. Add your first table.</div>
         ) : (
           tables.map(table => (
             <div
@@ -334,16 +334,16 @@ export default function AdminTablesClient() {
           ))
         )}
       </div>
-      <p className="text-xs text-center text-slate-400 font-medium">Tips: Anda bisa menarik kotak meja di atas menggunakan mouse atau sentuhan.</p>
+      <p className="text-xs text-center text-slate-400 font-medium">Tip: You can drag the table boxes above using mouse or touch.</p>
 
       {/* Delete Confirmation Modal */}
       {deleteTableId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Hapus Meja</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Table</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-5">
-                Apakah Anda yakin ingin menghapus meja <span className="font-bold text-slate-900">{deleteTableId.tableNumber}</span>? 
+                Are you sure you want to delete table <span className="font-bold text-slate-900">{deleteTableId.tableNumber}</span>? 
               </p>
               
               <div className="flex gap-3 justify-end">
@@ -352,14 +352,14 @@ export default function AdminTablesClient() {
                   onClick={() => setDeleteTableId(null)}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
-                  Batal
+                  Cancel
                 </button>
                 <button
                   onClick={executeDelete}
                   disabled={isSaving}
                   className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-md disabled:opacity-50"
                 >
-                  {isSaving ? "Memproses..." : "Ya, Hapus"}
+                  {isSaving ? "Processing..." : "Yes, Delete"}
                 </button>
               </div>
             </div>
