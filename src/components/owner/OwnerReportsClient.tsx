@@ -52,7 +52,7 @@ const paymentStatuses: Array<StatusBadgeOption<OwnerPaymentStatus>> = [
 ];
 
 const statusLabels: Record<OwnerPaymentStatus | "all", string> = {
-  all: "Semua status",
+  all: "All statuses",
   paid: "Paid",
   pending: "Pending",
   failed: "Failed",
@@ -86,7 +86,7 @@ const compactCurrencyFormatter = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 1,
 });
 
-const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "2-digit",
   month: "short",
   year: "numeric",
@@ -119,7 +119,7 @@ function formatDate(value: string) {
 }
 
 function formatPaymentType(value: string) {
-  if (value === "full") return "Pelunasan";
+  if (value === "full") return "Full Payment";
   if (value === "refund") return "Refund";
   return "Deposit";
 }
@@ -198,14 +198,14 @@ const paymentColumns: Array<DataTableColumn<OwnerPaymentRow>> = [
           {formatDate(getTransactionDate(payment))}
         </p>
         <p className="mt-1 text-xs text-slate-500">
-          Reservasi {formatDate(payment.reservationDate)}
+          Reservation {formatDate(payment.reservationDate)}
         </p>
       </div>
     ),
   },
   {
     id: "reservation",
-    header: "Reservasi",
+    header: "Reservation",
     headerClassName: "w-[16%] text-left",
     className: "w-[16%] align-middle text-left",
     cell: (payment) => (
@@ -217,7 +217,7 @@ const paymentColumns: Array<DataTableColumn<OwnerPaymentRow>> = [
   },
   {
     id: "type",
-    header: "Tipe",
+    header: "Type",
     headerClassName: "w-[13%] text-left",
     className: "w-[13%] align-middle text-left",
     cell: (payment) => (
@@ -233,7 +233,7 @@ const paymentColumns: Array<DataTableColumn<OwnerPaymentRow>> = [
   },
   {
     id: "amount",
-    header: "Nominal",
+    header: "Amount",
     headerClassName: "w-[17%] text-right",
     className: "w-[17%] align-middle text-right font-semibold text-slate-900",
     cell: (payment) => formatCurrency(payment.amount),
@@ -252,7 +252,7 @@ const paymentColumns: Array<DataTableColumn<OwnerPaymentRow>> = [
 const monthlyColumns: Array<DataTableColumn<OwnerMonthlyMetric>> = [
   {
     id: "month",
-    header: "Bulan",
+    header: "Month",
     accessor: "label",
   },
   {
@@ -267,12 +267,12 @@ const monthlyColumns: Array<DataTableColumn<OwnerMonthlyMetric>> = [
   },
   {
     id: "full",
-    header: "Pelunasan",
+    header: "Full Payment",
     cell: (month) => formatCurrency(month.fullPayments),
   },
   {
     id: "reservations",
-    header: "Reservasi",
+    header: "Reservations",
     accessor: "reservations",
   },
   {
@@ -353,10 +353,10 @@ export function OwnerReportsClient({
     labels:
       visibleStatusSummary.length > 0
         ? visibleStatusSummary.map((item) => statusLabels[item.status])
-        : ["Tidak ada data"],
+        : ["No data"],
     datasets: [
       {
-        label: "Nominal pembayaran",
+        label: "Payment amount",
         data:
           visibleStatusSummary.length > 0
             ? visibleStatusSummary.map((item) => item.amount)
@@ -373,10 +373,10 @@ export function OwnerReportsClient({
 
   const statusFooterText =
     visibleStatusSummary.length > 0
-      ? `Total nominal: ${formatCompactCurrency(
+      ? `Total amount: ${formatCompactCurrency(
           totalFilteredAmount
-        )} • ${filteredRows.length} transaksi sesuai filter`
-      : "Tidak ada data sesuai filter.";
+        )} • ${filteredRows.length} transactions matching filter`
+      : "No data matching filter.";
 
   const hasActiveFilters =
     query.trim().length > 0 ||
@@ -413,14 +413,14 @@ export function OwnerReportsClient({
       <section>
         <SectionTitle
           eyebrow="Financial Reports"
-          title="Laporan Keuangan"
+          title="Financial Reports"
           level={1}
-          description={`Ringkasan keuangan bulan ${analytics.currentMonthLabel}. Gunakan filter untuk audit transaksi berdasarkan status, tamu, order, sesi, dan tanggal.`}
+          description={`Financial summary for ${analytics.currentMonthLabel}. Use filters to audit transactions by status, guest, order, session, and date.`}
         />
       </section>
 
       <section
-        aria-label="Ringkasan laporan keuangan"
+        aria-label="Financial report summary"
         className="grid min-w-0 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-4"
       >
         <div className="min-w-0 *:h-full">
@@ -463,8 +463,8 @@ export function OwnerReportsClient({
       <section className="min-w-0">
         <DashboardChart
           type="doughnut"
-          title="Distribusi Status"
-          description="Distribusi nominal pembayaran berdasarkan status."
+          title="Status Distribution"
+          description="Distribution of payment amounts by status."
           data={statusChartData}
           height={300}
           footer={statusFooterText}
@@ -498,10 +498,10 @@ export function OwnerReportsClient({
         <div className="mb-5">
           <SectionTitle
             eyebrow="Monthly Recap"
-            title="Breakdown Bulanan"
-            description={`Rekap enam bulan terakhir (${analytics.reportRangeLabel}) dari transaksi paid, dipisahkan antara deposit dan pelunasan.`}
+            title="Monthly Breakdown"
+            description={`Six-month recap (${analytics.reportRangeLabel}) of paid transactions, separated by deposit and full payment.`}
             actions={
-              <p className="text-sm text-slate-500">6 bulan terakhir</p>
+              <p className="text-sm text-slate-500">Last 6 months</p>
             }
           />
         </div>
@@ -513,7 +513,7 @@ export function OwnerReportsClient({
           rowKey="label"
           initialPageSize={6}
           pageSizeOptions={[6]}
-          emptyState="Belum ada data rekap bulanan."
+          emptyState="No monthly recap data yet."
           tableClassName="min-w-[900px]"
         />
       </section>
@@ -522,8 +522,8 @@ export function OwnerReportsClient({
         <div className="mb-5">
           <SectionTitle
             eyebrow="Transaction Filter"
-            title="Filter Transaksi"
-            description={`${filteredRows.length} transaksi ditemukan berdasarkan filter yang sedang aktif.`}
+            title="Transaction Filter"
+            description={`${filteredRows.length} transactions found based on the active filter.`}
             actions={
               <button
                 type="button"
@@ -542,7 +542,7 @@ export function OwnerReportsClient({
             <label className="min-w-0 text-sm font-semibold text-slate-700">
               Status
               <select
-                aria-label="Filter status pembayaran"
+                aria-label="Filter payment status"
                 value={statusFilter}
                 onChange={(event) =>
                   setStatusFilter(
@@ -551,7 +551,7 @@ export function OwnerReportsClient({
                 }
                 className={filterControlClassName}
               >
-                <option value="all">Semua Status</option>
+                <option value="all">All Status</option>
                 {statusOrder.map((status) => (
                   <option key={status} value={status}>
                     {statusLabels[status]}
@@ -561,40 +561,40 @@ export function OwnerReportsClient({
             </label>
 
             <label className="min-w-0 text-sm font-semibold text-slate-700">
-              Pencarian
+              Search
               <div className="mt-2 flex h-10 min-w-0 rounded-xl border border-slate-200 bg-white transition focus-within:ring-2 focus-within:ring-primary/30">
                 <span className="grid size-10 shrink-0 place-items-center text-slate-400">
                   <MagnifyingGlass size={16} weight="bold" />
                 </span>
                 <input
                   type="search"
-                  aria-label="Cari transaksi pembayaran"
+                  aria-label="Search payment transactions"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Cari order ID, nama tamu, atau sesi..."
+                  placeholder="Search order ID, guest name, or session..."
                   className="min-w-0 flex-1 rounded-xl bg-transparent py-2 pr-3 text-sm font-normal text-slate-900 outline-none"
                 />
               </div>
             </label>
 
             <div className="min-w-0 text-sm font-semibold text-slate-700">
-              Rentang Tanggal
+              Date Range
               <div className="mt-2 grid min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:ring-2 focus-within:ring-primary/30 sm:grid-cols-[1fr_auto_1fr]">
                 <input
                   type="date"
-                  aria-label="Tanggal mulai"
+                  aria-label="Start date"
                   value={startDate}
                   onChange={(event) => setStartDate(event.target.value)}
                   className="h-10 min-w-0 bg-transparent px-3 text-sm font-normal text-slate-900 outline-none"
                 />
 
                 <span className="grid h-10 shrink-0 place-items-center border-y border-slate-200 px-3 text-xs font-normal text-slate-400 sm:border-x sm:border-y-0">
-                  sampai
+                  to
                 </span>
 
                 <input
                   type="date"
-                  aria-label="Tanggal akhir"
+                  aria-label="End date"
                   value={endDate}
                   onChange={(event) => setEndDate(event.target.value)}
                   className="h-10 min-w-0 bg-transparent px-3 text-sm font-normal text-slate-900 outline-none"
@@ -605,7 +605,7 @@ export function OwnerReportsClient({
 
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
             <p className="mr-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-              Cepat
+              Quick
             </p>
 
             <button
@@ -613,7 +613,7 @@ export function OwnerReportsClient({
               onClick={applyTodayFilter}
               className={presetButtonClassName}
             >
-              Hari ini
+              Today
             </button>
 
             <button
@@ -621,7 +621,7 @@ export function OwnerReportsClient({
               onClick={applyLastSevenDaysFilter}
               className={presetButtonClassName}
             >
-              7 hari terakhir
+              Last 7 days
             </button>
 
             <button
@@ -629,7 +629,7 @@ export function OwnerReportsClient({
               onClick={applyCurrentMonthFilter}
               className={presetButtonClassName}
             >
-              Bulan ini
+              This month
             </button>
 
             <button
@@ -638,7 +638,7 @@ export function OwnerReportsClient({
               disabled={!hasActiveFilters}
               className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Bersihkan
+              Clear
             </button>
           </div>
         </div>
@@ -648,7 +648,7 @@ export function OwnerReportsClient({
         <div className="mb-5">
           <SectionTitle
             eyebrow="Payment Ledger"
-            title="Daftar Transaksi"
+            title="Transaction List"
             actions={
               <p className="text-sm text-slate-500">
                 Total paid: {formatCompactCurrency(filteredPaidAmount)}
@@ -662,7 +662,7 @@ export function OwnerReportsClient({
           data={filteredRows}
           rowKey="orderId"
           caption="Owner payment ledger"
-          emptyState="Tidak ada pembayaran sesuai filter."
+          emptyState="No payments match the current filter."
           tableClassName="min-w-[1000px] table-fixed"
         />
       </section>

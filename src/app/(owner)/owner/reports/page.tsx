@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Financial Reports | Rooma Ceritarasa",
-  description: "Laporan keuangan dan transaksi pembayaran untuk owner",
+  description: "Financial reports and payment transactions for the owner",
 };
 
 export default async function OwnerReportsPage() {

@@ -2,8 +2,8 @@ import { Metadata } from "next";
 import OwnerUsersClient from "@/components/owner/OwnerUsersClient";
 
 export const metadata: Metadata = {
-  title: "Manajemen Staf | Rooma Ceritarasa Owner",
-  description: "Manajemen akun staf dan admin",
+  title: "Staff Management | Rooma Ceritarasa Owner",
+  description: "Staff and admin account management",
 };
 
 export default function OwnerUsersPage() {

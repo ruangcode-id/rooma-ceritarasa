@@ -17,13 +17,13 @@ type SettingsData = {
 };
 
 const DAYS = [
-  { value: "1", label: "Senin" },
-  { value: "2", label: "Selasa" },
-  { value: "3", label: "Rabu" },
-  { value: "4", label: "Kamis" },
-  { value: "5", label: "Jumat" },
-  { value: "6", label: "Sabtu" },
-  { value: "0", label: "Minggu" },
+  { value: "1", label: "Monday" },
+  { value: "2", label: "Tuesday" },
+  { value: "3", label: "Wednesday" },
+  { value: "4", label: "Thursday" },
+  { value: "5", label: "Friday" },
+  { value: "6", label: "Saturday" },
+  { value: "0", label: "Sunday" },
 ];
 
 export default function OwnerSettingsClient() {
@@ -92,9 +92,9 @@ export default function OwnerSettingsClient() {
       });
 
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Gagal menyimpan pengaturan");
+      if (!res.ok || !json.success) throw new Error(json.error || "Failed to save settings");
       
-      setMessage({ text: "Pengaturan berhasil disimpan!", type: "success" });
+      setMessage({ text: "Settings saved successfully!", type: "success" });
       setTimeout(() => setMessage({ text: "", type: "" }), 5000);
     } catch (err) {
       setMessage({ text: err instanceof Error ? err.message : String(err), type: "error" });
@@ -104,16 +104,16 @@ export default function OwnerSettingsClient() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-12 text-slate-400 font-medium">Memuat pengaturan...</div>;
+    return <div className="text-center py-12 text-slate-400 font-medium">Loading settings...</div>;
   }
 
   return (
     <div className="max-w-4xl">
       <header className="mb-8">
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Konfigurasi Owner</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Master Restoran</h1>
+        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Owner Configuration</p>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-950">Master Settings</h1>
         <p className="mt-2 text-sm text-slate-600 max-w-xl">
-          Pengaturan global untuk profil restoran dan kontak resmi.
+          Global settings for restaurant profile and official contacts.
         </p>
       </header>
 
@@ -130,20 +130,20 @@ export default function OwnerSettingsClient() {
         <section className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-6 text-slate-900">
             <Storefront size={24} weight="fill" className="text-primary" />
-            <h2 className="text-lg font-bold">Profil Restoran</h2>
+            <h2 className="text-lg font-bold">Restaurant Profile</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="col-span-1 md:col-span-2">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Nama Restoran *</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Restaurant Name *</label>
               <input type="text" name="name" required value={formData.name} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
             </div>
             <div className="col-span-1 md:col-span-2">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tagline Singkat</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Short Tagline</label>
               <input type="text" name="tagline" value={formData.tagline} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
             </div>
             <div className="col-span-1 md:col-span-2">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Alamat Lengkap</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Full Address</label>
               <textarea name="address" rows={3} value={formData.address} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"></textarea>
             </div>
           </div>
@@ -153,12 +153,12 @@ export default function OwnerSettingsClient() {
         <section className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 mb-6 text-slate-900">
             <Phone size={24} weight="fill" className="text-primary" />
-            <h2 className="text-lg font-bold">Kontak Resmi</h2>
+            <h2 className="text-lg font-bold">Official Contacts</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Telepon</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Phone</label>
               <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
             </div>
             <div>
@@ -166,7 +166,7 @@ export default function OwnerSettingsClient() {
               <input type="text" name="whatsappNumber" value={formData.whatsappNumber} onChange={handleChange} placeholder="628123456789" className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
             </div>
             <div className="col-span-1 md:col-span-2">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Tautan Instagram</label>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Instagram Link</label>
               <input type="url" placeholder="https://instagram.com/..." name="instagram" value={formData.socialLinks.instagram || ""} onChange={(e) => handleSocialLinkChange("instagram", e.target.value)} className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none" />
             </div>
           </div>
@@ -178,7 +178,7 @@ export default function OwnerSettingsClient() {
             type="submit" disabled={isSaving}
             className="bg-slate-900 text-white font-semibold py-3 px-8 rounded-xl shadow-lg hover:bg-slate-800 disabled:opacity-50 transition-colors flex items-center gap-2"
           >
-            {isSaving ? "Menyimpan Perubahan..." : "Simpan Pengaturan"}
+            {isSaving ? "Saving Changes..." : "Save Settings"}
           </button>
         </div>
 
