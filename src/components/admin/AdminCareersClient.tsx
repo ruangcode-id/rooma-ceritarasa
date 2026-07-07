@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Briefcase, CalendarBlank, X, CheckCircle } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
-import { id } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 
 type CareerJob = {
   id: string;
@@ -37,7 +37,7 @@ export default function AdminCareersClient() {
     try {
       const res = await fetch("/api/admin/careers", { cache: "no-store" });
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Gagal memuat lowongan");
+      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Failed to load jobs");
       
       setJobs(payload.data || []);
     } catch (err) {
@@ -82,7 +82,7 @@ export default function AdminCareersClient() {
     try {
       const res = await fetch(`/api/admin/careers/${deleteJobPrompt.id}`, { method: "DELETE" });
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || data.message || "Gagal menutup lowongan");
+      if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to close job posting");
       
       void loadJobs();
       setDeleteJobPrompt(null);
@@ -127,7 +127,7 @@ export default function AdminCareersClient() {
       const data = await res.json();
       
       if (!res.ok || !data.success) {
-        throw new Error(data.error || data.message || "Gagal menyimpan lowongan kerja");
+        throw new Error(data.error || data.message || "Failed to save job posting");
       }
       
       if (editingJob) {
@@ -148,10 +148,10 @@ export default function AdminCareersClient() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Konten & CRM</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Lowongan Kerja</h1>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Content & CRM</p>
+          <h1 className="mt-2 text-3xl font-semibold text-slate-950">Job Openings</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-xl">
-            Kelola pembukaan rekrutmen restoran. Loker aktif akan ditampilkan di halaman Karir publik.
+            Manage restaurant recruitment. Active job openings will be displayed on the public Careers page.
           </p>
         </div>
         <div>
@@ -160,7 +160,7 @@ export default function AdminCareersClient() {
             className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-slate-800 transition-colors"
           >
             <Plus weight="bold" />
-            Buka Lowongan
+            Open a Job
           </button>
         </div>
       </header>
@@ -176,7 +176,7 @@ export default function AdminCareersClient() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <h3 className="text-lg font-bold text-slate-900">{editingJob ? "Edit Lowongan Pekerjaan" : "Buat Lowongan Pekerjaan Baru"}</h3>
+              <h3 className="text-lg font-bold text-slate-900">{editingJob ? "Edit Job Opening" : "Create New Job Opening"}</h3>
               <button onClick={resetForm} className="text-slate-400 hover:text-slate-600 transition-colors">
                 <X size={20} weight="bold" />
               </button>
@@ -186,30 +186,30 @@ export default function AdminCareersClient() {
               {error && <div className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-600 border border-red-200">{error}</div>}
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Posisi / Jabatan *</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Position / Job Title *</label>
                 <input 
                   type="text" required
-                  placeholder="Misal: Executive Chef"
+                  placeholder="Example: Executive Chef"
                   value={newTitle} onChange={e => setNewTitle(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Deskripsi Pekerjaan *</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Job Description *</label>
                 <textarea 
                   required rows={4}
-                  placeholder="Tuliskan gambaran umum dan tanggung jawab pekerjaan..."
+                  placeholder="Write an overview and responsibilities of the job..."
                   value={newDescription} onChange={e => setNewDescription(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-y"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Persyaratan *</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Requirements *</label>
                 <textarea 
                   required rows={4}
-                  placeholder="Tuliskan kualifikasi, pengalaman, atau keahlian yang dibutuhkan..."
+                  placeholder="Write the required qualifications, experience, or skills..."
                   value={newRequirements} onChange={e => setNewRequirements(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-y"
                 />
@@ -217,7 +217,7 @@ export default function AdminCareersClient() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Batas Waktu (Opsional)</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Deadline (Optional)</label>
                   <input 
                     type="date"
                     value={newDeadline} onChange={e => setNewDeadline(e.target.value)}
@@ -225,7 +225,7 @@ export default function AdminCareersClient() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Status Publikasi</label>
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Publication Status</label>
                   <label className="flex items-center gap-3 p-2.5 border border-slate-200 rounded-lg bg-slate-50 cursor-pointer">
                     <input 
                       type="checkbox" 
@@ -234,8 +234,8 @@ export default function AdminCareersClient() {
                       className="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary"
                     />
                     <div>
-                      <span className="text-sm font-bold text-slate-800">Buka Lowongan Sekarang</span>
-                      <p className="text-[10px] text-slate-500 leading-tight mt-0.5">Akan langsung tampil di website</p>
+                      <span className="text-sm font-bold text-slate-800">Open Job Now</span>
+                      <p className="text-[10px] text-slate-500 leading-tight mt-0.5">Will be displayed immediately on the website</p>
                     </div>
                   </label>
                 </div>
@@ -243,13 +243,13 @@ export default function AdminCareersClient() {
             </form>
 
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
-              <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">Batal</button>
+              <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">Cancel</button>
               <button 
                 onClick={handleAddSubmit} 
                 disabled={isSaving} 
                 className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-md disabled:opacity-50 transition-colors"
               >
-                {isSaving ? "Menyimpan..." : "Simpan Lowongan"}
+                {isSaving ? "Saving..." : "Save Job Opening"}
               </button>
             </div>
           </div>
@@ -258,12 +258,12 @@ export default function AdminCareersClient() {
 
       {/* Careers List */}
       {isLoading ? (
-        <div className="text-center py-12 text-slate-400 font-medium">Memuat lowongan kerja...</div>
+        <div className="text-center py-12 text-slate-400 font-medium">Loading jobs...</div>
       ) : jobs.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
           <Briefcase size={48} className="mx-auto text-slate-300 mb-4" weight="light" />
-          <h3 className="text-lg font-bold text-slate-900 mb-2">Belum Ada Lowongan</h3>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto">Anda belum pernah membuat lowongan pekerjaan. Klik Buka Lowongan untuk memulai rekrutmen.</p>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">No Job Openings Yet</h3>
+          <p className="text-slate-500 text-sm max-w-sm mx-auto">You haven't created any job openings yet. Click Open a Job to start recruiting.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -285,19 +285,19 @@ export default function AdminCareersClient() {
               <div className="pt-4 border-t border-slate-100 mt-auto space-y-2">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   <CheckCircle size={14} className="text-slate-400" />
-                  <span className="truncate">Dibuat: {format(parseISO(job.createdAt), "dd MMM yyyy", { locale: id })}</span>
+                  <span className="truncate">Created: {format(parseISO(job.createdAt), "dd MMM yyyy", { locale: enUS })}</span>
                 </div>
                 {job.deadline && (
                   <div className="flex items-center gap-2 text-xs text-red-500 font-medium">
                     <CalendarBlank size={14} />
-                    <span className="truncate">Ditutup: {format(parseISO(job.deadline), "dd MMM yyyy", { locale: id })}</span>
+                    <span className="truncate">Deadline: {format(parseISO(job.deadline), "dd MMM yyyy", { locale: enUS })}</span>
                   </div>
                 )}
                 
                 <div className="pt-3 mt-3 border-t border-slate-50 flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => handleEditClick(job)} className="text-[11px] font-bold text-primary hover:bg-primary/10 px-3 py-1.5 rounded transition-colors uppercase tracking-wider">Edit</button>
                   {job.isOpen && (
-                    <button onClick={() => handleDeleteClick(job)} className="text-[11px] font-bold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded transition-colors uppercase tracking-wider">Tutup Loker</button>
+                    <button onClick={() => handleDeleteClick(job)} className="text-[11px] font-bold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded transition-colors uppercase tracking-wider">Close Job</button>
                   )}
                 </div>
               </div>
@@ -314,9 +314,9 @@ export default function AdminCareersClient() {
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Briefcase size={32} weight="fill" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Tutup Lowongan?</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Close Job Opening?</h3>
               <p className="text-sm text-slate-500">
-                Lowongan <strong>"{deleteJobPrompt.title}"</strong> akan ditutup dan tidak lagi muncul di halaman karir publik.
+                The job <strong>"{deleteJobPrompt.title}"</strong> will be closed and will no longer appear on the public careers page.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">
@@ -325,14 +325,14 @@ export default function AdminCareersClient() {
                 disabled={isSaving}
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
               >
-                Batal
+                Cancel
               </button>
               <button 
                 onClick={executeDeleteJob} 
                 disabled={isSaving} 
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-md disabled:opacity-50 transition-colors"
               >
-                {isSaving ? "Menutup..." : "Ya, Tutup Loker"}
+                {isSaving ? "Closing..." : "Yes, Close Job"}
               </button>
             </div>
           </div>

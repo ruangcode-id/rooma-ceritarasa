@@ -35,12 +35,12 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
 
       const payload = await res.json();
       if (!res.ok || !payload.success) {
-        throw new Error(payload.error || "Gagal mendaftarkan VIP");
+        throw new Error(payload.error || "Failed to register VIP");
       }
 
       setNewlyAssignedCard(payload.data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan server");
+      setError(err instanceof Error ? err.message : "A server error occurred");
     } finally {
       setIsSubmitting(false);
     }
@@ -60,7 +60,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
       <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <h2 className="text-xl font-bold text-slate-900">
-            {isVip ? "Kartu Member Digital" : "Daftar VIP"}
+            {isVip ? "Digital Member Card" : "VIP Registration"}
           </h2>
           <button
             onClick={handleClose}
@@ -77,21 +77,21 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
               <div className="rounded-2xl bg-amber-50 p-5 border border-amber-100 flex gap-4 items-start">
                 <Crown size={32} weight="duotone" className="text-amber-500 shrink-0" />
                 <div>
-                  <h3 className="font-bold text-amber-900">Tingkatkan ke VIP</h3>
+                  <h3 className="font-bold text-amber-900">Upgrade to VIP</h3>
                   <p className="text-sm text-amber-800 mt-1 leading-relaxed">
-                    Anda akan mendaftarkan <strong>{guest.name}</strong> sebagai member VIP. Sistem akan meng-generate QR Code dan Token eksklusif.
+                    You are about to register <strong>{guest.name}</strong> as a VIP member. The system will generate an exclusive QR Code and Token.
                   </p>
                 </div>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Catatan Benefits / Keistimewaan Khusus (Opsional)
+                  Notes / Special Benefits (Optional)
                 </label>
                 <textarea
                   value={benefits}
                   onChange={(e) => setBenefits(e.target.value)}
-                  placeholder="Contoh: Bebas minimum spend di ruangan Private..."
+                  placeholder="Example: No minimum spend in the Private room..."
                   className="w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none min-h-[100px]"
                 />
               </div>
@@ -110,12 +110,12 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
                 {isSubmitting ? (
                   <>
                     <LoadingSpinner className="size-5" />
-                    Memproses...
+                    Processing...
                   </>
                 ) : (
                   <>
                     <ShieldCheck size={20} weight="bold" />
-                    Proses Pendaftaran VIP
+                    Process VIP Registration
                   </>
                 )}
               </button>
@@ -178,7 +178,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
 
               {/* Actions */}
               <p className="text-slate-500 text-xs text-center mt-6 px-4">
-                Kartu VIP digital telah aktif. Tamu dapat menunjukkan QR Code atau menyebutkan nomor seri Token saat berkunjung.
+                Digital VIP card is now active. Guests can show the QR Code or mention the Token serial number when visiting.
               </p>
               
             </div>
