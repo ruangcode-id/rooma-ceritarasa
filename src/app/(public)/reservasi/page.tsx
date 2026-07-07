@@ -1,4 +1,5 @@
 import ReservationWizard from "@/components/ui/ReservationWizard";
+import { Suspense } from "react";
 
 export default function ReservationPage() {
   const snapClientKey = process.env.MIDTRANS_CLIENT_KEY ?? "";
@@ -10,10 +11,12 @@ export default function ReservationPage() {
   return (
     <div className="min-h-screen w-full bg-white text-slate-900 pb-20">
       <div className="w-full max-w-4xl mx-auto pt-8 px-4">
-        <ReservationWizard
-          snapClientKey={snapClientKey}
-          snapScriptUrl={snapScriptUrl}
-        />
+        <Suspense fallback={<div className="py-20 text-center">Loading...</div>}>
+          <ReservationWizard
+            snapClientKey={snapClientKey}
+            snapScriptUrl={snapScriptUrl}
+          />
+        </Suspense>
       </div>
     </div>
   );
