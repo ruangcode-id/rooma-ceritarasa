@@ -6,18 +6,25 @@ import { prisma } from "@/infrastructure/database/prisma";
 export const dynamic = "force-dynamic";
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
-  const settings = await SettingsUseCase.getSettingsAction();
-  const sessionsRaw = await prisma.restaurantSession.findMany({
-    where: { isActive: true },
-    orderBy: { startTime: "asc" }
-  });
+  let settings;
+  let sessionsRaw: Awaited<ReturnType<typeof prisma.restaurantSession.findMany>> = [];
+
+  try {
+    settings = await SettingsUseCase.getSettingsAction();
+    sessionsRaw = await prisma.restaurantSession.findMany({
+      where: { isActive: true },
+      orderBy: { startTime: "asc" },
+    });
+  } catch (error) {
+    console.error("[PublicLayout] Failed to load footer data", error);
+  }
 
   // Serialize Date objects from Prisma to strings for the Client Component
-  const sessions = sessionsRaw.map(s => ({
-    id: s.id,
-    name: s.name,
-    startTime: s.startTime instanceof Date ? s.startTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : s.startTime,
-    endTime: s.endTime instanceof Date ? s.endTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : s.endTime,
+  const sessions = sessionsRaw.map((session) => ({
+    id: session.id,
+    name: session.name,
+    startTime: session.startTime instanceof Date ? session.startTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : session.startTime,
+    endTime: session.endTime instanceof Date ? session.endTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : session.endTime,
   }));
   return (
     <>

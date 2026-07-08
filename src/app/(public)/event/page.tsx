@@ -31,7 +31,14 @@ async function getPublicEvents(): Promise<PublicEventItem[]> {
 
 export default async function EventsPage() {
   const events = await getPublicEvents();
-  const settings = await SettingsUseCase.getSettingsAction();
+  let whatsappNumber = "6285725539262";
 
-  return <PublicEventsClient events={events} whatsappNumber={settings.whatsappNumber || "6285725539262"} />;
+  try {
+    const settings = await SettingsUseCase.getSettingsAction();
+    whatsappNumber = settings.whatsappNumber || whatsappNumber;
+  } catch (error) {
+    console.error("[Public Events Page] Failed to load settings", error);
+  }
+
+  return <PublicEventsClient events={events} whatsappNumber={whatsappNumber} />;
 }
