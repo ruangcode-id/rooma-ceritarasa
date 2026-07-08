@@ -3,6 +3,8 @@ import Footer from "@/components/layout/Footer";
 import { SettingsUseCase } from "@/application/use-cases/settings/settings.usecase";
 import { prisma } from "@/infrastructure/database/prisma";
 
+export const dynamic = "force-dynamic";
+
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const settings = await SettingsUseCase.getSettingsAction();
   const sessionsRaw = await prisma.restaurantSession.findMany({
