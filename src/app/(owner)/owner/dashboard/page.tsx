@@ -1,0 +1,16 @@
+import { OwnerDashboardClient } from "@/components/owner/OwnerDashboardClient";
+import { getOwnerPaymentAnalytics } from "@/features/owner/owner-analytics.service";
+import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Owner Analytics | Rooma Ceritarasa",
+  description: "Revenue and reservation summary for the owner",
+};
+
+export default async function OwnerDashboardPage() {
+  const analytics = await getOwnerPaymentAnalytics();
+
+  return <OwnerDashboardClient analytics={analytics} />;
+}
