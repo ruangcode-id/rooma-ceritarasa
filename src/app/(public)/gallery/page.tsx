@@ -8,13 +8,8 @@ export const metadata: Metadata = {
 };
 
 export default async function GalleryPage() {
-  let images: Awaited<ReturnType<typeof listPublicGalleryImages>> = [];
+  let images = await listPublicGalleryImages({ sort: "sort_order" });
 
-  try {
-    images = await listPublicGalleryImages({ sort: "sort_order" });
-  } catch (error) {
-    console.error("[Gallery Page] Failed to load images", error);
-  }
 
 
   return (

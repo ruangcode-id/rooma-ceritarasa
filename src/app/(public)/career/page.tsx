@@ -10,14 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default async function CareerPage() {
-  let jobs: Awaited<ReturnType<typeof listPublicCareerJobs>>["data"] = [];
+  let { data: jobs } = await listPublicCareerJobs({ page: 1, limit: 100, sort: "latest" });
 
-  try {
-    const result = await listPublicCareerJobs({ page: 1, limit: 100, sort: "latest" });
-    jobs = result.data;
-  } catch (error) {
-    console.error("[Career Page] Failed to load jobs", error);
-  }
 
 
   return (
