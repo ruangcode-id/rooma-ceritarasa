@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 const ArrowIcon = () => (
   <svg 
@@ -26,10 +27,8 @@ export default function HeroSection() {
       />
       
       <div className="absolute inset-0 z-10 grid place-items-center px-6 text-center bg-linear-to-t from-black/60 via-black/10 to-black/30">
-        <a
-          href="https://api.whatsapp.com/send/?phone=6285725539262&text&type=phone_number&app_absent=0"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href="/reservasi"
           className="
             group inline-flex items-center justify-center rounded-full 
             px-8 py-3 text-base md:px-10 md:py-4 md:text-xl 
@@ -46,7 +45,7 @@ export default function HeroSection() {
         >
           Make a reservation
           <ArrowIcon />
-        </a>
+        </Link>
       </div>
     </div>
   );
