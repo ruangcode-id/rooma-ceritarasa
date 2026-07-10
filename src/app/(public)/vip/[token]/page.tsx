@@ -24,7 +24,7 @@ export default async function VipPage({
   // Determine VIP card styling based on tier
   let cardGradient = "from-black via-[#111] to-black"; // PLATINUM default
   let accentColor = "text-slate-300";
-  let tierLabel = "VIP MEMBER";
+  const tierLabel = "VIP MEMBER";
 
   if (invitation.vipTier === "GOLD") {
     cardGradient = "from-black via-[#111] to-black";
