@@ -30,7 +30,7 @@ export async function PATCH(
 
   const row = await updateNotificationRead(authResult.userId, id, parsed.data.isRead);
   if (!row) {
-    return jsonError("Notifikasi tidak ditemukan.", 404);
+    return jsonError("Notification not found.", 404);
   }
 
   return jsonSuccess({
