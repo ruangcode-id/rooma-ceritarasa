@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 };
 
 export default async function CareerPage() {
-  let { data: jobs } = await listPublicCareerJobs({ page: 1, limit: 100, sort: "latest" });
+  const { data: jobs } = await listPublicCareerJobs({ page: 1, limit: 100, sort: "latest" });
 
 
 

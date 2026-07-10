@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default async function GalleryPage() {
-  let images = await listPublicGalleryImages({ sort: "sort_order" });
+  const images = await listPublicGalleryImages({ sort: "sort_order" });
 
 
 

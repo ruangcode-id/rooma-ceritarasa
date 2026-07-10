@@ -24,7 +24,7 @@ export function normalizePhoneForFonnte(phone: string): string {
  * @see https://docs.fonnte.com/api-send-message/
  */
 export function formatTargetForFonnteApi(phone: string): string {
-  let digits = phone.replace(/\D/g, "");
+  const digits = phone.replace(/\D/g, "");
   if (digits.startsWith("62")) {
     return `0${digits.slice(2)}`;
   }
