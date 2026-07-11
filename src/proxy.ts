@@ -5,12 +5,15 @@ import { NextResponse } from "next/server";
 export const proxy = auth((request: NextAuthRequest) => {
   const pathname = request.nextUrl.pathname;
 
-  const isAdminRoute =
-    pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
-  const isOwnerRoute =
-    pathname.startsWith("/owner") || pathname.startsWith("/api/owner");
+  const isAdminUI = pathname.startsWith("/admin");
+  const isOwnerUI = pathname.startsWith("/owner");
+  const isAdminApi = pathname.startsWith("/api/admin");
+  const isOwnerApi = pathname.startsWith("/api/owner");
 
-  if (!isAdminRoute && !isOwnerRoute) {
+  const isApiRoute = pathname.startsWith("/api/");
+  const isProtectedRoute = isAdminUI || isOwnerUI || isAdminApi || isOwnerApi;
+
+  if (!isProtectedRoute) {
     return NextResponse.next();
   }
 
@@ -19,7 +22,7 @@ export const proxy = auth((request: NextAuthRequest) => {
     session = request.auth;
   } catch (error) {
     console.error("[proxy] auth() failed:", error);
-    if (pathname.startsWith("/api/")) {
+    if (isApiRoute) {
       return NextResponse.json(
         { success: false, error: "Authentication error" },
         { status: 401 }
@@ -28,14 +31,9 @@ export const proxy = auth((request: NextAuthRequest) => {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  const unauthorizedApi = () =>
-    NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-  const forbiddenApi = () =>
-    NextResponse.json({ success: false, error: "Forbidden" }, { status: 403 });
-
   if (!session?.user) {
-    if (pathname.startsWith("/api/")) {
-      return unauthorizedApi();
+    if (isApiRoute) {
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
@@ -43,17 +41,20 @@ export const proxy = auth((request: NextAuthRequest) => {
   }
 
   const role = session.user.role;
+  const requiresAdmin = isAdminUI || isAdminApi;
+  const requiresOwner = isOwnerUI || isOwnerApi;
 
-  if (isAdminRoute && role !== "admin" && role !== "owner") {
-    if (pathname.startsWith("/api/")) {
-      return forbiddenApi();
+  // Owner can also access Admin routes
+  if (requiresAdmin && role !== "admin" && role !== "owner") {
+    if (isApiRoute) {
+      return NextResponse.json({ success: false, error: "Forbidden: You do not have the required role to access this resource." }, { status: 403 });
     }
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
-  if (isOwnerRoute && role !== "owner") {
-    if (pathname.startsWith("/api/")) {
-      return forbiddenApi();
+  if (requiresOwner && role !== "owner") {
+    if (isApiRoute) {
+      return NextResponse.json({ success: false, error: "Forbidden: You do not have the required role to access this resource." }, { status: 403 });
     }
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
@@ -66,6 +67,6 @@ export const config = {
     "/admin/:path*",
     "/owner/:path*",
     "/api/admin/:path*",
-    "/api/owner/:path*",
+    "/api/owner/:path*"
   ],
 };
