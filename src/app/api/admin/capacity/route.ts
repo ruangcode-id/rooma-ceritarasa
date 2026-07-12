@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { z } from "zod";
 import {
   autoAssignTables,
@@ -21,7 +21,8 @@ const bodySchema = z.object({
  */
 export async function POST(req: NextRequest) {
   try {
-    await requireRole(["admin", "owner"]);
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
 
     const json = await req.json();
     const parsed = bodySchema.parse(json);
@@ -61,12 +62,6 @@ export async function POST(req: NextRequest) {
           ? String((error as { code?: unknown }).code)
           : "";
 
-    if (
-      message &&
-      (message.includes("Unauthorized") || message.includes("Forbidden"))
-    ) {
-      return NextResponse.json({ success: false, error: message }, { status: 401 });
-    }
 
     if (name === "ZodError" || message === "Invalid date") {
       return NextResponse.json({ success: false, error: message || "Invalid request" }, { status: 400 });
