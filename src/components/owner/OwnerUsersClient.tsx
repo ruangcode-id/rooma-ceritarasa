@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, X, UserCircle, Crown, Trash, PencilSimple } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type UserRole = "admin" | "owner";
 
@@ -38,8 +39,12 @@ export default function OwnerUsersClient() {
     setError("");
     try {
       const res = await fetch("/api/owner/users?page=1&limit=50", { cache: "no-store" });
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || "Failed to load staff");
+      if (!payload.success) throw new Error(payload.error || "Failed to load staff");
       
       setUsers(payload.data || []);
     } catch (err) {
@@ -82,8 +87,12 @@ export default function OwnerUsersClient() {
     
     try {
       const res = await fetch(`/api/owner/users/${deleteUserPrompt.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || "Failed to delete staff");
+      if (!data.success) throw new Error(data.error || "Failed to delete staff");
       
       setUsers(users.filter(u => u.id !== deleteUserPrompt.id));
       setDeleteUserPrompt(null);
@@ -127,7 +136,11 @@ export default function OwnerUsersClient() {
 
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
+      if (!data.success) {
         throw new Error(data.error || "Failed to save staff account");
       }
       

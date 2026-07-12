@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Clock, Users, CalendarBlank, Trash } from "@phosphor-icons/react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type SessionData = {
   id: string;
@@ -38,8 +39,12 @@ export default function AdminSessionsClient() {
     setError("");
     try {
       const res = await fetch("/api/admin/sessions", { cache: "no-store" });
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Failed to load sessions");
+      if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load sessions");
       
       const sessions = (payload.data || []).map((session: any) => ({
         ...session,
@@ -90,9 +95,13 @@ export default function AdminSessionsClient() {
       const res = await fetch(`/api/admin/sessions/${deleteSessionId.id}`, {
         method: "DELETE",
       });
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || "Failed to delete session. There might be active reservations.");
       }
       
@@ -141,9 +150,13 @@ export default function AdminSessionsClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || data.message || `Failed to ${editSessionId ? 'update' : 'add'} session`);
       }
       

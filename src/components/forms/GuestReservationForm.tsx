@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Crown, CircleNotch } from "@phosphor-icons/react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 interface GuestReservationFormProps {
   date: Date;
@@ -81,6 +82,12 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
 
       // Add a simulated loading delay to improve UX
       await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        setError(errorMsg);
+        return;
+      }
 
       const data = await res.json();
       if (data.success) {

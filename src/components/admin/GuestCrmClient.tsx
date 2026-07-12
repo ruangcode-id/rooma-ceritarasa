@@ -23,6 +23,7 @@ import {
   StatusBadge,
   type StatusBadgeOption,
 } from "@/components/ui/StatusBadge";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type GuestTag = "VIP" | "ALLERGY" | "BIRTHDAY" | "REGULAR" | "BLACKLIST";
 type ReservationStatus =
@@ -241,10 +242,16 @@ export function GuestCrmClient() {
       const response = await fetch(`/api/admin/guests/${guestId}`, {
         cache: "no-store",
       });
+
+      if (!response.ok) {
+        const errorMsg = await handleApiError(response);
+        throw new Error(errorMsg);
+      }
+
       const payload = await readJson<ApiItemResponse<GuestDetail>>(response);
 
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.success ? "Failed to load detail." : payload.error);
+      if (!payload.success) {
+        throw new Error(payload.error ?? "Failed to load detail.");
       }
 
       setGuestDetail(payload.data);
@@ -293,11 +300,13 @@ export function GuestCrmClient() {
         signal: controller.signal,
       })
         .then(async (response) => {
+          if (!response.ok) {
+            const errorMsg = await handleApiError(response);
+            throw new Error(errorMsg);
+          }
           const payload = await readJson<ApiListResponse>(response);
-          if (!response.ok || !payload.success) {
-            throw new Error(
-              payload.success ? "Failed to load guests." : payload.error,
-            );
+          if (!payload.success) {
+            throw new Error(payload.error ?? "Failed to load guests.");
           }
 
           setGuests(payload.data);
@@ -354,12 +363,15 @@ export function GuestCrmClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: noteContent.trim() }),
       });
-      const payload = await readJson<ApiItemResponse<GuestNote>>(response);
 
-      if (!response.ok || !payload.success) {
-        throw new Error(
-          payload.success ? "Failed to save note." : payload.error,
-        );
+      if (!response.ok) {
+        const errorMsg = await handleApiError(response);
+        throw new Error(errorMsg);
+      }
+
+      const payload = await readJson<ApiItemResponse<GuestNote>>(response);
+      if (!payload.success) {
+        throw new Error(payload.error ?? "Failed to save note.");
       }
 
       setNoteContent("");
@@ -391,14 +403,18 @@ export function GuestCrmClient() {
           remove: hasTag ? [tag] : [],
         }),
       });
+
+      if (!response.ok) {
+        const errorMsg = await handleApiError(response);
+        throw new Error(errorMsg);
+      }
+
       const payload = await readJson<
         ApiItemResponse<{ id: string; tags: GuestTag[]; isVip: boolean }>
       >(response);
 
-      if (!response.ok || !payload.success) {
-        throw new Error(
-          payload.success ? "Failed to update label." : payload.error,
-        );
+      if (!payload.success) {
+        throw new Error(payload.error ?? "Failed to update label.");
       }
 
       setGuestDetail((current) =>
