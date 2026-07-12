@@ -84,7 +84,36 @@ newgrp docker
 - Prisma error `P1000` (authentication failed):
   - Ensure `.env` `DATABASE_URL` credentials match `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` in `docker-compose.yml`.
 
+## Scripts
+
+Utility scripts for first-time setup (local dev or VPS deployment). Run after database is up and migrations have been applied.
+
+### Seed default restaurant settings & sessions
+
+Run **once** when setting up a fresh database:
+
+```bash
+npx tsx scripts/seed-settings.ts
+```
+
+This creates the default restaurant settings (name, address, contact) and 3 operational sessions (15:00, 17:30, 20:00).
+
+### Create the first Owner account
+
+```bash
+npx tsx scripts/create-owner.ts "Nama Owner" "owner@rooma.com" "password-kuat"
+```
+
+### Create an Admin account
+
+```bash
+npx tsx scripts/create-admin.ts "Nama Admin" "admin@rooma.com" "password-kuat"
+```
+
+> **Note:** These scripts require a valid `.env` with `DATABASE_URL` pointing to a running PostgreSQL instance.
+
 ## Notes
 
 - Do not commit `.env`.
 - Commit `.env.example` for team onboarding.
+
