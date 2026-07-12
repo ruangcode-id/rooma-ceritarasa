@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BlockedDateUseCase } from "@/application/use-cases/blocked-date/blocked-date.usecase";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 
 const readBody = async (req: NextRequest) => {
   const contentType = req.headers.get("content-type") ?? "";
@@ -36,25 +37,25 @@ const readBody = async (req: NextRequest) => {
 
 export async function GET() {
   try {
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
     const blockedDates = await BlockedDateUseCase.getBlockedDatesAction();
     return NextResponse.json({ success: true, data: blockedDates });
   } catch (error: any) {
-    if (typeof error?.message === "string" && (error.message.includes("Unauthorized") || error.message.includes("Forbidden"))) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
-    }
+
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
     const body = await readBody(req);
     const created = await BlockedDateUseCase.createBlockedDatesAction(body);
     return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error: any) {
-    if (typeof error?.message === "string" && (error.message.includes("Unauthorized") || error.message.includes("Forbidden"))) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
-    }
+
     if (typeof error?.message === "string") {
       if (error.message === "Invalid JSON") {
         return NextResponse.json({ success: false, error: error.message }, { status: 400 });

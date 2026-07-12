@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BlockedDateUseCase } from "@/application/use-cases/blocked-date/blocked-date.usecase";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 
 export async function GET(req: NextRequest) {
   try {
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
 
@@ -13,9 +16,7 @@ export async function GET(req: NextRequest) {
     const result = await BlockedDateUseCase.checkBlockedDateAction(date);
     return NextResponse.json({ success: true, data: result });
   } catch (error: any) {
-    if (typeof error?.message === "string" && (error.message.includes("Unauthorized") || error.message.includes("Forbidden"))) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
-    }
+
     if (error?.message === "Invalid date" || error?.name === "ZodError") {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }

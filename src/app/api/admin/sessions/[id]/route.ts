@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SessionUseCase } from "@/application/use-cases/sessions/session.usecase";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -22,6 +23,8 @@ function parseDateParam(dateStr: string | null): Date | undefined {
 
 export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
     const { id } = await params;
     const { searchParams } = new URL(req.url);
 
@@ -38,12 +41,6 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 
     const message = getErrorMessage(error);
 
-    if (message === "Unauthorized" || message === "Forbidden") {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 401 }
-      );
-    }
 
     if (message === "Session not found") {
       return NextResponse.json(
@@ -68,6 +65,8 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   try {
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
     const { id } = await params;
 
     let body: unknown;
@@ -92,12 +91,6 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
     const message = getErrorMessage(error);
 
-    if (message === "Unauthorized" || message === "Forbidden") {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 401 }
-      );
-    }
 
     if (message === "Session not found") {
       return NextResponse.json(
@@ -125,6 +118,8 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
     const { id } = await params;
 
     await SessionUseCase.deleteSessionAction(id);
@@ -138,12 +133,6 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
 
     const message = getErrorMessage(error);
 
-    if (message === "Unauthorized" || message === "Forbidden") {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 401 }
-      );
-    }
 
     if (message === "Session not found") {
       return NextResponse.json(

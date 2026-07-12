@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { z } from "zod";
 import { ReservationStatus } from "@/generated/prisma/client";
 import { AdminReservationUseCase } from "@/application/use-cases/reservation/reservation.usecase";
@@ -10,7 +10,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["admin", "owner"]);
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
 
     const { id } = await params;
     if (!id) {
@@ -35,9 +36,7 @@ export async function GET(
     return NextResponse.json({ success: true, data: reservation });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "";
-    if (message.includes("Unauthorized") || message.includes("Forbidden")) {
-      return NextResponse.json({ success: false, error: message }, { status: 401 });
-    }
+
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -75,7 +74,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["admin", "owner"]);
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
 
     const { id } = await params;
     if (!id) {
@@ -107,9 +107,7 @@ export async function PATCH(
     const message = error instanceof Error ? error.message : "";
     const name = error instanceof Error ? error.name : "";
 
-    if (message.includes("Unauthorized") || message.includes("Forbidden")) {
-      return NextResponse.json({ success: false, error: message }, { status: 401 });
-    }
+
 
     if (name === "ZodError") {
       return NextResponse.json(
