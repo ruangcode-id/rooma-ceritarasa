@@ -82,7 +82,7 @@ export default function Footer({ settings, sessions }: { settings?: any; session
                 className="text-primary mr-2 mt-0.5 shrink-0 transition-transform group-hover:scale-110"
               />
               <span className="whitespace-pre-line">
-                {settings?.address || "Jl. Lawu No.2, Kotabaru, Kec. Gondokusuman,\nKota Yogyakarta, DI Yogyakarta 55224"}
+                {settings?.address || "Jl. Lawu No.4, Kotabaru, Kec. Gondokusuman,\nKota Yogyakarta, DI Yogyakarta 55224"}
               </span>
             </li>
             <li className="flex items-center group">
