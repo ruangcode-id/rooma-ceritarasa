@@ -1,0 +1,23 @@
+import { notFound } from "next/navigation";
+
+// --- KLIEN MEMINTA FITUR INI DI-HIDE SEMENTARA ---
+// import { Metadata } from "next";
+// import AdminTablesClient from "@/components/admin/AdminTablesClient";
+//
+// export const metadata: Metadata = {
+//   title: "Floor Plan Meja | Rooma Ceritarasa",
+//   description: "Pengaturan tata letak 2D meja restoran",
+// };
+//
+// export default function AdminTablesPage() {
+//   return <AdminTablesClient />;
+// }
+
+export default function AdminTablesPageHidden() {
+  return (
+    <div className="p-12 text-center">
+      <h1 className="text-2xl font-bold text-slate-800">404 - Halaman Tidak Ditemukan</h1>
+      <p className="mt-2 text-slate-600">Fitur pengaturan tata letak meja saat ini sedang dinonaktifkan.</p>
+    </div>
+  );
+}
