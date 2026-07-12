@@ -37,7 +37,8 @@ const MENU_GROUPS = [
   {
     title: "Restaurant Setup",
     items: [
-      { name: "Tables", href: "/admin/tables", icon: Armchair },
+      // Klien meminta fitur Tables disembunyikan dari UI Admin sementara waktu
+      // { name: "Tables", href: "/admin/tables", icon: Armchair },
       { name: "Sessions", href: "/admin/sessions", icon: Clock },
       { name: "Blocked Dates", href: "/admin/blocked-dates", icon: CalendarX },
     ],
