@@ -385,7 +385,7 @@ export default function ReservationWizard({
             style={{ width: "auto" }}
           />
           <p className="text-sm md:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
-            Jl. Lawu No.2, Kotabaru, Kec. Gondokusuman, Kota Yogyakarta, DI Yogyakarta 55224
+            Jl. Lawu No.4, Kotabaru, Kec. Gondokusuman, Kota Yogyakarta, DI Yogyakarta 55224
           </p>
         </div>
       )}

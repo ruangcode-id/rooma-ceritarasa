@@ -19,6 +19,12 @@ export type PublicEventItem = {
   eventDate: string | null;
 };
 
+// --- KONFIGURASI POSTER EVENT ---
+// Tambahkan path URL gambar ke dalam array ini untuk mengaktifkan Slider Poster Event.
+// Kosongkan array [] untuk menonaktifkan slider dan kembali ke tampilan teks awal.
+// Contoh: ["/assets/poster1.jpg", "/assets/poster2.jpg"]
+const EVENT_POSTERS: string[] = [];
+
 const COMMON_EVENT_TYPES = [
   "Private Dining",
   "Birthday Celebration",
@@ -70,40 +76,23 @@ export function PublicEventsClient({
 
   return (
     <div className="bg-[#fcfbf9] text-slate-900">
-      <section className="relative min-h-[620px] overflow-hidden pt-20">
-        <Image
-          src="/assets/slider4.webp"
-          alt="Private event at Rooma Ceritarasa"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/85 via-slate-950/55 to-slate-950/20" />
-
-        <div className="relative mx-auto flex min-h-[540px] max-w-7xl items-center px-4 py-20 sm:px-6 lg:px-8">
-          <div className="max-w-3xl text-white animate-fade-in-up">
-            <p className="text-xs uppercase tracking-[0.35em] text-white/70">
-              Gather at Rooma
-            </p>
-            <h1 className="mt-5 text-5xl font-semibold leading-[1.05] sm:text-6xl lg:text-7xl">
-              Special moments,
-              <br />
-              designed more personally.
-            </h1>
-            <p className="mt-6 max-w-2xl text-base leading-7 text-white/80 sm:text-lg">
-              From intimate dinners to corporate gatherings, tell us the event you envision and our team will prepare a special offer.
-            </p>
-            <a
-              href="#event-request"
-              className="mt-8 inline-flex items-center gap-3 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition-all duration-300 hover:scale-105 hover:bg-primary hover:text-white"
-            >
-              Request Event
-              <ArrowRight size={18} weight="bold" />
-            </a>
+      {EVENT_POSTERS.length > 0 && (
+        <section className="relative min-h-[620px] w-full overflow-hidden pt-20 bg-slate-950">
+          <div className="flex h-[540px] w-full snap-x snap-mandatory overflow-x-auto [&::-webkit-scrollbar]:hidden">
+            {EVENT_POSTERS.map((poster, idx) => (
+              <div key={idx} className="relative w-full shrink-0 snap-center h-full">
+                <Image
+                  src={poster}
+                  alt={`Event Poster ${idx + 1}`}
+                  fill
+                  priority={idx === 0}
+                  className="object-contain"
+                />
+              </div>
+            ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
