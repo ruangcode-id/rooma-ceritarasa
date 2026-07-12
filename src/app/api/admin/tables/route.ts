@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { tableRepository } from "@/infrastructure/repositories/table.repository";
 import {
   createTableSchema,
@@ -7,30 +7,11 @@ import {
 } from "@/infrastructure/validations/table.validation";
 
 async function requireAdminOrOwner() {
-  try {
-    await requireRole(["admin", "owner"]);
-    return null;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-
-    if (message.toLowerCase().includes("unauthorized")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-        },
-        { status: 401 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Forbidden",
-      },
-      { status: 403 }
-    );
+  const authResult = await requireAdminApiSession();
+  if (!authResult.ok) {
+    return authResult.response;
   }
+  return null;
 }
 
 async function parseJsonBody(req: NextRequest) {

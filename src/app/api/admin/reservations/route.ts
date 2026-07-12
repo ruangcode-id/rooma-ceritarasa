@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { AdminReservationUseCase } from "@/application/use-cases/reservation/reservation.usecase";
 
 /**
@@ -16,7 +16,8 @@ import { AdminReservationUseCase } from "@/application/use-cases/reservation/res
  */
 export async function GET(req: NextRequest) {
   try {
-    await requireRole(["admin", "owner"]);
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
 
     const { searchParams } = req.nextUrl;
 
@@ -36,15 +37,6 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "";
 
-    if (message.includes("Unauthorized") || message.includes("Forbidden")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: message,
-        },
-        { status: 401 }
-      );
-    }
 
     if (message.includes("Invalid date") || message.includes("Invalid status")) {
       return NextResponse.json(
