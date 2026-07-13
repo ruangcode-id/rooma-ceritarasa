@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Plus, ArrowsOutCardinal, Trash, FloppyDisk } from "@phosphor-icons/react";
+import { Plus, ArrowsOutCardinal, FloppyDisk } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
 
 type TableData = {
@@ -175,14 +175,12 @@ export default function AdminTablesClient() {
   };
 
   // Drag and Drop Logic
-  const handlePointerDown = (e: React.PointerEvent, id: string, startX: number, startY: number) => {
+  const handlePointerDown = (e: React.PointerEvent, id: string) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     setDraggingTableId(id);
     
     // Hitung jarak dari kursor ke pojok kiri-atas elemen (offset)
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const boardRect = boardRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
-    
     setDragOffset({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
@@ -226,7 +224,7 @@ export default function AdminTablesClient() {
           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Restaurant Setup</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-950">Table Floor Plan</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-xl">
-            Drag and drop tables to arrange your restaurant's 2D layout. Don't forget to click Save after arranging.
+            Drag and drop tables to arrange your restaurant&apos;s 2D layout. Don&apos;t forget to click Save after arranging.
           </p>
         </div>
         <div className="flex gap-3">
@@ -299,7 +297,7 @@ export default function AdminTablesClient() {
           tables.map(table => (
             <div
               key={table.id}
-              onPointerDown={(e) => handlePointerDown(e, table.id, table.posX, table.posY)}
+              onPointerDown={(e) => handlePointerDown(e, table.id)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}

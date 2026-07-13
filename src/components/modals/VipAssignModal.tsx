@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Crown, ShieldCheck, DownloadSimple } from "@phosphor-icons/react";
+import { X, Crown, ShieldCheck } from "@phosphor-icons/react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import Image from "next/image";
 import type { GuestRow } from "@/components/admin/AdminVipClient";
