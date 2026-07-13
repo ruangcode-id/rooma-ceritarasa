@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   try {
     const authResult = await requireAdminApiSession();
     if (!authResult.ok) return authResult.response;
-    let body: any;
+    let body: unknown;
     try {
       body = await req.json();
     } catch {

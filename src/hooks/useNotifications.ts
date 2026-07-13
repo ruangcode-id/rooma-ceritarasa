@@ -27,6 +27,19 @@ interface NotificationsResponse {
   meta: NotificationsMeta;
 }
 
+async function requestNotifications(
+  page: number,
+  limit: number,
+  signal?: AbortSignal
+): Promise<NotificationsResponse> {
+  const res = await fetch(`/api/admin/notifications?page=${page}&limit=${limit}`, {
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  return res.json();
+}
+
 export function useNotifications(page = 1, limit = 20) {
   const [data, setData] = useState<NotificationsResponse | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -35,10 +48,7 @@ export function useNotifications(page = 1, limit = 20) {
 
   const fetchNotifications = useCallback(async () => {
     try {
-      const res = await fetch(`/api/admin/notifications?page=${page}&limit=${limit}`);
-      if (!res.ok) throw new Error(await handleApiError(res));
-      const json = await res.json();
-      setData(json);
+      setData(await requestNotifications(page, limit));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Unknown error"));
@@ -49,12 +59,34 @@ export function useNotifications(page = 1, limit = 20) {
 
   // Initial fetch and polling every 60s
   useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications]);
+    const controller = new AbortController();
+
+    const pollNotifications = () => {
+      void requestNotifications(page, limit, controller.signal)
+        .then((response) => {
+          if (!controller.signal.aborted) {
+            setData(response);
+            setError(null);
+          }
+        })
+        .catch((err: unknown) => {
+          if (!controller.signal.aborted) {
+            setError(err instanceof Error ? err : new Error("Unknown error"));
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setIsLoading(false);
+        });
+    };
+
+    pollNotifications();
+    const interval = setInterval(pollNotifications, 60000);
+
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
+  }, [page, limit]);
 
   const mutate = useCallback(() => {
     fetchNotifications();

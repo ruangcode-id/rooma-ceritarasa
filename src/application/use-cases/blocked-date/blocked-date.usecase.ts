@@ -76,7 +76,7 @@ export const BlockedDateUseCase = {
     const created = await BlockedDateRepository.createBlockedDates({
       dates: datesToBlock,
       reason: parsed.reason ?? null,
-      createdBy: (user as any).id ?? null,
+      createdBy: user.id,
     });
 
     return created;

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 
 // --- Configuration ---
 const CONFIG = {
@@ -71,11 +72,12 @@ const GalleryCard = ({ src, alt, isPriority, cardRef }: { src: string, alt: stri
     className="snap-center shrink-0 w-[90vw] sm:w-[65vw] md:w-[50vw] lg:w-[40vw] xl:w-[30vw] aspect-4/5 overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] hover:shadow-2xl transition-shadow duration-500 relative group cursor-grab active:cursor-grabbing"
   >
     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300 z-10 pointer-events-none" />
-    <div className="w-full h-full translate-x-(--px) will-change-transform">
-      <img
+    <div className="relative w-full h-full translate-x-(--px) will-change-transform">
+      <Image
         src={src}
         alt={alt}
-        decoding="async"
+        fill
+        sizes="(max-width: 639px) 90vw, (max-width: 767px) 65vw, (max-width: 1023px) 50vw, (max-width: 1279px) 40vw, 30vw"
         fetchPriority={isPriority ? 'high' : 'auto'}
         className="w-full h-full object-cover object-center scale-[1.2] transition-transform duration-700 group-hover:scale-[1.25]"
       />
@@ -98,11 +100,13 @@ export default function Gallery() {
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 reveal">
         <div className="flex justify-center">
-          <img
+          <Image
             src="/assets/logo_no_background.png"
             alt="Rooma"
+            width={1241}
+            height={1241}
+            sizes="(max-width: 639px) 6rem, (max-width: 767px) 7rem, 8rem"
             className="h-24 sm:h-28 md:h-32 w-auto object-contain"
-            decoding="async"
             fetchPriority="high"
           />
         </div>

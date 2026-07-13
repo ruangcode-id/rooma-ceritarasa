@@ -1,8 +1,8 @@
 import { prisma } from "@/infrastructure/database/prisma";
-import { Prisma, ReservationStatus } from "@/generated/prisma/client";
+import { Prisma, ReservationStatus, type RestaurantSession } from "@/generated/prisma/client";
 
 type SessionWithAvailability =
-  Prisma.RestaurantSessionGetPayload<{}> & {
+  RestaurantSession & {
     currentCapacity: number;
     availableSlots: number;
   };

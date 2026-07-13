@@ -15,6 +15,19 @@ type GalleryImage = {
   isActive: boolean;
 };
 
+async function fetchGalleryImages(signal?: AbortSignal): Promise<GalleryImage[]> {
+  const res = await fetch("/api/admin/gallery", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload = await res.json();
+  if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load gallery");
+
+  return payload.data || [];
+}
+
 export default function AdminGalleryClient() {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,26 +46,23 @@ export default function AdminGalleryClient() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
 
-  async function loadImages() {
-    setIsLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/admin/gallery", { cache: "no-store" });
-      if (!res.ok) throw new Error(await handleApiError(res));
-
-      const payload = await res.json();
-      if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load gallery");
-      
-      setImages(payload.data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   useEffect(() => {
-    void loadImages();
+    const controller = new AbortController();
+
+    void fetchGalleryImages(controller.signal)
+      .then((loadedImages) => {
+        if (!controller.signal.aborted) setImages(loadedImages);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
   }, []);
 
   const resetForm = () => {
