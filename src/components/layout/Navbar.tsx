@@ -9,18 +9,13 @@ import { List, X } from "@phosphor-icons/react";
 export default function Navbar() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  
+
+  return <NavbarContent key={isHome ? "home" : "inner"} isHome={isHome} />;
+}
+
+function NavbarContent({ isHome }: { isHome: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-
-
-  // Pastikan navbar disembunyikan saat pertama kali masuk ke halaman Home
-  // Ini memperbaiki bug di mana isVisible "tersangkut" menjadi true dari halaman sebelumnya
-  useEffect(() => {
-    if (pathname === "/") {
-      setIsVisible(false);
-    }
-  }, [pathname]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 

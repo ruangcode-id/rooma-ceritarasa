@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BlockedDateUseCase } from "@/application/use-cases/blocked-date/blocked-date.usecase";
 import { requireAdminApiSession } from "@/lib/require-admin-api";
+import { jsonValidationError } from "@/lib/api-envelope";
+import { ZodError } from "zod";
 
 const readBody = async (req: NextRequest) => {
   const contentType = req.headers.get("content-type") ?? "";
@@ -53,9 +55,11 @@ export async function POST(req: NextRequest) {
     const body = await readBody(req);
     const created = await BlockedDateUseCase.createBlockedDatesAction(body);
     return NextResponse.json({ success: true, data: created }, { status: 201 });
-  } catch (error: any) {
-
-    if (typeof error?.message === "string") {
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return jsonValidationError(error);
+    }
+    if (error instanceof Error) {
       if (error.message === "Invalid JSON") {
         return NextResponse.json({ success: false, error: error.message }, { status: 400 });
       }
@@ -69,9 +73,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: error.message }, { status: 400 });
       }
       if (error.message.includes("confirmed reservations")) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-      }
-      if (error.name === "ZodError") {
         return NextResponse.json({ success: false, error: error.message }, { status: 400 });
       }
     }

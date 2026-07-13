@@ -4,6 +4,11 @@ import { UserUseCase } from "@/application/use-cases/users/user.usecase";
 import { usersListQuerySchema } from "@/lib/users-list-query";
 import { buildPaginationMeta } from "@/lib/pagination";
 import { jsonValidationError } from "@/lib/api-envelope";
+import { ZodError } from "zod";
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,11 +43,13 @@ export async function POST(req: NextRequest) {
     const newUser = await UserUseCase.createUserAction(body);
 
     return NextResponse.json({ success: true, data: newUser }, { status: 201 });
-  } catch (error: any) {
-
-    if (error.name === "ZodError") {
-      return NextResponse.json({ success: false, error: error.issues[0]?.message || "Validation Error", details: error.issues }, { status: 400 });
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return jsonValidationError(error);
     }
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: getErrorMessage(error, "Failed to create user") },
+      { status: 400 },
+    );
   }
 }

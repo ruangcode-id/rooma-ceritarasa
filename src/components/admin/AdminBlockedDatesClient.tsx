@@ -13,6 +13,19 @@ type BlockedDate = {
   createdBy: string;
 };
 
+async function fetchBlockedDates(signal?: AbortSignal): Promise<BlockedDate[]> {
+  const res = await fetch("/api/admin/blocked-dates", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload = await res.json();
+  if (!payload.success) throw new Error(payload.error || "Failed to load blocked dates");
+
+  return payload.data || [];
+}
+
 export default function AdminBlockedDatesClient() {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
@@ -29,20 +42,26 @@ export default function AdminBlockedDatesClient() {
   async function loadBlockedDates() {
     setError("");
     try {
-      const res = await fetch("/api/admin/blocked-dates", { cache: "no-store" });
-      if (!res.ok) throw new Error(await handleApiError(res));
-
-      const payload = await res.json();
-      if (!payload.success) throw new Error(payload.error || "Failed to load blocked dates");
-      
-      setBlockedDates(payload.data || []);
+      setBlockedDates(await fetchBlockedDates());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
   }
 
   useEffect(() => {
-    void loadBlockedDates();
+    const controller = new AbortController();
+
+    void fetchBlockedDates(controller.signal)
+      .then((dates) => {
+        if (!controller.signal.aborted) setBlockedDates(dates);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   const handleToggleBlock = (date: Date) => {

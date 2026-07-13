@@ -23,7 +23,7 @@ export const requireRole = async (allowedRoles: Role[]) => {
   }
 
   // The role is injected in the session callback in src/auth.ts
-  const userRole = (user as any).role as Role;
+  const userRole = user.role;
 
   if (!userRole || !allowedRoles.includes(userRole)) {
     throw new Error(`Forbidden: You do not have the required role to access this resource.`);

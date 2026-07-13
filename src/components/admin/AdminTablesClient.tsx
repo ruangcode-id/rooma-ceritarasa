@@ -13,6 +13,23 @@ type TableData = {
   status: string;
 };
 
+async function fetchTables(signal?: AbortSignal): Promise<TableData[]> {
+  const res = await fetch("/api/admin/tables", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload = await res.json();
+  if (!payload.success) throw new Error(payload.message || "Failed to load tables");
+
+  return (payload.data as TableData[]).map((table, index) => ({
+    ...table,
+    posX: table.posX ?? (index % 5) * 120 + 20,
+    posY: table.posY ?? Math.floor(index / 5) * 120 + 20,
+  }));
+}
+
 export default function AdminTablesClient() {
   const [tables, setTables] = useState<TableData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,22 +51,7 @@ export default function AdminTablesClient() {
   async function loadTables() {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/tables", { cache: "no-store" });
-      if (!res.ok) {
-        const errorMsg = await handleApiError(res);
-        throw new Error(errorMsg);
-      }
-      const payload = await res.json();
-      if (!payload.success) throw new Error(payload.message || "Failed to load tables");
-      
-      // Berikan posisi default jika null
-      const processed = (payload.data as TableData[]).map((t, idx) => ({
-        ...t,
-        posX: t.posX ?? (idx % 5) * 120 + 20,
-        posY: t.posY ?? Math.floor(idx / 5) * 120 + 20,
-      }));
-      
-      setTables(processed);
+      setTables(await fetchTables());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -58,7 +60,22 @@ export default function AdminTablesClient() {
   }
 
   useEffect(() => {
-    void loadTables();
+    const controller = new AbortController();
+
+    void fetchTables(controller.signal)
+      .then((loadedTables) => {
+        if (!controller.signal.aborted) setTables(loadedTables);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
   }, []);
 
   const resetForm = () => {

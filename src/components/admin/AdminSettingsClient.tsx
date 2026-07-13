@@ -82,8 +82,11 @@ export default function AdminSettingsClient() {
       
       setMessage({ text: "Operational settings saved successfully!", type: "success" });
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (error: any) {
-      setMessage({ text: error.message || "Failed to save settings", type: "error" });
+    } catch (error: unknown) {
+      setMessage({
+        text: error instanceof Error ? error.message : "Failed to save settings",
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }
