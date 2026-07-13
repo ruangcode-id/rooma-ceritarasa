@@ -11,10 +11,6 @@ import Script from "next/script";
 import { GuestReservationForm } from "../forms/GuestReservationForm";
 import { payWithSnap } from "@/lib/midtrans-snap-client";
 
-interface BlockedDate {
-  date: string;
-}
-
 interface Session {
   id: string;
   name: string;

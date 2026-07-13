@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isBefore, startOfDay, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, addMonths, subMonths, isBefore, startOfDay, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { CaretLeft, CaretRight, Prohibit, CalendarX } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
@@ -16,7 +16,6 @@ type BlockedDate = {
 export default function AdminBlockedDatesClient() {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -28,7 +27,6 @@ export default function AdminBlockedDatesClient() {
   const [unblockDialog, setUnblockDialog] = useState<BlockedDate | null>(null);
 
   async function loadBlockedDates() {
-    setIsLoading(true);
     setError("");
     try {
       const res = await fetch("/api/admin/blocked-dates", { cache: "no-store" });
@@ -40,8 +38,6 @@ export default function AdminBlockedDatesClient() {
       setBlockedDates(payload.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsLoading(false);
     }
   }
 

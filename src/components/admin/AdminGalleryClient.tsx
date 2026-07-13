@@ -124,7 +124,6 @@ export default function AdminGalleryClient() {
     setError("");
     try {
       let res;
-      let data;
       
       if (editingImage) {
         // Editing Mode (PUT)
@@ -171,7 +170,7 @@ export default function AdminGalleryClient() {
 
       if (!res.ok) throw new Error(await handleApiError(res));
 
-      data = await res.json();
+      const data = await res.json();
       
       if (!data.success) {
         throw new Error(data.error || data.message || "Failed to save photo");
@@ -366,7 +365,7 @@ export default function AdminGalleryClient() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Photo?</h3>
               <p className="text-sm text-slate-500">
-                Are you sure you want to delete the photo <strong>"{deleteImagePrompt.title || 'Untitled'}"</strong>? This photo will be permanently deleted.
+                Are you sure you want to delete the photo <strong>&quot;{deleteImagePrompt.title || 'Untitled'}&quot;</strong>? This photo will be permanently deleted.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">

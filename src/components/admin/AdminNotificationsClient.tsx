@@ -9,7 +9,6 @@ import {
   CheckCircle,
   CircleNotch,
   WarningCircle,
-  X,
   CalendarCheck,
   CreditCard,
   MapPinLine,

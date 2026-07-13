@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Clock, Users, CalendarBlank, Trash } from "@phosphor-icons/react";
+import { Plus, Clock, Users, CalendarBlank } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
 
 type SessionData = {

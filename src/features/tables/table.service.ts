@@ -33,12 +33,6 @@ const CAPACITY_STATUSES = [
   ReservationStatus.checked_in,
 ];
 
-const TABLE_BLOCK_STATUSES = [
-  ReservationStatus.pending,
-  ReservationStatus.confirmed,
-  ReservationStatus.checked_in,
-];
-
 export type BookableTable = {
   id: string;
   tableNumber: string;

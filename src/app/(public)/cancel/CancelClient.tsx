@@ -42,7 +42,7 @@ export default function CancelReservationClient() {
       } else {
         setError(data.error || "Gagal membatalkan reservasi");
       }
-    } catch (err) {
+    } catch {
       setError("Terjadi kesalahan jaringan.");
     } finally {
       setLoading(false);
