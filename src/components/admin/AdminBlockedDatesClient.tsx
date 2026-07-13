@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isBefore, startOfDay, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { CaretLeft, CaretRight, Prohibit, CalendarX } from "@phosphor-icons/react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type BlockedDate = {
   id: string;
@@ -31,8 +32,10 @@ export default function AdminBlockedDatesClient() {
     setError("");
     try {
       const res = await fetch("/api/admin/blocked-dates", { cache: "no-store" });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || "Failed to load blocked dates");
+      if (!payload.success) throw new Error(payload.error || "Failed to load blocked dates");
       
       setBlockedDates(payload.data || []);
     } catch (err) {
@@ -83,9 +86,11 @@ export default function AdminBlockedDatesClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || "Failed to block date. Make sure there are no active reservations.");
       }
       
@@ -107,9 +112,11 @@ export default function AdminBlockedDatesClient() {
       const res = await fetch(`/api/admin/blocked-dates/${unblockDialog.id}`, {
         method: "DELETE",
       });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || "Failed to unblock date.");
       }
       

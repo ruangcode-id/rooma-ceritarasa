@@ -7,7 +7,11 @@
     "postinstall": "prisma generate",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:proxy": "node --test tests/proxy.test.mjs",
+    "test:api-auth": "node --test tests/api-auth-guards.test.mjs",
+    "test:ui-errors": "node --test tests/ui-error-handling.test.mjs",
+    "test:security": "node --test tests/proxy.test.mjs tests/api-auth-guards.test.mjs tests/ui-error-handling.test.mjs tests/security-integrations.test.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

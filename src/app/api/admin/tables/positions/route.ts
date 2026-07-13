@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-envelope";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { tableRepository } from "@/infrastructure/repositories/table.repository";
 import { bulkUpdatePositionSchema } from "@/infrastructure/validations/table.validation";
 
@@ -10,24 +12,15 @@ async function parseJsonBody(req: NextRequest) {
   }
 }
 
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  return "Terjadi kesalahan internal";
-}
-
 export async function PATCH(req: NextRequest) {
+  const authResult = await requireAdminApiSession();
+  if (!authResult.ok) return authResult.response;
+
   try {
     const body = await parseJsonBody(req);
 
     if (!body) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Request body is required",
-        },
-        { status: 400 }
-      );
+      return jsonError("Request body is required", 400);
     }
 
     const payload = Array.isArray(body)
@@ -38,14 +31,9 @@ export async function PATCH(req: NextRequest) {
       bulkUpdatePositionSchema.safeParse(payload);
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validation error",
-          errors: validation.error.flatten(),
-        },
-        { status: 400 }
-      );
+      return jsonError("Validation error", 400, {
+        errors: validation.error.flatten(),
+      });
     }
 
     await tableRepository.bulkUpdatePosition(
@@ -65,13 +53,6 @@ export async function PATCH(req: NextRequest) {
       error
     );
 
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Gagal update posisi meja",
-        detail: getErrorMessage(error),
-      },
-      { status: 500 }
-    );
+    return jsonError("Gagal update posisi meja", 500);
   }
 }

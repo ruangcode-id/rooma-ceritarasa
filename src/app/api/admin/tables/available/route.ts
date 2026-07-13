@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-envelope";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { getAvailableTables } from "@/features/tables/table.service";
 
 export async function GET(req: NextRequest) {
+  const authResult = await requireAdminApiSession();
+  if (!authResult.ok) return authResult.response;
+
   try {
     const { searchParams } = new URL(req.url);
 
@@ -10,13 +15,7 @@ export async function GET(req: NextRequest) {
     const capacity = searchParams.get("capacity");
 
     if (!sessionId || !date || !capacity) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "sessionId, date, and capacity are required",
-        },
-        { status: 400 }
-      );
+      return jsonError("sessionId, date, and capacity are required", 400);
     }
 
     const tables = await getAvailableTables(sessionId, date, Number(capacity));
@@ -28,15 +27,8 @@ export async function GET(req: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("GET AVAILABLE TABLES ERROR:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: error?.message || "Failed to get available tables",
-      },
-      { status: 400 }
-    );
+    return jsonError("Failed to get available tables", 400);
   }
 }

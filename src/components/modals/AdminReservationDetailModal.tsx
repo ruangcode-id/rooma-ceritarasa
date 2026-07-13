@@ -7,6 +7,7 @@ import { StatusBadge, type StatusBadgeOption } from "@/components/ui/StatusBadge
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type DetailReservation = {
   id: string;
@@ -55,8 +56,10 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
     const fetchDetail = async () => {
       try {
         const res = await fetch(`/api/admin/reservations/${reservationId}`);
+        if (!res.ok) throw new Error(await handleApiError(res));
+
         const payload = await res.json();
-        if (!res.ok || !payload.success) {
+        if (!payload.success) {
           throw new Error(payload.error || "Gagal mengambil detail reservasi");
         }
         if (isMounted) setData(payload.data);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 export interface NotificationItem {
   id: string;
@@ -35,7 +36,7 @@ export function useNotifications(page = 1, limit = 20) {
   const fetchNotifications = useCallback(async () => {
     try {
       const res = await fetch(`/api/admin/notifications?page=${page}&limit=${limit}`);
-      if (!res.ok) throw new Error("Failed to fetch notifications");
+      if (!res.ok) throw new Error(await handleApiError(res));
       const json = await res.json();
       setData(json);
       setError(null);
@@ -85,11 +86,13 @@ export function useNotifications(page = 1, limit = 20) {
   const markAsRead = useCallback(
     async (ids: string[]) => {
       try {
-        await fetch("/api/admin/notifications", {
+        const res = await fetch("/api/admin/notifications", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ids }),
         });
+        if (!res.ok) throw new Error(await handleApiError(res));
+
         mutate();
       } catch (err) {
         console.error("Failed to mark notifications as read", err);
@@ -100,11 +103,13 @@ export function useNotifications(page = 1, limit = 20) {
 
   const markAllRead = useCallback(async () => {
     try {
-      await fetch("/api/admin/notifications", {
+      const res = await fetch("/api/admin/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ markAllRead: true }),
       });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       mutate();
     } catch (err) {
       console.error("Failed to mark all notifications as read", err);
