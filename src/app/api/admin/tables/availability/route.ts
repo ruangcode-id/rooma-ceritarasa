@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-envelope";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { getSessionAvailability } from "@/features/tables/table.service";
 
 export async function GET(req: NextRequest) {
+  const authResult = await requireAdminApiSession();
+  if (!authResult.ok) return authResult.response;
+
   try {
     const { searchParams } = new URL(req.url);
 
@@ -10,13 +15,7 @@ export async function GET(req: NextRequest) {
 
     // Validasi input
     if (!sessionId || !date) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "sessionId and date are required",
-        },
-        { status: 400 }
-      );
+      return jsonError("sessionId and date are required", 400);
     }
 
     // Call service
@@ -33,16 +32,8 @@ export async function GET(req: NextRequest) {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("GET AVAILABILITY ERROR:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          error?.message || "Failed to get session availability",
-      },
-      { status: 500 }
-    );
+    return jsonError("Failed to get session availability", 500);
   }
 }
