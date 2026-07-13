@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { CheckCircle, XCircle, QrCode, Keyboard, ArrowRight } from "@phosphor-icons/react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 export default function AdminCheckInPage() {
   const [mode, setMode] = useState<"manual" | "scan">("manual");
@@ -32,9 +33,13 @@ export default function AdminCheckInPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "check_in", lookup: code.trim() }),
       });
+      if (!res.ok) {
+        throw new Error(await handleApiError(res));
+      }
+
       const data = await res.json();
 
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error ?? "Check-in failed. Code is invalid or already used.");
       }
 
