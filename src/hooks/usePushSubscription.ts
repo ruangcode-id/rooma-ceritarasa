@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 export function usePushSubscription() {
   const [isSupported, setIsSupported] = useState(false);
@@ -48,7 +49,7 @@ export function usePushSubscription() {
       // Fetch VAPID key
       const vapidRes = await fetch("/api/admin/notifications/vapid-public-key");
       if (!vapidRes.ok) {
-        throw new Error("Failed to fetch VAPID public key");
+        throw new Error(await handleApiError(vapidRes));
       }
       const vapidData = await vapidRes.json();
       if (!vapidData.success || !vapidData.data.publicKey) {
@@ -71,7 +72,7 @@ export function usePushSubscription() {
       });
 
       if (!subscriptionRes.ok) {
-        throw new Error("Failed to save push subscription on server");
+        throw new Error(await handleApiError(subscriptionRes));
       }
 
       setIsSubscribed(true);

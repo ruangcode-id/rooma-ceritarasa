@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jsonError } from "@/lib/api-envelope";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { tableRepository } from "@/infrastructure/repositories/table.repository";
 import { updateTableSchema } from "@/infrastructure/validations/table.validation";
 
@@ -8,12 +10,6 @@ async function parseJsonBody(req: NextRequest) {
   } catch {
     return null;
   }
-}
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  return "Terjadi kesalahan internal";
 }
 
 function isPrismaError(error: unknown, code: string) {
@@ -30,36 +26,29 @@ export async function PATCH(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAdminApiSession();
+  if (!authResult.ok) return authResult.response;
+
   try {
     const { id } = await context.params;
 
     const body = await parseJsonBody(req);
 
     if (!body) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Request body is required",
-        },
-        { status: 400 }
-      );
+      return jsonError("Request body is required", 400);
     }
 
     const validation = updateTableSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validation error",
-          errors: validation.error.flatten(),
-        },
-        { status: 400 }
-      );
+      return jsonError("Validation error", 400, {
+        errors: validation.error.flatten(),
+      });
     }
 
-    // Ensure we don't pass duplicate `id` property if present in validation.data
-    const { id: _maybeId, ...data } = validation.data as { [key: string]: any };
+    // Route params remain the source of truth; never forward a body ID to the repository.
+    const { id: bodyId, ...data } = validation.data;
+    void bodyId;
 
     const updatedTable = await tableRepository.update({
       id,
@@ -71,33 +60,14 @@ export async function PATCH(
     console.error("Error updating table:", error);
 
     if (isPrismaError(error, "P2025")) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Meja tidak ditemukan",
-        },
-        { status: 404 }
-      );
+      return jsonError("Meja tidak ditemukan", 404);
     }
 
     if (isPrismaError(error, "P2002")) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Nomor meja sudah digunakan",
-        },
-        { status: 409 }
-      );
+      return jsonError("Nomor meja sudah digunakan", 409);
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Gagal update meja",
-        detail: getErrorMessage(error),
-      },
-      { status: 500 }
-    );
+    return jsonError("Gagal update meja", 500);
   }
 }
 
@@ -106,6 +76,9 @@ export async function DELETE(
   _req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  const authResult = await requireAdminApiSession();
+  if (!authResult.ok) return authResult.response;
+
   try {
     const { id } = await context.params;
 
@@ -122,32 +95,16 @@ export async function DELETE(
     console.error("Error deleting table:", error);
 
     if (isPrismaError(error, "P2025")) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Meja tidak ditemukan",
-        },
-        { status: 404 }
-      );
+      return jsonError("Meja tidak ditemukan", 404);
     }
 
     if (isPrismaError(error, "P2003")) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Meja ini tidak dapat dihapus karena sudah terkait dengan reservasi tamu.",
-        },
-        { status: 400 }
+      return jsonError(
+        "Meja ini tidak dapat dihapus karena sudah terkait dengan reservasi tamu.",
+        400,
       );
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Gagal menghapus meja",
-        detail: getErrorMessage(error),
-      },
-      { status: 500 }
-    );
+    return jsonError("Gagal menghapus meja", 500);
   }
 }

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/FeedbackDialog";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SectionTitle } from "@/components/ui/SectionTitle";
+import { handleApiError } from "@/lib/handle-api-error";
 import {
   StatusBadge,
   type StatusBadgeOption,
@@ -188,14 +189,6 @@ function getPaymentMethodLabel(method: string | null) {
   return method.replaceAll("_", " ");
 }
 
-async function parseApiError(response: Response) {
-  const payload = (await response.json().catch(() => null)) as
-    | ApiErrorResponse
-    | null;
-
-  return payload?.error ?? "Request failed to process.";
-}
-
 async function requestPayments({
   page,
   limit,
@@ -222,7 +215,7 @@ async function requestPayments({
   });
 
   if (!response.ok) {
-    throw new Error(await parseApiError(response));
+    throw new Error(await handleApiError(response));
   }
 
   const payload = (await response.json()) as ApiListResponse | ApiErrorResponse;
@@ -352,7 +345,7 @@ export default function AdminPaymentsPage() {
       });
 
       if (!response.ok) {
-        throw new Error(await parseApiError(response));
+        throw new Error(await handleApiError(response));
       }
 
       const payload = (await response.json()) as
@@ -420,7 +413,7 @@ export default function AdminPaymentsPage() {
       );
 
       if (!response.ok) {
-        throw new Error(await parseApiError(response));
+        throw new Error(await handleApiError(response));
       }
 
       const payload = (await response.json()) as

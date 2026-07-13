@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { Plus, Image as ImageIcon, UploadSimple, X } from "@phosphor-icons/react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type GalleryImage = {
   id: string;
@@ -37,8 +38,10 @@ export default function AdminGalleryClient() {
     setError("");
     try {
       const res = await fetch("/api/admin/gallery", { cache: "no-store" });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Failed to load gallery");
+      if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load gallery");
       
       setImages(payload.data || []);
     } catch (err) {
@@ -82,8 +85,10 @@ export default function AdminGalleryClient() {
     
     try {
       const res = await fetch(`/api/admin/gallery/${deleteImagePrompt.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to delete photo");
+      if (!data.success) throw new Error(data.error || data.message || "Failed to delete photo");
       
       setImages(images.filter(i => i.id !== deleteImagePrompt.id));
       setDeleteImagePrompt(null);
@@ -164,9 +169,11 @@ export default function AdminGalleryClient() {
         res = await fetch("/api/admin/gallery", { method: "POST", body: formData });
       }
 
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || data.message || "Failed to save photo");
       }
       

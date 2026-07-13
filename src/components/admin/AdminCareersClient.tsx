@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, Briefcase, CalendarBlank, X, CheckCircle } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type CareerJob = {
   id: string;
@@ -36,8 +37,10 @@ export default function AdminCareersClient() {
     setError("");
     try {
       const res = await fetch("/api/admin/careers", { cache: "no-store" });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Failed to load jobs");
+      if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load jobs");
       
       setJobs(payload.data || []);
     } catch (err) {
@@ -81,8 +84,10 @@ export default function AdminCareersClient() {
     
     try {
       const res = await fetch(`/api/admin/careers/${deleteJobPrompt.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to close job posting");
+      if (!data.success) throw new Error(data.error || data.message || "Failed to close job posting");
       
       void loadJobs();
       setDeleteJobPrompt(null);
@@ -124,9 +129,11 @@ export default function AdminCareersClient() {
         });
       }
 
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || data.message || "Failed to save job posting");
       }
       

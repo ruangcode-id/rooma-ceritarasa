@@ -7,6 +7,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { format } from "date-fns";
 import { enUS as localeId } from "date-fns/locale";
 import VipAssignModal from "@/components/modals/VipAssignModal";
+import { handleApiError } from "@/lib/handle-api-error";
 
 export type VipCardData = {
   id: string;
@@ -50,9 +51,11 @@ export default function AdminVipClient() {
         const res = await fetch(`/api/admin/vip/guests?${params.toString()}`, {
           signal: controller.signal,
         });
+        if (!res.ok) throw new Error(await handleApiError(res));
+
         const payload = await res.json();
         
-        if (!res.ok || !payload.success) {
+        if (!payload.success) {
           throw new Error(payload.error || "Failed to fetch guest data");
         }
         
