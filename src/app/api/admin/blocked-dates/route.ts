@@ -41,8 +41,7 @@ export async function GET() {
     if (!authResult.ok) return authResult.response;
     const blockedDates = await BlockedDateUseCase.getBlockedDatesAction();
     return NextResponse.json({ success: true, data: blockedDates });
-  } catch (error: any) {
-
+  } catch {
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }

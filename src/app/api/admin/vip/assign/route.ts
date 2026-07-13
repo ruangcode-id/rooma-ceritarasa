@@ -91,8 +91,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (error: unknown) {
     console.error("[VIP ASSIGN ERROR]", error);
-    const message = error instanceof Error ? error.message : "Internal Error";
-
     return NextResponse.json({ success: false, error: "Gagal mendaftarkan VIP. Coba lagi." }, { status: 500 });
   }
 }

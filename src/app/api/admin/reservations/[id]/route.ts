@@ -34,9 +34,7 @@ export async function GET(
     }
 
     return NextResponse.json({ success: true, data: reservation });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "";
-
+  } catch {
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -88,7 +86,7 @@ export async function PATCH(
     let json: unknown;
     try {
       json = await req.json();
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { success: false, error: "Payload request tidak valid atau kosong." },
         { status: 400 }

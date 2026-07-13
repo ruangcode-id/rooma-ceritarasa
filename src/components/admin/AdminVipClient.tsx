@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MagnifyingGlass, Crown, CheckCircle } from "@phosphor-icons/react";
+import { MagnifyingGlass, Crown } from "@phosphor-icons/react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { format } from "date-fns";

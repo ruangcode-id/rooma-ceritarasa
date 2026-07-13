@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { CheckCircle, WarningCircle, Books, ChatTeardropText, Browser, Spinner } from "@phosphor-icons/react";
+import { CheckCircle, WarningCircle, Books, Browser, Spinner } from "@phosphor-icons/react";
 import type { UpdateRestaurantSettingsInput } from "@/validations/settings.validation";
 import { handleApiError } from "@/lib/handle-api-error";
 

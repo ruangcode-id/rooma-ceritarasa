@@ -25,8 +25,7 @@ export async function GET(req: NextRequest) {
       data: result.users,
       meta: buildPaginationMeta(result.total, page, limit),
     });
-  } catch (error: any) {
-
+  } catch {
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }

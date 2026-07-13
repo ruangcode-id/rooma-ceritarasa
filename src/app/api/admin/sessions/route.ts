@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     let body: any;
     try {
       body = await req.json();
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { success: false, error: "Payload request tidak valid atau kosong." },
         { status: 400 }

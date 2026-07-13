@@ -270,7 +270,7 @@ export default function AdminCareersClient() {
         <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
           <Briefcase size={48} className="mx-auto text-slate-300 mb-4" weight="light" />
           <h3 className="text-lg font-bold text-slate-900 mb-2">No Job Openings Yet</h3>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto">You haven't created any job openings yet. Click Open a Job to start recruiting.</p>
+          <p className="text-slate-500 text-sm max-w-sm mx-auto">You haven&apos;t created any job openings yet. Click Open a Job to start recruiting.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -323,7 +323,7 @@ export default function AdminCareersClient() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">Close Job Opening?</h3>
               <p className="text-sm text-slate-500">
-                The job <strong>"{deleteJobPrompt.title}"</strong> will be closed and will no longer appear on the public careers page.
+                The job <strong>&quot;{deleteJobPrompt.title}&quot;</strong> will be closed and will no longer appear on the public careers page.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">

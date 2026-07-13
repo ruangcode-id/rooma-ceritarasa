@@ -1,7 +1,6 @@
 import { Suspense } from 'react';
 import HeroSection from '@/components/layout/HeroSection';
 import Gallery from '@/components/ui/Gallery';
-import Footer from '@/components/layout/Footer';
 
 export default function PublicPage() {
   return (
