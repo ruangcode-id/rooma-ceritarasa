@@ -14,7 +14,31 @@ type SessionData = {
   dayOfWeek: number[];
 };
 
+type SessionsResponse = {
+  success: boolean;
+  data?: SessionData[];
+  error?: string;
+  message?: string;
+};
+
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+async function fetchSessions(signal?: AbortSignal): Promise<SessionData[]> {
+  const res = await fetch("/api/admin/sessions", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload: SessionsResponse = await res.json();
+  if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load sessions");
+
+  return (payload.data ?? []).map((session) => ({
+    ...session,
+    startTime: typeof session.startTime === "string" ? session.startTime.substring(11, 16) : session.startTime,
+    endTime: typeof session.endTime === "string" ? session.endTime.substring(11, 16) : session.endTime,
+  }));
+}
 
 export default function AdminSessionsClient() {
   const [sessions, setSessions] = useState<SessionData[]>([]);
@@ -38,20 +62,7 @@ export default function AdminSessionsClient() {
     setIsLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/sessions", { cache: "no-store" });
-      if (!res.ok) {
-        const errorMsg = await handleApiError(res);
-        throw new Error(errorMsg);
-      }
-      const payload = await res.json();
-      if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load sessions");
-      
-      const sessions = (payload.data || []).map((session: any) => ({
-        ...session,
-        startTime: typeof session.startTime === "string" ? session.startTime.substring(11, 16) : session.startTime,
-        endTime: typeof session.endTime === "string" ? session.endTime.substring(11, 16) : session.endTime,
-      }));
-      setSessions(sessions);
+      setSessions(await fetchSessions());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -60,7 +71,22 @@ export default function AdminSessionsClient() {
   }
 
   useEffect(() => {
-    void loadSessions();
+    const controller = new AbortController();
+
+    void fetchSessions(controller.signal)
+      .then((loadedSessions) => {
+        if (!controller.signal.aborted) setSessions(loadedSessions);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
   }, []);
 
   const resetForm = () => {

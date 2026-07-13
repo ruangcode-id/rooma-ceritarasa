@@ -12,9 +12,8 @@ export async function DELETE(
     const { id } = await params;
     const result = await BlockedDateUseCase.deleteBlockedDateAction(id);
     return NextResponse.json({ success: true, message: result.message });
-  } catch (error: any) {
-
-    if (error?.message === "Blocked date not found") {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "Blocked date not found") {
       return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });

@@ -5,21 +5,33 @@ import {
   BulkUpdatePositionInput 
 } from "../validations/table.validation";
 import { TableEntity } from "@/domain/table/types";
+import { Prisma } from "@/generated/prisma/client";
 
-function formatTableResponse(table: any): TableEntity {
+type TableWithReservations = Prisma.TableGetPayload<{
+  include: {
+    reservationTables: {
+      include: { reservation: true };
+    };
+  };
+}>;
+
+function formatTableResponse(table: TableWithReservations): TableEntity {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const currentReservation = table.reservationTables?.length > 0
     ? table.reservationTables
-        .map((rt: any) => rt.reservation)
-        .filter((r: any) => r && r.date >= today && (r.status === "confirmed" || r.status === "checked_in"))
-        .map((r: any) => ({
-          id: r.id,
-          date: r.date.toISOString().split('T')[0],
-          status: r.status,
-          sessionId: r.sessionId,
-          partySize: r.partySize,
+        .map((reservationTable) => reservationTable.reservation)
+        .filter((reservation) =>
+          reservation.date >= today &&
+          (reservation.status === "confirmed" || reservation.status === "checked_in")
+        )
+        .map((reservation) => ({
+          id: reservation.id,
+          date: reservation.date.toISOString().split('T')[0],
+          status: reservation.status,
+          sessionId: reservation.sessionId,
+          partySize: reservation.partySize,
         }))[0] || null
     : null;
 

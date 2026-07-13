@@ -1,18 +1,39 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import {
   InstagramLogo,
   WhatsappLogo,
   MapPin,
   Phone,
+  type Icon,
 } from '@phosphor-icons/react';
+import type { RestaurantSettingEntity } from '@/domain/settings/types';
 
 const LOGO_H = 'h-24 md:h-28';
 
 // Removed hardcoded SESSIONS and SOCIAL_LINKS
 
-function SocialLink({ href, label, Icon }: { href: string; label: string; Icon: any }) {
+type SocialLinkProps = {
+  href: string;
+  label: string;
+  Icon: Icon;
+};
+
+type FooterSession = {
+  id: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+};
+
+type FooterProps = {
+  settings?: RestaurantSettingEntity;
+  sessions?: FooterSession[];
+};
+
+function SocialLink({ href, label, Icon }: SocialLinkProps) {
   return (
     <a
       href={href}
@@ -33,9 +54,9 @@ function SocialLink({ href, label, Icon }: { href: string; label: string; Icon: 
   );
 }
 
-export default function Footer({ settings, sessions }: { settings?: any; sessions?: any[] }) {
+export default function Footer({ settings, sessions }: FooterProps) {
   // Construct dynamic social links based on settings
-  const dynamicSocialLinks = [];
+  const dynamicSocialLinks: SocialLinkProps[] = [];
   if (settings?.socialLinks?.instagram) {
     dynamicSocialLinks.push({ href: settings.socialLinks.instagram, label: 'Instagram', Icon: InstagramLogo });
   }
@@ -53,9 +74,12 @@ export default function Footer({ settings, sessions }: { settings?: any; session
 
         {/* ── Brand ── */}
         <div>
-          <img
+          <Image
             src="/assets/logo_no_background.png"
             alt="Rooma Ceritarasa"
+            width={1241}
+            height={1241}
+            sizes="(max-width: 767px) 6rem, 7rem"
             className={`${LOGO_H} w-auto object-contain mb-4 drop-shadow-sm`}
           />
           <p className="text-gray-600 font-light leading-relaxed space-y-1 whitespace-pre-line">

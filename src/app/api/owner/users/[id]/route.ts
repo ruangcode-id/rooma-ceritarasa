@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOwnerApiSession } from "@/lib/require-owner-api";
 import { UserUseCase } from "@/application/use-cases/users/user.usecase";
+import { jsonValidationError } from "@/lib/api-envelope";
+import { ZodError } from "zod";
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export async function GET(
   req: NextRequest,
@@ -12,9 +18,8 @@ export async function GET(
     const { id } = await params;
     const user = await UserUseCase.getUserByIdAction(id);
     return NextResponse.json({ success: true, data: user });
-  } catch (error: any) {
-
-    if (error.message === "User not found") {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === "User not found") {
       return NextResponse.json({ success: false, error: error.message }, { status: 404 });
     }
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
@@ -33,12 +38,14 @@ export async function PATCH(
     const updatedUser = await UserUseCase.updateUserAction(id, body);
 
     return NextResponse.json({ success: true, data: updatedUser });
-  } catch (error: any) {
-
-    if (error.name === "ZodError") {
-      return NextResponse.json({ success: false, error: error.issues[0]?.message || "Validation Error", details: error.issues }, { status: 400 });
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return jsonValidationError(error);
     }
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return NextResponse.json(
+      { success: false, error: getErrorMessage(error, "Failed to update user") },
+      { status: 400 },
+    );
   }
 }
 
@@ -53,9 +60,11 @@ export async function DELETE(
     await UserUseCase.deleteUserAction(id);
 
     return NextResponse.json({ success: true, message: "User deactivated successfully" });
-  } catch (error: any) {
-
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { success: false, error: getErrorMessage(error, "Failed to deactivate user") },
+      { status: 400 },
+    );
   }
 }
 

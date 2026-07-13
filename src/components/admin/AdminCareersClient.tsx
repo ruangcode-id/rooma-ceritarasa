@@ -16,6 +16,19 @@ type CareerJob = {
   createdAt: string;
 };
 
+async function fetchJobs(signal?: AbortSignal): Promise<CareerJob[]> {
+  const res = await fetch("/api/admin/careers", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload = await res.json();
+  if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load jobs");
+
+  return payload.data || [];
+}
+
 export default function AdminCareersClient() {
   const [jobs, setJobs] = useState<CareerJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,13 +49,7 @@ export default function AdminCareersClient() {
     setIsLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/careers", { cache: "no-store" });
-      if (!res.ok) throw new Error(await handleApiError(res));
-
-      const payload = await res.json();
-      if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load jobs");
-      
-      setJobs(payload.data || []);
+      setJobs(await fetchJobs());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -51,7 +58,22 @@ export default function AdminCareersClient() {
   }
 
   useEffect(() => {
-    void loadJobs();
+    const controller = new AbortController();
+
+    void fetchJobs(controller.signal)
+      .then((loadedJobs) => {
+        if (!controller.signal.aborted) setJobs(loadedJobs);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
   }, []);
 
   const resetForm = () => {

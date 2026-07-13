@@ -25,6 +25,11 @@ interface Table {
   isAvailable: boolean;
 }
 
+type BlockedDatesResponse = {
+  success: boolean;
+  data?: string[];
+};
+
 const HERO_IMAGES = [
   "/assets/slider1.webp",
   "/assets/slider2.webp",
@@ -132,12 +137,11 @@ export default function ReservationWizard({
         const month = currentMonth.getMonth() + 1;
         const year = currentMonth.getFullYear();
         const res = await fetch(`/api/public/blocked-dates?month=${month}&year=${year}`);
-        const data = await res.json();
+        const data: BlockedDatesResponse = await res.json();
         
         if (data.success) {
           const blocked = new Set<string>();
-          data.data.forEach((b: any) => {
-            const dateStr = typeof b === "string" ? b : b.date;
+          (data.data ?? []).forEach((dateStr) => {
             blocked.add(dateStr.split("T")[0]);
           });
           setBlockedDates(blocked);

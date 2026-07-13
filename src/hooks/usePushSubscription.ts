@@ -1,28 +1,55 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { handleApiError } from "@/lib/handle-api-error";
 
+const subscribeToPushSupport = () => () => {};
+
+function getPushSupportSnapshot() {
+  return "serviceWorker" in navigator && "PushManager" in window;
+}
+
+function getServerPushSupportSnapshot() {
+  return false;
+}
+
+async function getCurrentPushSubscription() {
+  const registration = await navigator.serviceWorker.getRegistration();
+  return registration?.pushManager.getSubscription() ?? null;
+}
+
 export function usePushSubscription() {
-  const [isSupported, setIsSupported] = useState(false);
+  const isSupported = useSyncExternalStore(
+    subscribeToPushSupport,
+    getPushSupportSnapshot,
+    getServerPushSupportSnapshot
+  );
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
-      setIsSupported(true);
-      checkSubscription();
-    }
-  }, []);
+    if (!isSupported) return;
+
+    let ignore = false;
+
+    void getCurrentPushSubscription()
+      .then((subscription) => {
+        if (!ignore) setIsSubscribed(!!subscription);
+      })
+      .catch((err: unknown) => {
+        if (!ignore) console.error("Error checking push subscription:", err);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [isSupported]);
 
   async function checkSubscription() {
     try {
-      const registration = await navigator.serviceWorker.getRegistration();
-      if (registration) {
-        const subscription = await registration.pushManager.getSubscription();
-        setIsSubscribed(!!subscription);
-      }
+      const subscription = await getCurrentPushSubscription();
+      setIsSubscribed(!!subscription);
     } catch (err) {
       console.error("Error checking push subscription:", err);
     }
