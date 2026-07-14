@@ -198,21 +198,21 @@ function NavbarContent({ isHome }: { isHome: boolean }) {
           </button>
         </div>
 
-        <div className="flex h-[calc(100vh-80px)] flex-col items-center justify-center space-y-8 font-sans text-2xl font-light tracking-widest">
+        <div className="flex h-[calc(100vh-80px)] flex-col items-center justify-center space-y-8 font-sans text-xl font-light tracking-widest">
           <Link href="/" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
-            home
+            Home
           </Link>
           <Link href="/reservasi" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
-            reservation
+            Reservation
           </Link>
           <Link href="/gallery" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
-            gallery
+            Gallery
           </Link>
           <Link href="/event" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
-            events
+            Events
           </Link>
           <Link href="/career" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
-            careers
+            Careers
           </Link>
         </div>
       </div>

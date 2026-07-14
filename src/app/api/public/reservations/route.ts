@@ -2,9 +2,35 @@ import "@/infrastructure/notifications/init";
 import { NextRequest, NextResponse } from "next/server";
 import { createPublicReservation } from "@/features/reservations/reservation.service";
 import { publicReservationSchema } from "@/validations/reservation.validation";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  uniqueTokenPerInterval: 500,
+  interval: 3600000, // 1 hour
+});
 
 export async function POST(req: NextRequest) {
   try {
+    // A4: Rate Limiting
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+    try {
+      await limiter.check(3, ip);
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Terlalu banyak permintaan (Rate limit exceeded). Silakan coba lagi nanti." },
+        { status: 429, headers: { "Retry-After": "3600" } }
+      );
+    }
+
+    // A5: Payload Size Limit (50KB)
+    const contentLength = req.headers.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > 50000) {
+      return NextResponse.json(
+        { success: false, error: "Ukuran data terlalu besar (Payload Too Large)." },
+        { status: 413 }
+      );
+    }
+
     const body = await req.json().catch(() => null);
 
     const parsed = publicReservationSchema.safeParse(body);
