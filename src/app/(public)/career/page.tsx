@@ -1,7 +1,6 @@
 import { listPublicCareerJobs } from "@/features/careers/career.service";
 import { format } from "date-fns";
 import Link from "next/link";
-import Image from "next/image";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

@@ -605,7 +605,7 @@ export default function ReservationWizard({
               Please select your preferred date and time to see available tables.
             </p>
             <p className="text-sm text-slate-500 max-w-lg mx-auto">
-              If you need any assistance with your reservation, please don't hesitate to <a href="https://wa.me/6285725539262" target="_blank" rel="noopener noreferrer" className="text-[#1f0609] font-medium underline underline-offset-2 hover:text-[#3a0d13] transition-colors">reach out to our dedicated reservations team</a>.
+              If you need any assistance with your reservation, please don&apos;t hesitate to <a href="https://wa.me/6285725539262" target="_blank" rel="noopener noreferrer" className="text-[#1f0609] font-medium underline underline-offset-2 hover:text-[#3a0d13] transition-colors">reach out to our dedicated reservations team</a>.
             </p>
           </div>
         ) : (
