@@ -252,20 +252,18 @@
                 </tr>
                 <tr>
                     <td>A4 — Rate limiting reservasi publik</td>
-                    <td class="status-pending">Belum</td>
-                    <td>Tidak ada rate limiter atau respons 429 backend pada endpoint reservasi publik.</td>
+                    <td class="status-done">Selesai</td>
+                    <td>In-memory rate limiter via <code>lru-cache</code>: maks 3 req/jam per IP. Mengembalikan 429 + header <code>Retry-After</code>. Test otomatis lulus. Branch: <code>feature/security-a4-a5</code>.</td>
                 </tr>
                 <tr>
                     <td>A5 — Batas ukuran payload</td>
-                    <td class="status-pending">Belum</td>
-                    <td>Request langsung menjalankan <code>req.json()</code> tanpa pemeriksaan ukuran dan tanpa respons
-                        413 backend.</td>
+                    <td class="status-done">Selesai</td>
+                    <td>Cek <code>Content-Length</code> sebelum <code>req.json()</code>. Payload &gt; 50KB langsung ditolak dengan 413. Test otomatis lulus. Branch: <code>feature/security-a4-a5</code>.</td>
                 </tr>
                 <tr>
                     <td>B1 — Sanitasi <code>.env.example</code></td>
-                    <td class="status-partial">Selesai sebagian besar</td>
-                    <td><code>.env.example</code> sudah memakai placeholder, tetapi masih ada password database spesifik
-                        pada Docker Compose.</td>
+                    <td class="status-done">Selesai</td>
+                    <td>Password hardcoded Docker Compose diganti <code>${POSTGRES_PASSWORD}</code>. <code>.env.example</code> sudah memuat semua variabel VPS termasuk <code>POSTGRES_PASSWORD</code> dan <code>NEXT_PUBLIC_APP_URL</code>.</td>
                 </tr>
                 <tr>
                     <td>B2 — UI error 401/403/413/429</td>
@@ -281,13 +279,7 @@
             </tbody>
         </table>
 
-        <p>Dua pekerjaan audit utama yang benar-benar belum diimplementasikan berada di route reservasi publik:</p>
-        <ol>
-            <li><strong>A4 — rate limiting</strong></li>
-            <li><strong>A5 — payload size limit</strong></li>
-        </ol>
-        <p>Dokumen <code>security-smoke-test.md</code> juga sudah mencatat bahwa B3 belum dapat dianggap lulus penuh
-            sebelum A4 dan A5 selesai.</p>
+        <p>Seluruh celah keamanan kode (A1–A5, B1–B2) telah selesai diimplementasikan. Test otomatis berjalan <strong>18/18 lulus</strong>. Sisa pekerjaan adalah konfigurasi infrastruktur VPS dan pengujian staging end-to-end.</p>
 
         <h2>2. Pekerjaan Security Wajib Sebelum VPS Dibuka</h2>
 
@@ -468,7 +460,7 @@ coverage</code></pre>
         <p>Repository belum mempunyai runbook production VPS yang lengkap. Yang masih perlu dibuat:</p>
         <ul style="column-count: 2;">
             <li>Production Docker Compose untuk aplikasi + database/Redis.</li>
-            <li><code>.dockerignore</code>.</li>
+            <li><del><code>.dockerignore</code>.</del> (Selesai)</li>
             <li>Environment validation saat aplikasi startup.</li>
             <li>Langkah <code>npx prisma migrate deploy</code>.</li>
             <li>Prosedur seed dan pembuatan akun owner pertama.</li>
@@ -503,18 +495,18 @@ coverage</code></pre>
 
         <h3>Tahap 1: Wajib sebelum staging</h3>
         <ol>
-            <li>Implementasikan A4 rate limiting.</li>
-            <li>Implementasikan A5 payload limit.</li>
+            <li><del>Implementasikan A4 rate limiting.</del> (Selesai ✅ — 3 req/jam per IP, 18/18 test lulus)</li>
+            <li><del>Implementasikan A5 payload limit.</del> (Selesai ✅ — 50KB max, HTTP 413)</li>
             <li><del>Perbaiki seed alamat No.2 menjadi No.4.</del> (Selesai)</li>
             <li><del>Selesaikan bantuan WhatsApp dan tombol Pax.</del> (Selesai)</li>
             <li>Putuskan apakah menu Sessions tetap tersedia.</li>
-            <li>Tambahkan test 413 dan 429 backend.</li>
+            <li><del>Tambahkan test 413 dan 429 backend.</del> (Selesai ✅)</li>
         </ol>
 
         <h3>Tahap 2: Wajib sebelum deployment VPS</h3>
         <ol>
-            <li>Buat <code>.dockerignore</code>.</li>
-            <li>Hilangkan password hardcoded Docker Compose.</li>
+            <li><del>Buat <code>.dockerignore</code>.</del> (Selesai)</li>
+            <li><del>Hilangkan password hardcoded Docker Compose.</del> (Selesai)</li>
             <li>Rotasi credential database yang lama.</li>
             <li>Perbaiki Dockerfile Prisma/postinstall.</li>
             <li>Buat Compose production dengan app, database, dan Redis bila digunakan.</li>
