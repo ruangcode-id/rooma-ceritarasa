@@ -18,6 +18,9 @@ export type CloudinaryUploadResult = UploadApiResponse & {
 };
 
 function getEnvVar(key: string) {
+  if (key === "CLOUDINARY_API_SECRET") {
+    return process.env[key];
+  }
   return process.env[key] || process.env[`NEXT_PUBLIC_${key}`];
 }
 
