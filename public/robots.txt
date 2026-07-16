@@ -1,0 +1,18 @@
+User-agent: *
+# Izinkan halaman publik
+Allow: /$
+Allow: /reservasi
+Allow: /event
+Allow: /gallery
+Allow: /career
+Allow: /vip/
+Allow: /cancel
+
+# Blokir halaman internal & admin dari crawler
+Disallow: /admin/
+Disallow: /owner/
+Disallow: /login
+Disallow: /unauthorized
+Disallow: /api/
+
+Sitemap: https://your-production-domain.com/sitemap.xml

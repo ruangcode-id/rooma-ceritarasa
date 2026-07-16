@@ -245,9 +245,8 @@ export async function POST(req: NextRequest) {
 
     return jsonSuccess(result);
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Internal Server Error";
-
-    return jsonError(message, 500);
+    // Log internal error server-side — jangan ekspos detail ke caller
+    console.error("[midtrans-webhook] unhandled error:", error);
+    return jsonError("Internal Server Error", 500);
   }
 }
