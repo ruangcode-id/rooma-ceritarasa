@@ -95,6 +95,7 @@ function NavbarContent({ isHome }: { isHome: boolean }) {
                       className="object-contain"
                       style={{ width: "auto", height: "auto" }}
                       priority
+                      fetchPriority="high"
                     />
                   </Link>
                 </div>
@@ -126,6 +127,7 @@ function NavbarContent({ isHome }: { isHome: boolean }) {
                       className="object-contain"
                       style={{ width: "auto", height: "auto" }}
                       priority
+                      fetchPriority="high"
                     />
                   </Link>
                 </div>
