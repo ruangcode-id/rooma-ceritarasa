@@ -6,6 +6,10 @@
 node_modules
 npm-debug.log*
 coverage
-README.md
+*.md
+*.html
+.vscode/
+.agents/
 docs/
 tests/
+docker-compose*.yml
