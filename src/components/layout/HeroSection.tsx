@@ -27,25 +27,25 @@ export default function HeroSection() {
       />
       
       <div className="absolute inset-0 z-10 grid place-items-center px-6 text-center bg-linear-to-t from-black/60 via-black/10 to-black/30">
-        <Link
-          href="/reservasi"
-          className="
-            group inline-flex items-center justify-center rounded-full 
-            px-8 py-3 text-base md:px-10 md:py-4 md:text-xl 
-            text-white font-light tracking-wide
-            bg-white/15 hover:bg-white/25 
-            backdrop-blur-md 
-            border border-white/30 hover:border-white/50 
-            shadow-lg hover:shadow-2xl hover:shadow-white/10 
-            transition-all duration-300 ease-out 
-            hover:scale-105 
-            transform translate-y-20 md:translate-y-32 
-            animate-fade-in-up
-          "
-        >
-          Make a reservation
-          <ArrowIcon />
-        </Link>
+        <div className="animate-fade-in-up pt-20 md:pt-32">
+          <Link
+            href="/reservasi"
+            className="
+              group inline-flex items-center justify-center rounded-full 
+              px-8 py-3 text-base md:px-10 md:py-4 md:text-xl 
+              text-white font-light tracking-wide
+              bg-white/15 hover:bg-white/25 
+              backdrop-blur-md 
+              border border-white/30 hover:border-white/50 
+              shadow-lg hover:shadow-2xl hover:shadow-white/10 
+              transition-all duration-300 ease-out 
+              hover:scale-105 
+            "
+          >
+            Make a reservation
+            <ArrowIcon />
+          </Link>
+        </div>
       </div>
     </div>
   );
