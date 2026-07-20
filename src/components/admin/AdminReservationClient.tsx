@@ -24,6 +24,7 @@ import {
   StatusBadge,
   type StatusBadgeOption,
 } from "@/components/ui/StatusBadge";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type ReservationStatus =
   | "pending"
@@ -123,9 +124,13 @@ async function requestReservations({
       signal,
     }
   );
-  const payload = await response.json();
+  if (!response.ok) {
+    const errorMsg = await handleApiError(response);
+    throw new Error(errorMsg);
+  }
 
-  if (!response.ok || !payload.success) {
+  const payload = await response.json();
+  if (!payload.success) {
     throw new Error(payload.error ?? "Failed to fetch reservation data.");
   }
 
@@ -226,9 +231,13 @@ export default function AdminReservationClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
-      const payload = await response.json();
+      if (!response.ok) {
+        const errorMsg = await handleApiError(response);
+        throw new Error(errorMsg);
+      }
 
-      if (!response.ok || !payload.success) {
+      const payload = await response.json();
+      if (!payload.success) {
         throw new Error(payload.error ?? "Failed to update status.");
       }
 

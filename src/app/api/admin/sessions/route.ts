@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SessionUseCase } from "@/application/use-cases/sessions/session.usecase";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 
 export async function GET(req: NextRequest) {
   try {
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
     const { searchParams } = new URL(req.url);
 
     const page = parseInt(searchParams.get("page") ?? "1", 10);
@@ -39,12 +42,6 @@ export async function GET(req: NextRequest) {
 
     const message = error instanceof Error ? error.message : "Internal Server Error";
 
-    if (message === "Unauthorized" || message === "Forbidden") {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 401 }
-      );
-    }
 
     return NextResponse.json(
       { success: false, error: message },
@@ -55,10 +52,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    let body: any;
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
+    let body: unknown;
     try {
       body = await req.json();
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { success: false, error: "Payload request tidak valid atau kosong." },
         { status: 400 }
@@ -76,12 +75,6 @@ export async function POST(req: NextRequest) {
 
     const message = error instanceof Error ? error.message : "Internal Server Error";
 
-    if (message === "Unauthorized" || message === "Forbidden") {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 401 }
-      );
-    }
 
     if (message.includes("Start time must be before end time")) {
       return NextResponse.json(

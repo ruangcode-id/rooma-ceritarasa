@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { X, Crown, ShieldCheck, DownloadSimple } from "@phosphor-icons/react";
+import { X, Crown, ShieldCheck } from "@phosphor-icons/react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import Image from "next/image";
 import type { GuestRow } from "@/components/admin/AdminVipClient";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type VipAssignModalProps = {
   guest: GuestRow;
@@ -32,9 +33,10 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ guestId: guest.id, benefits }),
       });
+      if (!res.ok) throw new Error(await handleApiError(res));
 
       const payload = await res.json();
-      if (!res.ok || !payload.success) {
+      if (!payload.success) {
         throw new Error(payload.error || "Failed to register VIP");
       }
 

@@ -1,37 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
+import { jsonError } from "@/lib/api-envelope";
 import { tableRepository } from "@/infrastructure/repositories/table.repository";
 import {
   createTableSchema,
   bulkUpdatePositionSchema,
 } from "@/infrastructure/validations/table.validation";
-
-async function requireAdminOrOwner() {
-  try {
-    await requireRole(["admin", "owner"]);
-    return null;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-
-    if (message.toLowerCase().includes("unauthorized")) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized",
-        },
-        { status: 401 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: "Forbidden",
-      },
-      { status: 403 }
-    );
-  }
-}
 
 async function parseJsonBody(req: NextRequest) {
   try {
@@ -39,12 +13,6 @@ async function parseJsonBody(req: NextRequest) {
   } catch {
     return null;
   }
-}
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  return "Terjadi kesalahan internal";
 }
 
 function isPrismaError(error: unknown, code: string) {
@@ -58,8 +26,8 @@ function isPrismaError(error: unknown, code: string) {
 
 // GET: List all tables
 export async function GET() {
-  const guardResponse = await requireAdminOrOwner();
-  if (guardResponse) return guardResponse;
+  const authResult = await requireAdminApiSession();
+  if (!authResult.ok) return authResult.response;
 
   try {
     const tables = await tableRepository.getAll();
@@ -74,46 +42,28 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching tables:", error);
 
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Gagal mengambil data meja",
-        detail: getErrorMessage(error),
-      },
-      { status: 500 }
-    );
+    return jsonError("Gagal mengambil data meja", 500);
   }
 }
 
 // POST: Create new table
 export async function POST(req: NextRequest) {
-  const guardResponse = await requireAdminOrOwner();
-  if (guardResponse) return guardResponse;
+  const authResult = await requireAdminApiSession();
+  if (!authResult.ok) return authResult.response;
 
   try {
     const body = await parseJsonBody(req);
 
     if (!body) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Request body is required",
-        },
-        { status: 400 }
-      );
+      return jsonError("Request body is required", 400);
     }
 
     const validation = createTableSchema.safeParse(body);
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validation error",
-          errors: validation.error.flatten(),
-        },
-        { status: 400 }
-      );
+      return jsonError("Validation error", 400, {
+        errors: validation.error.flatten(),
+      });
     }
 
     const newTable = await tableRepository.create(validation.data);
@@ -129,68 +79,40 @@ export async function POST(req: NextRequest) {
     console.error("Error creating table:", error);
 
     if (isPrismaError(error, "P2002")) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Nomor meja sudah digunakan",
-        },
-        { status: 409 }
-      );
+      return jsonError("Nomor meja sudah digunakan", 409);
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Gagal membuat meja baru",
-        detail: getErrorMessage(error),
-      },
-      { status: 500 }
-    );
+    return jsonError("Gagal membuat meja baru", 500);
   }
 }
 
 // PATCH: Bulk update positions
 export async function PATCH(req: NextRequest) {
-  const guardResponse = await requireAdminOrOwner();
-  if (guardResponse) return guardResponse;
+  const authResult = await requireAdminApiSession();
+  if (!authResult.ok) return authResult.response;
 
   try {
     const body = await parseJsonBody(req);
 
     if (!body) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Request body is required",
-        },
-        { status: 400 }
-      );
+      return jsonError("Request body is required", 400);
     }
 
     const payload = Array.isArray(body) ? { updates: body } : body;
 
     if (!payload.updates || !Array.isArray(payload.updates)) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Format bulk update salah. Gunakan array [{ id, posX, posY }] atau { updates: [...] }",
-        },
-        { status: 400 }
+      return jsonError(
+        "Format bulk update salah. Gunakan array [{ id, posX, posY }] atau { updates: [...] }",
+        400,
       );
     }
 
     const validation = bulkUpdatePositionSchema.safeParse(payload);
 
     if (!validation.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validation error",
-          errors: validation.error.flatten(),
-        },
-        { status: 400 }
-      );
+      return jsonError("Validation error", 400, {
+        errors: validation.error.flatten(),
+      });
     }
 
     await tableRepository.bulkUpdatePosition(validation.data);
@@ -205,13 +127,6 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     console.error("Error bulk updating tables:", error);
 
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Gagal update posisi meja",
-        detail: getErrorMessage(error),
-      },
-      { status: 500 }
-    );
+    return jsonError("Gagal update posisi meja", 500);
   }
 }

@@ -1,7 +1,15 @@
 import { UserRepository } from "@/infrastructure/repositories/user.repository";
 import { createUserSchema, updateUserSchema } from "@/validations/user.validation";
 import { requireRole } from "@/lib/auth";
+import { Prisma } from "@/generated/prisma/client";
 import bcrypt from "bcryptjs";
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
 
 export const UserUseCase = {
   /**
@@ -48,8 +56,8 @@ export const UserUseCase = {
         role: parsedData.role,
       });
       return newUser;
-    } catch (error: any) {
-      if (error.code === "P2002") {
+    } catch (error: unknown) {
+      if (isUniqueConstraintError(error)) {
         throw new Error("Email is already registered");
       }
       throw error;
@@ -65,17 +73,17 @@ export const UserUseCase = {
 
     const parsedData = updateUserSchema.parse(data);
 
-    const updatePayload: any = { ...parsedData };
-
-    if (parsedData.password) {
-      updatePayload.password = await bcrypt.hash(parsedData.password, 12);
-    }
+    const { password, ...otherFields } = parsedData;
+    const updatePayload: Prisma.UserUpdateInput = {
+      ...otherFields,
+      ...(password ? { password: await bcrypt.hash(password, 12) } : {}),
+    };
 
     try {
       const updatedUser = await UserRepository.updateUser(id, updatePayload);
       return updatedUser;
-    } catch (error: any) {
-      if (error.code === "P2002") {
+    } catch (error: unknown) {
+      if (isUniqueConstraintError(error)) {
         throw new Error("Email is already registered");
       }
       throw error;

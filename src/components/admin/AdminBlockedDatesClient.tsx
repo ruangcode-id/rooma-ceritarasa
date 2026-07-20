@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, isBefore, startOfDay, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isToday, addMonths, subMonths, isBefore, startOfDay, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { CaretLeft, CaretRight, Prohibit, CalendarX } from "@phosphor-icons/react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type BlockedDate = {
   id: string;
@@ -12,10 +13,22 @@ type BlockedDate = {
   createdBy: string;
 };
 
+async function fetchBlockedDates(signal?: AbortSignal): Promise<BlockedDate[]> {
+  const res = await fetch("/api/admin/blocked-dates", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload = await res.json();
+  if (!payload.success) throw new Error(payload.error || "Failed to load blocked dates");
+
+  return payload.data || [];
+}
+
 export default function AdminBlockedDatesClient() {
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(new Date()));
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -27,23 +40,28 @@ export default function AdminBlockedDatesClient() {
   const [unblockDialog, setUnblockDialog] = useState<BlockedDate | null>(null);
 
   async function loadBlockedDates() {
-    setIsLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/blocked-dates", { cache: "no-store" });
-      const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || "Failed to load blocked dates");
-      
-      setBlockedDates(payload.data || []);
+      setBlockedDates(await fetchBlockedDates());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsLoading(false);
     }
   }
 
   useEffect(() => {
-    void loadBlockedDates();
+    const controller = new AbortController();
+
+    void fetchBlockedDates(controller.signal)
+      .then((dates) => {
+        if (!controller.signal.aborted) setBlockedDates(dates);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   const handleToggleBlock = (date: Date) => {
@@ -83,9 +101,11 @@ export default function AdminBlockedDatesClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || "Failed to block date. Make sure there are no active reservations.");
       }
       
@@ -107,9 +127,11 @@ export default function AdminBlockedDatesClient() {
       const res = await fetch(`/api/admin/blocked-dates/${unblockDialog.id}`, {
         method: "DELETE",
       });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || "Failed to unblock date.");
       }
       

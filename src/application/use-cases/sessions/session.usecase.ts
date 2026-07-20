@@ -1,6 +1,7 @@
 import { SessionRepository } from "@/infrastructure/repositories/session.repository";
 import { createSessionSchema, updateSessionSchema } from "@/validations/session.validation";
 import { requireRole } from "@/lib/auth";
+import { Prisma } from "@/generated/prisma/client";
 
 // Helper to convert HH:MM to Prisma DateTime
 const parseTime = (timeStr: string) => {
@@ -90,9 +91,12 @@ export const SessionUseCase = {
 
     const parsedData = updateSessionSchema.parse(data);
 
-    const updatePayload: any = { ...parsedData };
-    if (parsedData.startTime) updatePayload.startTime = parseTime(parsedData.startTime);
-    if (parsedData.endTime) updatePayload.endTime = parseTime(parsedData.endTime);
+    const { startTime, endTime, ...otherFields } = parsedData;
+    const updatePayload: Prisma.RestaurantSessionUpdateInput = {
+      ...otherFields,
+      ...(startTime ? { startTime: parseTime(startTime) } : {}),
+      ...(endTime ? { endTime: parseTime(endTime) } : {}),
+    };
 
     return SessionRepository.updateSession(id, updatePayload);
   },

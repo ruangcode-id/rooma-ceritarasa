@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, Briefcase, CalendarBlank, X, CheckCircle } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type CareerJob = {
   id: string;
@@ -14,6 +15,19 @@ type CareerJob = {
   isOpen: boolean;
   createdAt: string;
 };
+
+async function fetchJobs(signal?: AbortSignal): Promise<CareerJob[]> {
+  const res = await fetch("/api/admin/careers", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload = await res.json();
+  if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load jobs");
+
+  return payload.data || [];
+}
 
 export default function AdminCareersClient() {
   const [jobs, setJobs] = useState<CareerJob[]>([]);
@@ -35,11 +49,7 @@ export default function AdminCareersClient() {
     setIsLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/admin/careers", { cache: "no-store" });
-      const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Failed to load jobs");
-      
-      setJobs(payload.data || []);
+      setJobs(await fetchJobs());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -48,7 +58,22 @@ export default function AdminCareersClient() {
   }
 
   useEffect(() => {
-    void loadJobs();
+    const controller = new AbortController();
+
+    void fetchJobs(controller.signal)
+      .then((loadedJobs) => {
+        if (!controller.signal.aborted) setJobs(loadedJobs);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
   }, []);
 
   const resetForm = () => {
@@ -81,8 +106,10 @@ export default function AdminCareersClient() {
     
     try {
       const res = await fetch(`/api/admin/careers/${deleteJobPrompt.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to close job posting");
+      if (!data.success) throw new Error(data.error || data.message || "Failed to close job posting");
       
       void loadJobs();
       setDeleteJobPrompt(null);
@@ -124,9 +151,11 @@ export default function AdminCareersClient() {
         });
       }
 
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || data.message || "Failed to save job posting");
       }
       
@@ -263,7 +292,7 @@ export default function AdminCareersClient() {
         <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
           <Briefcase size={48} className="mx-auto text-slate-300 mb-4" weight="light" />
           <h3 className="text-lg font-bold text-slate-900 mb-2">No Job Openings Yet</h3>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto">You haven't created any job openings yet. Click Open a Job to start recruiting.</p>
+          <p className="text-slate-500 text-sm max-w-sm mx-auto">You haven&apos;t created any job openings yet. Click Open a Job to start recruiting.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -316,7 +345,7 @@ export default function AdminCareersClient() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">Close Job Opening?</h3>
               <p className="text-sm text-slate-500">
-                The job <strong>"{deleteJobPrompt.title}"</strong> will be closed and will no longer appear on the public careers page.
+                The job <strong>&quot;{deleteJobPrompt.title}&quot;</strong> will be closed and will no longer appear on the public careers page.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">

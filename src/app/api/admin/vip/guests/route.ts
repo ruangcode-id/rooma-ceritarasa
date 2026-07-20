@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/infrastructure/database/prisma";
-import { requireRole } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { Prisma } from "@/generated/prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
-    await requireRole(["admin", "owner"]);
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
 
     const searchParams = req.nextUrl.searchParams;
     const search = searchParams.get("search") || "";
@@ -41,9 +42,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: true, data: guests });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Internal Error";
-    if (message.includes("Unauthorized") || message.includes("Forbidden")) {
-      return NextResponse.json({ success: false, error: message }, { status: 401 });
-    }
+
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

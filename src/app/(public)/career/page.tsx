@@ -1,7 +1,6 @@
 import { listPublicCareerJobs } from "@/features/careers/career.service";
 import { format } from "date-fns";
 import Link from "next/link";
-import Image from "next/image";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -25,27 +24,7 @@ export default async function CareerPage() {
         }
       `}} />
 
-      {/* Hero Section */}
-      <section className="relative py-32 px-4 text-center overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="/assets/slider6.webp"
-            alt="Rooma Career"
-            fill
-            className="object-cover"
-            priority
-          />
-          {/* Dark Overlay */}
-          <div className="absolute inset-0 bg-black/60"></div>
-        </div>
 
-        <div className="relative z-10 max-w-4xl mx-auto text-white flex flex-col items-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-            Crafting an atmosphere of quiet confidence and meticulous service.
-          </h1>
-        </div>
-      </section>
 
       {/* Positions List Section */}
       <section className="max-w-6xl mx-auto px-4 md:px-8 py-24">

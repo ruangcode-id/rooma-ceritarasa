@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { Plus, Image as ImageIcon, UploadSimple, X } from "@phosphor-icons/react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type GalleryImage = {
   id: string;
@@ -13,6 +14,19 @@ type GalleryImage = {
   sortOrder: number;
   isActive: boolean;
 };
+
+async function fetchGalleryImages(signal?: AbortSignal): Promise<GalleryImage[]> {
+  const res = await fetch("/api/admin/gallery", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload = await res.json();
+  if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load gallery");
+
+  return payload.data || [];
+}
 
 export default function AdminGalleryClient() {
   const [images, setImages] = useState<GalleryImage[]>([]);
@@ -32,24 +46,23 @@ export default function AdminGalleryClient() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
 
-  async function loadImages() {
-    setIsLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/admin/gallery", { cache: "no-store" });
-      const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || payload.message || "Failed to load gallery");
-      
-      setImages(payload.data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   useEffect(() => {
-    void loadImages();
+    const controller = new AbortController();
+
+    void fetchGalleryImages(controller.signal)
+      .then((loadedImages) => {
+        if (!controller.signal.aborted) setImages(loadedImages);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
   }, []);
 
   const resetForm = () => {
@@ -82,8 +95,10 @@ export default function AdminGalleryClient() {
     
     try {
       const res = await fetch(`/api/admin/gallery/${deleteImagePrompt.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || data.message || "Failed to delete photo");
+      if (!data.success) throw new Error(data.error || data.message || "Failed to delete photo");
       
       setImages(images.filter(i => i.id !== deleteImagePrompt.id));
       setDeleteImagePrompt(null);
@@ -119,7 +134,6 @@ export default function AdminGalleryClient() {
     setError("");
     try {
       let res;
-      let data;
       
       if (editingImage) {
         // Editing Mode (PUT)
@@ -164,9 +178,11 @@ export default function AdminGalleryClient() {
         res = await fetch("/api/admin/gallery", { method: "POST", body: formData });
       }
 
-      data = await res.json();
+      if (!res.ok) throw new Error(await handleApiError(res));
+
+      const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.error || data.message || "Failed to save photo");
       }
       
@@ -359,7 +375,7 @@ export default function AdminGalleryClient() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Photo?</h3>
               <p className="text-sm text-slate-500">
-                Are you sure you want to delete the photo <strong>"{deleteImagePrompt.title || 'Untitled'}"</strong>? This photo will be permanently deleted.
+                Are you sure you want to delete the photo <strong>&quot;{deleteImagePrompt.title || 'Untitled'}&quot;</strong>? This photo will be permanently deleted.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">

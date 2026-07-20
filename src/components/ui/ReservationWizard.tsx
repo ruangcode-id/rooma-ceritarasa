@@ -11,10 +11,6 @@ import Script from "next/script";
 import { GuestReservationForm } from "../forms/GuestReservationForm";
 import { payWithSnap } from "@/lib/midtrans-snap-client";
 
-interface BlockedDate {
-  date: string;
-}
-
 interface Session {
   id: string;
   name: string;
@@ -28,6 +24,11 @@ interface Table {
   capacity: number;
   isAvailable: boolean;
 }
+
+type BlockedDatesResponse = {
+  success: boolean;
+  data?: string[];
+};
 
 const HERO_IMAGES = [
   "/assets/slider1.webp",
@@ -136,12 +137,11 @@ export default function ReservationWizard({
         const month = currentMonth.getMonth() + 1;
         const year = currentMonth.getFullYear();
         const res = await fetch(`/api/public/blocked-dates?month=${month}&year=${year}`);
-        const data = await res.json();
+        const data: BlockedDatesResponse = await res.json();
         
         if (data.success) {
           const blocked = new Set<string>();
-          data.data.forEach((b: any) => {
-            const dateStr = typeof b === "string" ? b : b.date;
+          (data.data ?? []).forEach((dateStr) => {
             blocked.add(dateStr.split("T")[0]);
           });
           setBlockedDates(blocked);
@@ -385,7 +385,7 @@ export default function ReservationWizard({
             style={{ width: "auto" }}
           />
           <p className="text-sm md:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
-            Jl. Lawu No.2, Kotabaru, Kec. Gondokusuman, Kota Yogyakarta, DI Yogyakarta 55224
+            Jl. Lawu No.4, Kotabaru, Kec. Gondokusuman, Kota Yogyakarta, DI Yogyakarta 55224
           </p>
         </div>
       )}
@@ -445,7 +445,7 @@ export default function ReservationWizard({
                 <X size={24} />
               </button>
               <h2 className="text-xl font-semibold tracking-wide text-slate-900">Rooma Ceritarasa</h2>
-              <p className="text-xs uppercase tracking-widest text-slate-500 mt-1">
+              <p className="text-xs tracking-widest text-slate-500 mt-1">
                 {activeModal === "guests" ? "Select Pax" : activeModal === "date" ? "Select Date" : "Select Session"}
               </p>
             </div>
@@ -463,7 +463,7 @@ export default function ReservationWizard({
                   </button>
                   <div className="text-center">
                     <span className="block text-3xl font-semibold text-slate-900">{partySize}</span>
-                    <span className="text-xs uppercase tracking-wider text-slate-500">Pax</span>
+                    <span className="text-xs tracking-wider text-slate-500">pax</span>
                   </div>
                   <button 
                     onClick={() => setPartySize(partySize + 1)}
@@ -474,9 +474,9 @@ export default function ReservationWizard({
                 </div>
                 <button 
                   onClick={() => setActiveModal(null)}
-                  className="w-full mt-6 py-4 bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors"
+                  className="w-full mt-6 py-4 bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors border-2 border-slate-900"
                 >
-                  Save
+                  save
                 </button>
               </div>
             )}
@@ -600,9 +600,14 @@ export default function ReservationWizard({
       {/* 4. Table Grid (Meimei style) */}
       <div className="w-full max-w-4xl px-4 mt-4">
         {!selectedDate || !selectedSessionId ? (
-          <p className="text-center text-slate-500 italic mt-8">
-            Please select your preferred date and time to see available tables.
-          </p>
+          <div className="text-center mt-8 space-y-4">
+            <p className="text-slate-500 italic">
+              Please select your preferred date and time to see available tables.
+            </p>
+            <p className="text-sm text-slate-500 max-w-lg mx-auto">
+              If you need any assistance with your reservation, please don&apos;t hesitate to <a href="https://wa.me/6285725539262" target="_blank" rel="noopener noreferrer" className="text-[#1f0609] font-medium underline underline-offset-2 hover:text-[#3a0d13] transition-colors">reach out to our dedicated reservations team</a>.
+            </p>
+          </div>
         ) : (
           <div className="bg-slate-50 border border-slate-200 p-6 md:p-10 animate-in slide-in-from-bottom-4 fade-in duration-500">
             <h3 className="text-lg font-medium text-center text-slate-800 mb-2">

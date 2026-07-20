@@ -9,18 +9,13 @@ import { List, X } from "@phosphor-icons/react";
 export default function Navbar() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  
+
+  return <NavbarContent key={isHome ? "home" : "inner"} isHome={isHome} />;
+}
+
+function NavbarContent({ isHome }: { isHome: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-
-
-  // Pastikan navbar disembunyikan saat pertama kali masuk ke halaman Home
-  // Ini memperbaiki bug di mana isVisible "tersangkut" menjadi true dari halaman sebelumnya
-  useEffect(() => {
-    if (pathname === "/") {
-      setIsVisible(false);
-    }
-  }, [pathname]);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -100,6 +95,7 @@ export default function Navbar() {
                       className="object-contain"
                       style={{ width: "auto", height: "auto" }}
                       priority
+                      fetchPriority="high"
                     />
                   </Link>
                 </div>
@@ -131,6 +127,7 @@ export default function Navbar() {
                       className="object-contain"
                       style={{ width: "auto", height: "auto" }}
                       priority
+                      fetchPriority="high"
                     />
                   </Link>
                 </div>
@@ -165,21 +162,21 @@ export default function Navbar() {
                 isOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-4 pointer-events-none"
               }`}
             >
-            <div className="flex flex-col space-y-1 font-sans text-sm tracking-widest font-semibold uppercase text-slate-700">
+              <div className="flex flex-col space-y-1 font-sans text-sm tracking-widest font-semibold text-slate-700">
               <Link href="/" onClick={() => setIsOpen(false)} className="rounded-xl px-4 py-3 hover:bg-slate-50 hover:text-primary transition-colors">
-                Home
+                home
               </Link>
               <Link href="/reservasi" onClick={() => setIsOpen(false)} className="rounded-xl px-4 py-3 hover:bg-slate-50 hover:text-primary transition-colors">
-                Reservation
+                reservation
               </Link>
               <Link href="/gallery" onClick={() => setIsOpen(false)} className="rounded-xl px-4 py-3 hover:bg-slate-50 hover:text-primary transition-colors">
-                Gallery
+                gallery
               </Link>
               <Link href="/event" onClick={() => setIsOpen(false)} className="rounded-xl px-4 py-3 hover:bg-slate-50 hover:text-primary transition-colors">
-                Events
+                events
               </Link>
               <Link href="/career" onClick={() => setIsOpen(false)} className="rounded-xl px-4 py-3 hover:bg-slate-50 hover:text-primary transition-colors">
-                Careers
+                careers
               </Link>
             </div>
             </div>
@@ -203,7 +200,7 @@ export default function Navbar() {
           </button>
         </div>
 
-        <div className="flex h-[calc(100vh-80px)] flex-col items-center justify-center space-y-8 font-sans text-3xl font-light uppercase tracking-widest">
+        <div className="flex h-[calc(100vh-80px)] flex-col items-center justify-center space-y-8 font-sans text-xl font-light tracking-widest">
           <Link href="/" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
             Home
           </Link>
@@ -214,7 +211,7 @@ export default function Navbar() {
             Gallery
           </Link>
           <Link href="/event" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
-            Special Events
+            Events
           </Link>
           <Link href="/career" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
             Careers

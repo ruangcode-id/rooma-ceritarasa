@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BlockedDateUseCase } from "@/application/use-cases/blocked-date/blocked-date.usecase";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
+import { ZodError } from "zod";
 
 export async function GET(req: NextRequest) {
   try {
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
 
@@ -12,11 +16,14 @@ export async function GET(req: NextRequest) {
 
     const result = await BlockedDateUseCase.checkBlockedDateAction(date);
     return NextResponse.json({ success: true, data: result });
-  } catch (error: any) {
-    if (typeof error?.message === "string" && (error.message.includes("Unauthorized") || error.message.includes("Forbidden"))) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 401 });
+  } catch (error: unknown) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        { success: false, error: error.issues[0]?.message ?? "Invalid date" },
+        { status: 400 },
+      );
     }
-    if (error?.message === "Invalid date" || error?.name === "ZodError") {
+    if (error instanceof Error && error.message === "Invalid date") {
       return NextResponse.json({ success: false, error: error.message }, { status: 400 });
     }
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });

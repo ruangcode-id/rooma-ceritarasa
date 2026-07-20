@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { CheckCircle, WarningCircle, Books, ChatTeardropText, Browser, Spinner } from "@phosphor-icons/react";
+import { CheckCircle, WarningCircle, Books, Browser, Spinner } from "@phosphor-icons/react";
 import type { UpdateRestaurantSettingsInput } from "@/validations/settings.validation";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type AdminSettingsData = Pick<UpdateRestaurantSettingsInput, 'maxGuestsPerDay' | 'depositPercent' | 'cancellationPolicy' | 'confirmationTemplate' | 'reminderTemplate' | 'seoTitle' | 'seoDescription'>;
 
@@ -26,6 +27,8 @@ export default function AdminSettingsClient() {
     async function loadSettings() {
       try {
         const res = await fetch("/api/admin/settings");
+        if (!res.ok) throw new Error(await handleApiError(res));
+
         const json = await res.json();
         if (json.success && json.data) {
           const d = json.data;
@@ -69,16 +72,21 @@ export default function AdminSettingsClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
       const json = await res.json();
       
-      if (!res.ok || !json.success) {
+      if (!json.success) {
         throw new Error(json.error || "Failed to save settings");
       }
       
       setMessage({ text: "Operational settings saved successfully!", type: "success" });
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } catch (error: any) {
-      setMessage({ text: error.message || "Failed to save settings", type: "error" });
+    } catch (error: unknown) {
+      setMessage({
+        text: error instanceof Error ? error.message : "Failed to save settings",
+        type: "error",
+      });
     } finally {
       setIsSaving(false);
     }

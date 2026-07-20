@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, X, UserCircle, Crown, Trash, PencilSimple } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type UserRole = "admin" | "owner";
 
@@ -15,6 +16,26 @@ type User = {
   isActive: boolean;
   createdAt: string;
 };
+
+type SaveUserPayload = {
+  name: string;
+  email: string;
+  role: UserRole;
+  password?: string;
+};
+
+async function fetchUsers(signal?: AbortSignal): Promise<User[]> {
+  const res = await fetch("/api/owner/users?page=1&limit=50", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload = await res.json();
+  if (!payload.success) throw new Error(payload.error || "Failed to load staff");
+
+  return payload.data || [];
+}
 
 export default function OwnerUsersClient() {
   const [users, setUsers] = useState<User[]>([]);
@@ -33,24 +54,23 @@ export default function OwnerUsersClient() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("admin");
 
-  async function loadUsers() {
-    setIsLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/owner/users?page=1&limit=50", { cache: "no-store" });
-      const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.error || "Failed to load staff");
-      
-      setUsers(payload.data || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   useEffect(() => {
-    void loadUsers();
+    const controller = new AbortController();
+
+    void fetchUsers(controller.signal)
+      .then((loadedUsers) => {
+        if (!controller.signal.aborted) setUsers(loadedUsers);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
   }, []);
 
   const resetForm = () => {
@@ -82,8 +102,12 @@ export default function OwnerUsersClient() {
     
     try {
       const res = await fetch(`/api/owner/users/${deleteUserPrompt.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || "Failed to delete staff");
+      if (!data.success) throw new Error(data.error || "Failed to delete staff");
       
       setUsers(users.filter(u => u.id !== deleteUserPrompt.id));
       setDeleteUserPrompt(null);
@@ -107,7 +131,7 @@ export default function OwnerUsersClient() {
     setError("");
     
     try {
-      const payload: any = { name, email, role };
+      const payload: SaveUserPayload = { name, email, role };
       if (password) payload.password = password; // Only send password if changed
 
       let res;
@@ -127,7 +151,11 @@ export default function OwnerUsersClient() {
 
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
+      if (!data.success) {
         throw new Error(data.error || "Failed to save staff account");
       }
       

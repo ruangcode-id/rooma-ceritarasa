@@ -17,7 +17,7 @@ async function main() {
   const defaultSettings = {
     name: "Rooma Ceritarasa",
     tagline: "Refined Comfort Dish, Intimate Casual Dining",
-    address: "Jl. Lawu No.2, Kotabaru, Kec. Gondokusuman,\nKota Yogyakarta, DI Yogyakarta 55224",
+    address: "Jl. Lawu No.4, Kotabaru, Kec. Gondokusuman,\nKota Yogyakarta, DI Yogyakarta 55224",
     phone: "+6285725539262",
     whatsappNumber: "6285725539262",
     email: "info@roomaceritarasa.com",

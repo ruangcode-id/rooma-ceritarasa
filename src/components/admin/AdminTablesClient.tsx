@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Plus, ArrowsOutCardinal, Trash, FloppyDisk } from "@phosphor-icons/react";
+import { Plus, ArrowsOutCardinal, FloppyDisk } from "@phosphor-icons/react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type TableData = {
   id: string;
@@ -11,6 +12,23 @@ type TableData = {
   posY: number;
   status: string;
 };
+
+async function fetchTables(signal?: AbortSignal): Promise<TableData[]> {
+  const res = await fetch("/api/admin/tables", {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) throw new Error(await handleApiError(res));
+
+  const payload = await res.json();
+  if (!payload.success) throw new Error(payload.message || "Failed to load tables");
+
+  return (payload.data as TableData[]).map((table, index) => ({
+    ...table,
+    posX: table.posX ?? (index % 5) * 120 + 20,
+    posY: table.posY ?? Math.floor(index / 5) * 120 + 20,
+  }));
+}
 
 export default function AdminTablesClient() {
   const [tables, setTables] = useState<TableData[]>([]);
@@ -33,18 +51,7 @@ export default function AdminTablesClient() {
   async function loadTables() {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/admin/tables", { cache: "no-store" });
-      const payload = await res.json();
-      if (!res.ok || !payload.success) throw new Error(payload.message || "Failed to load tables");
-      
-      // Berikan posisi default jika null
-      const processed = (payload.data as TableData[]).map((t, idx) => ({
-        ...t,
-        posX: t.posX ?? (idx % 5) * 120 + 20,
-        posY: t.posY ?? Math.floor(idx / 5) * 120 + 20,
-      }));
-      
-      setTables(processed);
+      setTables(await fetchTables());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -53,7 +60,22 @@ export default function AdminTablesClient() {
   }
 
   useEffect(() => {
-    void loadTables();
+    const controller = new AbortController();
+
+    void fetchTables(controller.signal)
+      .then((loadedTables) => {
+        if (!controller.signal.aborted) setTables(loadedTables);
+      })
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => controller.abort();
   }, []);
 
   const resetForm = () => {
@@ -80,9 +102,13 @@ export default function AdminTablesClient() {
       const res = await fetch(`/api/admin/tables/${deleteTableId.id}`, {
         method: "DELETE",
       });
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
       const data = await res.json();
       
-      if (!res.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.message || data.error || "Failed to delete table.");
       }
       
@@ -119,13 +145,9 @@ export default function AdminTablesClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(finalPayload),
       });
-      const data = await res.json();
-      
       if (!res.ok) {
-        // Since the API might return the object directly for PATCH instead of { success: true, data } 
-        // We need to be careful based on the route implementation.
-        // Wait, POST returns { success: true, data }, PATCH returns updatedTable directly? Let's assume it throws on error.
-        throw new Error(data.message || data.error || `Failed to ${editTableId ? 'update' : 'add'} table`);
+        const data = await handleApiError(res);
+        throw new Error(data);
       }
       
       resetForm();
@@ -153,9 +175,12 @@ export default function AdminTablesClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ updates }),
       });
-      
+      if (!res.ok) {
+        const errorMsg = await handleApiError(res);
+        throw new Error(errorMsg);
+      }
       const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.message || "Failed to save layout");
+      if (!data.success) throw new Error(data.message || "Failed to save layout");
       
       alert("Table layout saved successfully!");
     } catch (err) {
@@ -167,14 +192,12 @@ export default function AdminTablesClient() {
   };
 
   // Drag and Drop Logic
-  const handlePointerDown = (e: React.PointerEvent, id: string, startX: number, startY: number) => {
+  const handlePointerDown = (e: React.PointerEvent, id: string) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     setDraggingTableId(id);
     
     // Hitung jarak dari kursor ke pojok kiri-atas elemen (offset)
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const boardRect = boardRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
-    
     setDragOffset({
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
@@ -218,7 +241,7 @@ export default function AdminTablesClient() {
           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Restaurant Setup</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-950">Table Floor Plan</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-xl">
-            Drag and drop tables to arrange your restaurant's 2D layout. Don't forget to click Save after arranging.
+            Drag and drop tables to arrange your restaurant&apos;s 2D layout. Don&apos;t forget to click Save after arranging.
           </p>
         </div>
         <div className="flex gap-3">
@@ -291,7 +314,7 @@ export default function AdminTablesClient() {
           tables.map(table => (
             <div
               key={table.id}
-              onPointerDown={(e) => handlePointerDown(e, table.id, table.posX, table.posY)}
+              onPointerDown={(e) => handlePointerDown(e, table.id)}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               onPointerCancel={handlePointerUp}

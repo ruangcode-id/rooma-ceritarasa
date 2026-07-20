@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Clock, Storefront, Phone, Users, CheckCircle, WarningCircle } from "@phosphor-icons/react";
-
-type OperatingHours = {
-  [day: string]: { open?: string; close?: string; closed?: boolean };
-};
+import { Storefront, Phone, CheckCircle, WarningCircle } from "@phosphor-icons/react";
+import { handleApiError } from "@/lib/handle-api-error";
 
 type SettingsData = {
   name: string;
@@ -15,16 +12,6 @@ type SettingsData = {
   whatsappNumber: string;
   socialLinks: Record<string, string>;
 };
-
-const DAYS = [
-  { value: "1", label: "Monday" },
-  { value: "2", label: "Tuesday" },
-  { value: "3", label: "Wednesday" },
-  { value: "4", label: "Thursday" },
-  { value: "5", label: "Friday" },
-  { value: "6", label: "Saturday" },
-  { value: "0", label: "Sunday" },
-];
 
 export default function OwnerSettingsClient() {
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +31,8 @@ export default function OwnerSettingsClient() {
     async function loadSettings() {
       try {
         const res = await fetch("/api/admin/settings");
+        if (!res.ok) throw new Error(await handleApiError(res));
+
         const json = await res.json();
         if (json.success && json.data) {
           const d = json.data;
@@ -90,9 +79,10 @@ export default function OwnerSettingsClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) throw new Error(await handleApiError(res));
 
       const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.error || "Failed to save settings");
+      if (!json.success) throw new Error(json.error || "Failed to save settings");
       
       setMessage({ text: "Settings saved successfully!", type: "success" });
       setTimeout(() => setMessage({ text: "", type: "" }), 5000);

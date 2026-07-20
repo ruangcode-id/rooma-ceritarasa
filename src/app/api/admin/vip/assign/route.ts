@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/infrastructure/database/prisma";
-import { requireRole } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { z } from "zod";
 import QRCode from "qrcode";
 import { uploadToCloudinary } from "@/lib/cloudinary";
@@ -20,7 +20,8 @@ function generateUniqueToken() {
 
 export async function POST(req: NextRequest) {
   try {
-    await requireRole(["admin", "owner"]);
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
 
     const body = await req.json().catch(() => null);
     const parsed = assignVipSchema.safeParse(body);
@@ -90,10 +91,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (error: unknown) {
     console.error("[VIP ASSIGN ERROR]", error);
-    const message = error instanceof Error ? error.message : "Internal Error";
-    if (message.includes("Unauthorized") || message.includes("Forbidden")) {
-      return NextResponse.json({ success: false, error: message }, { status: 401 });
-    }
     return NextResponse.json({ success: false, error: "Gagal mendaftarkan VIP. Coba lagi." }, { status: 500 });
   }
 }
