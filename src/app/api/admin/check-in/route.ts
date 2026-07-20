@@ -6,6 +6,7 @@ import {
 } from "@/lib/api-envelope";
 import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { CheckInUseCase } from "@/application/use-cases/check-in/check-in.usecase";
+import { CHECK_IN_GRACE_EXPIRED_MESSAGE } from "@/infrastructure/check-in/grace";
 
 export async function POST(request: Request) {
   const authResult = await requireAdminApiSession();
@@ -28,6 +29,9 @@ export async function POST(request: Request) {
     const msg = e instanceof Error ? e.message : "Check-in gagal";
     if (msg === "Reservation not found") {
       return jsonError("Reservasi tidak ditemukan.", 404);
+    }
+    if (msg === CHECK_IN_GRACE_EXPIRED_MESSAGE) {
+      return jsonError(msg, 409);
     }
     if (msg.includes("not eligible") || msg.includes("cannot be marked")) {
       return jsonError(msg, 409);
