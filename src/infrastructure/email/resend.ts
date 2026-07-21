@@ -4,6 +4,12 @@ import { getResendConfig } from "@/config/env";
 export const RESEND_CONFIG_WARNING =
   "Email tidak dikirim karena konfigurasi Resend belum lengkap (RESEND_API_KEY, RESEND_FROM_EMAIL).";
 
+export type EmailAttachment = {
+  filename: string;
+  content: Buffer;
+  contentId?: string;
+};
+
 export type EmailSendResult =
   | { sent: true }
   | { sent: false; warning: string };
@@ -12,6 +18,7 @@ export async function sendTransactionalEmail(params: {
   to: string;
   subject: string;
   html: string;
+  attachments?: EmailAttachment[];
 }): Promise<EmailSendResult> {
   const config = getResendConfig();
   if (!config) {
@@ -26,6 +33,17 @@ export async function sendTransactionalEmail(params: {
       to: params.to,
       subject: params.subject,
       html: params.html,
+      ...(params.attachments?.length
+        ? {
+            attachments: params.attachments.map((attachment) => ({
+              filename: attachment.filename,
+              content: attachment.content,
+              ...(attachment.contentId
+                ? { contentId: attachment.contentId }
+                : {}),
+            })),
+          }
+        : {}),
     });
 
     if (result.error) {
