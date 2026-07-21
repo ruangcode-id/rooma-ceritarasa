@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       );
     }
     if (error instanceof Error && error.message === "Invalid date") {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Invalid date" }, { status: 400 });
     }
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }

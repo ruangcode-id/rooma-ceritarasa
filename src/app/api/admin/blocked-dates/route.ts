@@ -61,19 +61,19 @@ export async function POST(req: NextRequest) {
     }
     if (error instanceof Error) {
       if (error.message === "Invalid JSON") {
-        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+        return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400 });
       }
       if (error.message === "Unsupported Content-Type") {
-        return NextResponse.json({ success: false, error: error.message }, { status: 415 });
+        return NextResponse.json({ success: false, error: "Unsupported Content-Type" }, { status: 415 });
       }
       if (error.message === "Invalid date") {
-        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+        return NextResponse.json({ success: false, error: "Invalid date" }, { status: 400 });
       }
       if (error.message.includes("Provide either") || error.message.includes("dateStart must be")) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+        return NextResponse.json({ success: false, error: "Invalid date range parameters" }, { status: 400 });
       }
       if (error.message.includes("confirmed reservations")) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+        return NextResponse.json({ success: false, error: "Cannot block dates with confirmed reservations" }, { status: 400 });
       }
     }
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
