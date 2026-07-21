@@ -258,6 +258,8 @@ model Reservation {
   internalNotes  String?           @map("internal_notes") @db.Text
   cancelToken    String?           @unique @map("cancel_token") @db.VarChar(100)
   paymentToken   String?           @unique @map("payment_token") @db.VarChar(100)
+  checkInToken          String?   @unique @map("check_in_token") @db.VarChar(100)
+  checkInTokenExpiresAt DateTime? @map("check_in_token_expires_at")
   expiresAt      DateTime?         @map("expires_at")
   reminderSentAt DateTime?         @map("reminder_sent_at")
   createdBy      String?           @map("created_by") @db.Uuid

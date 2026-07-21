@@ -49,6 +49,7 @@ type CreateReservationResult = {
   expiresAt: string | null;
   cancelToken: string;
   paymentToken: string;
+  checkInToken: string;
 };
 
 type ReservationPaymentResult = {

@@ -267,3 +267,74 @@ test("B2.P0: duplicate public payment requests are blocked atomically", () => {
   );
 });
 
+test("B6.P1: QR check-in token is separate from cancel token", () => {
+  const schemaSource = readProjectFile("prisma/schema.prisma");
+  const reservationServiceSource = readProjectFile("src/features/reservations/reservation.service.ts");
+  const repositorySource = readProjectFile("src/infrastructure/repositories/reservation.repository.ts");
+  const notificationSource = readProjectFile("src/infrastructure/notifications/guest-notification.service.ts");
+  const migrationSource = readProjectFile(
+    "prisma/migrations/20260721190000_split_check_in_and_cancel_tokens/migration.sql",
+  );
+
+  assert.match(
+    schemaSource,
+    /checkInToken\s+String\?\s+@unique\s+@map\("check_in_token"\)/,
+    "Reservation schema must define a unique checkInToken",
+  );
+  assert.match(
+    schemaSource,
+    /checkInTokenExpiresAt\s+DateTime\?\s+@map\("check_in_token_expires_at"\)/,
+    "Reservation schema must define check-in token expiry",
+  );
+  assert.match(
+    reservationServiceSource,
+    /const checkInToken = crypto\.randomBytes\(24\)\.toString\("hex"\)/,
+    "public reservation creation must generate a dedicated check-in token",
+  );
+  assert.match(
+    reservationServiceSource,
+    /checkInTokenExpiresAt = buildCheckInDeadline/,
+    "public reservation creation must set check-in token expiry",
+  );
+  assert.doesNotMatch(
+    notificationSource,
+    /reservation\.cancelToken\?\.trim\(\) \?\? ""/,
+    "guest QR notifications must not use cancelToken as the check-in code",
+  );
+  assert.match(
+    notificationSource,
+    /reservation\.checkInToken\?\.trim\(\) \?\? ""/,
+    "guest QR notifications must use checkInToken as the check-in code",
+  );
+  assert.match(
+    repositorySource,
+    /where:\s*\{\s*checkInToken:\s*trimmed,/,
+    "check-in lookup must resolve scanned QR codes through checkInToken",
+  );
+  assert.doesNotMatch(
+    repositorySource,
+    /where:\s*\{\s*cancelToken:\s*trimmed\s*\}/,
+    "check-in lookup must not accept cancelToken",
+  );
+  assert.match(
+    migrationSource,
+    /ADD COLUMN IF NOT EXISTS "check_in_token" VARCHAR\(100\)/,
+    "migration must add check_in_token",
+  );
+  assert.match(
+    migrationSource,
+    /ADD COLUMN IF NOT EXISTS "check_in_token_expires_at" TIMESTAMP\(3\)/,
+    "migration must add check_in_token_expires_at",
+  );
+  assert.match(
+    migrationSource,
+    /UPDATE "reservations"[\s\S]*SET "cancel_token"/,
+    "migration must rotate active cancel tokens so old QR values cannot cancel",
+  );
+  assert.match(
+    migrationSource,
+    /CREATE UNIQUE INDEX IF NOT EXISTS "reservations_check_in_token_key"/,
+    "migration must enforce unique check_in_token",
+  );
+});
+

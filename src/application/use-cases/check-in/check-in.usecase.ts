@@ -10,7 +10,7 @@ export const adminCheckInBodySchema = z
   .object({
     action: z.enum(["check_in", "no_show"]).default("check_in"),
     reservationId: z.string().uuid().optional(),
-    /** Scan QR / kolom cepat — UUID atau `cancel_token`. */
+    /** Scan QR / kolom cepat — UUID internal atau `check_in_token`. */
     lookup: z.string().trim().min(1).max(200).optional(),
   })
   .refine((b) => b.reservationId != null || (b.lookup != null && b.lookup.length > 0), {
