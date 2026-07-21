@@ -61,6 +61,94 @@ test("cron reminder authorization runs before reminder side effects", () => {
   );
 });
 
+test("B8.P1: Auth.js production config is explicit and secure", () => {
+  const authSource = readProjectFile("src/auth.ts");
+  const envSource = readProjectFile("src/config/env.ts");
+  const signoutSource = readProjectFile("src/app/api/auth/signout/route.ts");
+  const envExample = readProjectFile(".env.example");
+
+  assert.match(
+    authSource,
+    /secret:\s*getAuthSecret\(\)/,
+    "Auth.js must read its secret through validated env config",
+  );
+  assert.match(
+    authSource,
+    /trustHost:\s*getAuthTrustHost\(\)/,
+    "Auth.js must configure host trust explicitly for production deployments",
+  );
+  assert.match(
+    authSource,
+    /useSecureCookies:\s*shouldUseSecureAuthCookies\(\)/,
+    "Auth.js must force secure cookies in production",
+  );
+  assert.match(
+    authSource,
+    /basePath:\s*"\/api\/auth"/,
+    "Auth.js must keep the App Router auth endpoint base path explicit",
+  );
+  assert.match(
+    authSource,
+    /\.\.\.authConfig\.callbacks/,
+    "Auth.js runtime callbacks must preserve shared authConfig callbacks",
+  );
+  assert.match(
+    envSource,
+    /PLACEHOLDER_AUTH_SECRETS/,
+    "production auth config must reject placeholder secrets",
+  );
+  assert.match(
+    envSource,
+    /"replace-with-a-strong-random-secret"/,
+    "production auth config must reject the documented example secret if it is not replaced",
+  );
+  assert.match(
+    envSource,
+    /process\.env\.NODE_ENV === "production"[^]*throw new Error\("AUTH_SECRET must be a strong production secret\."\)/,
+    "production auth config must fail fast on placeholder AUTH_SECRET",
+  );
+  assert.match(
+    envSource,
+    /export function getAuthUrl\(\): string \| null/,
+    "production auth config must support canonical AUTH_URL/NEXTAUTH_URL",
+  );
+  assert.match(
+    envSource,
+    /export function getAuthTrustHost\(\): boolean/,
+    "production auth config must expose explicit trustHost behavior",
+  );
+  assert.match(
+    envSource,
+    /export function shouldUseSecureAuthCookies\(\): boolean/,
+    "production auth config must expose secure cookie behavior",
+  );
+  assert.match(
+    signoutSource,
+    /"authjs\.session-token"/,
+    "custom signout route must clear Auth.js v5 session cookie",
+  );
+  assert.match(
+    signoutSource,
+    /"__Secure-authjs\.session-token"/,
+    "custom signout route must clear secure Auth.js v5 session cookie",
+  );
+  assert.match(
+    envExample,
+    /AUTH_SECRET="replace-with-a-strong-random-secret"/,
+    ".env.example must not suggest CHANGE_ME as the Auth.js production secret",
+  );
+  assert.match(
+    envExample,
+    /AUTH_URL="https:\/\/your-production-domain\.com"/,
+    ".env.example must document the canonical production Auth.js URL",
+  );
+  assert.match(
+    envExample,
+    /AUTH_TRUST_HOST=true/,
+    ".env.example must document production host trust",
+  );
+});
+
 test("admin session routes keep client-facing errors generic", () => {
   const routes = [
     "src/app/api/admin/sessions/route.ts",
