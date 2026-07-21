@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SessionUseCase } from "@/application/use-cases/sessions/session.usecase";
 import { requireAdminApiSession } from "@/lib/require-admin-api";
+import { getSessionErrorResponse } from "@/lib/session-error-response";
 
 export async function GET(req: NextRequest) {
   try {
@@ -39,11 +40,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: unknown) {
     console.error("ERROR GET /api/admin/sessions:", error);
-
-    return NextResponse.json(
-      { success: false, error: "Terjadi kesalahan internal pada server." },
-      { status: 500 }
-    );
+    return getSessionErrorResponse(error);
   }
 }
 
@@ -69,27 +66,6 @@ export async function POST(req: NextRequest) {
     );
   } catch (error: unknown) {
     console.error("ERROR POST /api/admin/sessions:", error);
-
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-
-
-    if (message.includes("Start time must be before end time")) {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 400 }
-      );
-    }
-
-    if (message.includes("dayOfWeek")) {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { success: false, error: "Terjadi kesalahan internal pada server." },
-      { status: 500 }
-    );
+    return getSessionErrorResponse(error);
   }
 }
