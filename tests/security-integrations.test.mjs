@@ -103,3 +103,103 @@ test("A5: payload size guard (413) runs before createPublicReservation", () => {
   assert.match(source, /status:\s*413/, "A5: route must return HTTP 413 when payload is too large");
 });
 
+test("B2.P0: public create payment requires paymentToken instead of reservation id", () => {
+  const source = readProjectFile("src/app/api/public/payments/route.ts");
+  const migrationSource = readProjectFile(
+    "prisma/migrations/20260721152000_add_reservation_payment_token/migration.sql",
+  );
+
+  assert.match(
+    source,
+    /typeof body\.paymentToken !== "string"/,
+    "create payment must reject payloads without a paymentToken",
+  );
+  assert.match(
+    source,
+    /where:\s*\{\s*paymentToken:\s*body\.paymentToken,/,
+    "create payment must resolve reservation access through paymentToken",
+  );
+  assert.doesNotMatch(
+    source,
+    /where:\s*\{\s*id:\s*body\.reservationId\s*\}/,
+    "create payment must not trust a public reservationId as access proof",
+  );
+  assert.match(
+    migrationSource,
+    /ADD COLUMN IF NOT EXISTS "payment_token" VARCHAR\(100\)/,
+    "database migration must add reservation payment_token",
+  );
+  assert.match(
+    migrationSource,
+    /CREATE UNIQUE INDEX IF NOT EXISTS "reservations_payment_token_key"/,
+    "database migration must enforce unique reservation payment_token",
+  );
+});
+
+test("B2.P0: public payment status requires a matching paymentToken", () => {
+  const source = readProjectFile("src/app/api/public/payments/[orderId]/status/route.ts");
+
+  assertAppearsBefore(
+    source,
+    "const paymentToken = req.nextUrl.searchParams.get(\"paymentToken\")",
+    "const payment = await paymentRepository.findByOrderId(orderId)",
+    "status endpoint must read the payment token before loading payment status",
+  );
+  assert.match(
+    source,
+    /if \(!paymentToken\)\s*\{\s*return NextResponse\.json\([^]*status:\s*401/,
+    "status endpoint must reject missing paymentToken",
+  );
+  assert.match(
+    source,
+    /where:\s*\{\s*paymentToken\s*\}/,
+    "status endpoint must resolve reservation through paymentToken",
+  );
+  assert.match(
+    source,
+    /!reservation \|\| reservation\.id !== payment\.reservationId/,
+    "status endpoint must reject tokens that do not belong to the payment reservation",
+  );
+});
+
+test("B2.P0: duplicate public payment requests are blocked atomically", () => {
+  const routeSource = readProjectFile("src/app/api/public/payments/route.ts");
+  const serviceSource = readProjectFile("src/features/payments/payment.service.ts");
+  const migrationSource = readProjectFile(
+    "prisma/migrations/20260721153000_one_active_payment_per_reservation/migration.sql",
+  );
+
+  assert.match(
+    serviceSource,
+    /prisma\.\$transaction/,
+    "payment creation must perform duplicate checks inside a database transaction",
+  );
+  assertAppearsBefore(
+    serviceSource,
+    "pg_advisory_xact_lock",
+    "tx.payment.create",
+    "payment creation must acquire a reservation-scoped lock before inserting payment",
+  );
+  assertAppearsBefore(
+    serviceSource,
+    "existingActivePayment",
+    "tx.payment.create",
+    "payment creation must check existing active payment before inserting payment",
+  );
+  assert.match(
+    serviceSource,
+    /status:\s*\{\s*in:\s*\[\.\.\.ACTIVE_PAYMENT_STATUSES\]\s*\}/,
+    "payment creation must guard active statuses, not only a short retry window",
+  );
+  assert.match(
+    routeSource,
+    /error instanceof PaymentAlreadyProcessingError[^]*jsonError\([^]*,\s*409\s*\)/,
+    "public route must return HTTP 409 for duplicate active payment requests",
+  );
+  assert.match(
+    migrationSource,
+    /CREATE UNIQUE INDEX "payments_one_active_per_reservation_key"[^]*WHERE "status" IN \('pending', 'paid'\)/,
+    "database must enforce one active payment per reservation",
+  );
+});
+
