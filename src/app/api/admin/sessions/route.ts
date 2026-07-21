@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
 
 
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: "Terjadi kesalahan internal pada server." },
       { status: 500 }
     );
   }
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: "Terjadi kesalahan internal pada server." },
       { status: 500 }
     );
   }

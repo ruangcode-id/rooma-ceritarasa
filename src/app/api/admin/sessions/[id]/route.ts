@@ -57,7 +57,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     }
 
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: "Terjadi kesalahan internal pada server." },
       { status: 500 }
     );
   }
@@ -110,7 +110,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     }
 
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: "Terjadi kesalahan internal pada server." },
       { status: 500 }
     );
   }
@@ -152,7 +152,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     }
 
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: "Terjadi kesalahan internal pada server." },
       { status: 500 }
     );
   }
