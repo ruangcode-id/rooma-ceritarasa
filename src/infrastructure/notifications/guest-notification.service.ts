@@ -12,6 +12,8 @@ import { ReservationStatus } from "@/generated/prisma/client";
 
 type TemplateVars = Record<string, string | number | null | undefined>;
 
+const REMINDER_TIME_ZONE = "Asia/Jakarta";
+
 function asTemplateMap(value: unknown): Record<string, string> {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     const out: Record<string, string> = {};
@@ -36,7 +38,7 @@ async function loadEmailTemplates(): Promise<Record<string, string>> {
 function formatDateId(value: Date): string {
   return new Intl.DateTimeFormat("id-ID", {
     dateStyle: "long",
-    timeZone: "Asia/Jakarta",
+    timeZone: REMINDER_TIME_ZONE,
   }).format(value);
 }
 
@@ -45,8 +47,34 @@ function formatTimeFromSession(startTime: Date): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "Asia/Jakarta",
+    timeZone: REMINDER_TIME_ZONE,
   }).format(startTime);
+}
+
+function formatReminderDateKey(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: REMINDER_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function reservationDateFromKey(dateKey: string): Date {
+  return new Date(`${dateKey}T00:00:00.000Z`);
+}
+
+export function getDailyReminderTargetDate(now: Date = new Date()): Date {
+  const todayKey = formatReminderDateKey(now);
+  const tomorrowKey = addDaysToDateKey(todayKey, 1);
+  return reservationDateFromKey(tomorrowKey);
 }
 
 export async function sendWaFromTemplate(
@@ -317,11 +345,8 @@ export async function sendReservationReminder(reservationId: string) {
 
 
 
-export async function runDailyReminders() {
-  const tomorrow = new Date();
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-  const dateStr = tomorrow.toISOString().slice(0, 10);
-  const targetDate = new Date(`${dateStr}T00:00:00.000Z`);
+export async function runDailyReminders(now: Date = new Date()) {
+  const targetDate = getDailyReminderTargetDate(now);
 
   const [reservations] = await Promise.all([
     prisma.reservation.findMany({
