@@ -4,9 +4,7 @@ import { UserUseCase } from "@/application/use-cases/users/user.usecase";
 import { jsonValidationError } from "@/lib/api-envelope";
 import { ZodError } from "zod";
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
+// Error helper removed to prevent error.message leakage
 
 export async function GET(
   req: NextRequest,
@@ -42,8 +40,9 @@ export async function PATCH(
     if (error instanceof ZodError) {
       return jsonValidationError(error);
     }
+    console.error("ERROR PATCH /api/owner/users/[id]:", error);
     return NextResponse.json(
-      { success: false, error: getErrorMessage(error, "Failed to update user") },
+      { success: false, error: "Failed to update user" },
       { status: 400 },
     );
   }
@@ -61,8 +60,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: "User deactivated successfully" });
   } catch (error: unknown) {
+    console.error("ERROR DELETE /api/owner/users/[id]:", error);
     return NextResponse.json(
-      { success: false, error: getErrorMessage(error, "Failed to deactivate user") },
+      { success: false, error: "Failed to deactivate user" },
       { status: 400 },
     );
   }

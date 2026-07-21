@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
 
     if (name === "ZodError" || message === "Invalid date") {
-      return NextResponse.json({ success: false, error: message || "Invalid request" }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Invalid request" }, { status: 400 });
     }
 
     // Prisma invalid UUID / malformed id input
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
         message.includes("Not enough capacity") ||
         message.includes("No available table"))
     ) {
-      return NextResponse.json({ success: false, error: message }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Invalid request capacity or availability" }, { status: 400 });
     }
 
     console.error("/api/admin/capacity error:", error);

@@ -109,7 +109,7 @@ export async function PATCH(
 
     if (name === "ZodError") {
       return NextResponse.json(
-        { success: false, error: message || "Invalid request body" },
+        { success: false, error: "Invalid request body" },
         { status: 400 }
       );
     }
@@ -120,7 +120,7 @@ export async function PATCH(
       message.includes("tidak mencukupi") ||
       message.includes("sudah dipesan")
     ) {
-      return NextResponse.json({ success: false, error: message }, { status: 400 });
+      return NextResponse.json({ success: false, error: "Validation or business rule error" }, { status: 400 });
     }
 
     // Prisma: record not found
