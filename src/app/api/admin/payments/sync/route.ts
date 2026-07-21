@@ -10,8 +10,7 @@ export async function POST() {
     const result = await syncMutablePaymentStatuses();
     return jsonSuccess(result);
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Internal Server Error";
-    return jsonError(message, 500);
+    console.error("API [Admin Payment Sync] Error:", error);
+    return jsonError("Terjadi kesalahan internal pada server.", 500);
   }
 }

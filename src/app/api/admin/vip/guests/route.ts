@@ -41,8 +41,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: guests });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Internal Error";
-
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error("API [Admin VIP Guests] Error:", error);
+    return NextResponse.json({ success: false, error: "Terjadi kesalahan internal pada server." }, { status: 500 });
   }
 }

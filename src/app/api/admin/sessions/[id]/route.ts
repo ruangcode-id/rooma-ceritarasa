@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SessionUseCase } from "@/application/use-cases/sessions/session.usecase";
 import { requireAdminApiSession } from "@/lib/require-admin-api";
+import { getSessionErrorResponse } from "@/lib/session-error-response";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Internal Server Error";
-}
 
 function parseDateParam(dateStr: string | null): Date | undefined {
   if (!dateStr) return undefined;
@@ -38,28 +35,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
     });
   } catch (error: unknown) {
     console.error("ERROR GET /api/admin/sessions/[id]:", error);
-
-    const message = getErrorMessage(error);
-
-
-    if (message === "Session not found") {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 404 }
-      );
-    }
-
-    if (message.includes("Invalid date format")) {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
-    );
+    return getSessionErrorResponse(error);
   }
 }
 
@@ -88,31 +64,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     });
   } catch (error: unknown) {
     console.error("ERROR PATCH /api/admin/sessions/[id]:", error);
-
-    const message = getErrorMessage(error);
-
-
-    if (message === "Session not found") {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 404 }
-      );
-    }
-
-    if (
-      message.includes("Start time must be before end time") ||
-      message.includes("dayOfWeek")
-    ) {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
-    );
+    return getSessionErrorResponse(error);
   }
 }
 
@@ -130,30 +82,6 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     });
   } catch (error: unknown) {
     console.error("ERROR DELETE /api/admin/sessions/[id]:", error);
-
-    const message = getErrorMessage(error);
-
-
-    if (message === "Session not found") {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 404 }
-      );
-    }
-
-    if (
-      message.includes("Cannot delete session") ||
-      message.includes("active reservations")
-    ) {
-      return NextResponse.json(
-        { success: false, error: message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json(
-      { success: false, error: message },
-      { status: 500 }
-    );
+    return getSessionErrorResponse(error);
   }
 }

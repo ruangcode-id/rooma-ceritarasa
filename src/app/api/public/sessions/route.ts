@@ -27,7 +27,8 @@ export async function GET(req: Request) {
       success: true,
       data: sessions,
     });
-  } catch {
-    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("Public Sessions Error:", error);
+    return NextResponse.json({ success: false, error: "Terjadi kesalahan internal pada server." }, { status: 500 });
   }
 }

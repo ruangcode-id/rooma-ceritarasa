@@ -66,7 +66,7 @@ export async function POST(request: Request, context: RouteCtx) {
       amount: refundResult.amount,
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    return jsonError(message, 500);
+    console.error("API [Admin Payment Refund] Error:", error);
+    return jsonError("Terjadi kesalahan internal pada server.", 500);
   }
 }

@@ -3,8 +3,12 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/infrastructure/database/prisma";
 import { jsonError, jsonSuccess } from "@/lib/api-envelope";
 
-import { createPayment } from "@/features/payments/payment.service";
+import {
+  PaymentAlreadyProcessingError,
+  createPayment,
+} from "@/features/payments/payment.service";
 import { ReservationPaymentType } from "@/features/payments/payment.types";
+import { PaymentStatus as DbPaymentStatus } from "@/generated/prisma/client";
 import rateLimit from "@/lib/rate-limit";
 
 const limiter = rateLimit({
@@ -140,48 +144,61 @@ export async function POST(req: NextRequest) {
 
     const amount = depositAmount;
 
-    // Mencegah pembuatan transaksi Midtrans ganda jika user double-click atau retry terlalu cepat
-    const existingRecentPayment = await prisma.payment.findFirst({
+    // Mencegah pembuatan transaksi Midtrans ganda jika sudah ada payment aktif untuk reservasi ini.
+    const existingActivePayment = await prisma.payment.findFirst({
       where: {
         reservationId: reservation.id,
-        status: "pending",
-        createdAt: {
-          gt: new Date(Date.now() - 1 * 60 * 1000), // 1 menit yang lalu
-        },
+        status: { in: [DbPaymentStatus.pending, DbPaymentStatus.paid] },
       },
+      select: { id: true },
     });
 
-    if (existingRecentPayment) {
-      return jsonError("Transaksi pembayaran sedang diproses. Mohon selesaikan pembayaran di pop-up yang aktif, atau tunggu 1 menit untuk mengulang.", 409);
+    if (existingActivePayment) {
+      return jsonError(
+        "Transaksi pembayaran sedang diproses. Mohon selesaikan pembayaran di pop-up yang aktif, atau tunggu beberapa saat untuk mengulang.",
+        409
+      );
     }
 
-    const result = await createPayment({
-      reservationId: reservation.id,
-      paymentType: body.paymentType,
-      amount,
+    let result;
+    try {
+      result = await createPayment({
+        reservationId: reservation.id,
+        paymentType: body.paymentType,
+        amount,
 
-      customer: {
-        name: reservation.guest?.name ?? "Guest",
+        customer: {
+          name: reservation.guest?.name ?? "Guest",
 
-        email: reservation.guest?.email ?? undefined,
+          email: reservation.guest?.email ?? undefined,
 
-        phone: reservation.guest?.phone ?? undefined,
-      },
-
-      items: [
-        {
-          id: body.paymentType,
-          name: getPaymentItemName(partySize, body.paymentType, reservationDate),
-          price: amount,
-          quantity: 1,
+          phone: reservation.guest?.phone ?? undefined,
         },
-      ],
 
-      metadata: {
-        partySize,
-        minimumOrder,
-      },
-    });
+        items: [
+          {
+            id: body.paymentType,
+            name: getPaymentItemName(partySize, body.paymentType, reservationDate),
+            price: amount,
+            quantity: 1,
+          },
+        ],
+
+        metadata: {
+          partySize,
+          minimumOrder,
+        },
+      });
+    } catch (error: unknown) {
+      if (error instanceof PaymentAlreadyProcessingError) {
+        return jsonError(
+          "Transaksi pembayaran sedang diproses. Mohon selesaikan pembayaran di pop-up yang aktif, atau tunggu beberapa saat untuk mengulang.",
+          409
+        );
+      }
+
+      throw error;
+    }
 
     return jsonSuccess(
       {

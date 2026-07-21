@@ -35,8 +35,7 @@ export async function GET(request: NextRequest) {
 
     return jsonSuccess(tables);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
     console.error("Public Tables Error:", error);
-    return jsonError(message, 500);
+    return jsonError("Terjadi kesalahan internal pada server.", 500);
   }
 }

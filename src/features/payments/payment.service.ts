@@ -38,6 +38,25 @@ class MidtransTransactionNotStartedError extends Error {
   }
 }
 
+export class PaymentAlreadyProcessingError extends Error {
+  constructor() {
+    super("Transaksi pembayaran sedang diproses.");
+    this.name = "PaymentAlreadyProcessingError";
+  }
+}
+
+const ACTIVE_PAYMENT_STATUSES = [
+  DbPaymentStatus.pending,
+  DbPaymentStatus.paid,
+] as const;
+
+function isUniqueConstraintError(error: unknown) {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002"
+  );
+}
+
 function isMidtransTransactionNotStarted(error: unknown) {
   if (typeof error !== "object" || error === null) return false;
 
@@ -108,18 +127,49 @@ export async function createPayment(
 
   const snap = getMidtransSnap();
 
-  await paymentRepository.createPayment({
-    reservationId: input.reservationId,
-    type: mapReservationPaymentType(input.paymentType),
-    amount,
-    status: "pending",
-    midtransOrderId: orderId,
-  });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`
+        SELECT pg_advisory_xact_lock(hashtextextended(${input.reservationId}, 0))
+      `;
 
-  let transaction;
+      const existingActivePayment = await tx.payment.findFirst({
+        where: {
+          reservationId: input.reservationId,
+          status: { in: [...ACTIVE_PAYMENT_STATUSES] },
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (existingActivePayment) {
+        throw new PaymentAlreadyProcessingError();
+      }
+
+      await tx.payment.create({
+        data: {
+          reservationId: input.reservationId,
+          type: mapReservationPaymentType(input.paymentType),
+          amount,
+          status: DbPaymentStatus.pending,
+          midtransOrderId: orderId,
+        },
+      });
+    });
+  } catch (error) {
+    if (
+      error instanceof PaymentAlreadyProcessingError ||
+      isUniqueConstraintError(error)
+    ) {
+      throw new PaymentAlreadyProcessingError();
+    }
+
+    throw error;
+  }
 
   try {
-    transaction = await snap.createTransaction({
+    const transaction = await snap.createTransaction({
       transaction_details: {
         order_id: orderId,
         gross_amount: amount,
@@ -128,16 +178,16 @@ export async function createPayment(
       item_details: input.items,
       metadata: input.metadata,
     });
+
+    return {
+      orderId,
+      token: transaction.token,
+      redirectUrl: transaction.redirect_url,
+    };
   } catch (error) {
     await paymentRepository.updateStatusByOrderId(orderId, "failed");
     throw error;
   }
-
-  return {
-    orderId,
-    token: transaction.token,
-    redirectUrl: transaction.redirect_url,
-  };
 }
 
 export async function listPayments(query: PaymentListQuery) {

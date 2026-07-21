@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    return jsonError(message, 500);
+    console.error("API [Admin Payments] Error:", error);
+    return jsonError("Terjadi kesalahan internal pada server.", 500);
   }
 }
