@@ -6,9 +6,7 @@ import { buildPaginationMeta } from "@/lib/pagination";
 import { jsonValidationError } from "@/lib/api-envelope";
 import { ZodError } from "zod";
 
-function getErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback;
-}
+// Error helper removed to prevent error.message leakage
 
 export async function GET(req: NextRequest) {
   try {
@@ -47,8 +45,9 @@ export async function POST(req: NextRequest) {
     if (error instanceof ZodError) {
       return jsonValidationError(error);
     }
+    console.error("ERROR POST /api/owner/users:", error);
     return NextResponse.json(
-      { success: false, error: getErrorMessage(error, "Failed to create user") },
+      { success: false, error: "Failed to create user" },
       { status: 400 },
     );
   }

@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: isClientError ? message : "Internal Server Error",
+        error: isClientError ? "Data tidak valid atau reservasi tidak dapat diproses." : "Internal Server Error",
       },
       { status: isClientError ? 400 : 500 },
     );

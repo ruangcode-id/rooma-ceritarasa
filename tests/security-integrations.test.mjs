@@ -149,6 +149,53 @@ test("B8.P1: Auth.js production config is explicit and secure", () => {
   );
 });
 
+test("B7.P1: daily reservation reminders use the Jakarta calendar day", () => {
+  const source = readProjectFile("src/infrastructure/notifications/guest-notification.service.ts");
+
+  assert.match(
+    source,
+    /const REMINDER_TIME_ZONE = "Asia\/Jakarta"/,
+    "daily reminders must define the restaurant timezone explicitly",
+  );
+  assert.match(
+    source,
+    /Intl\.DateTimeFormat\("en-CA",\s*\{[^]*timeZone: REMINDER_TIME_ZONE/,
+    "daily reminders must format the target calendar date in Asia/Jakarta",
+  );
+  assert.match(
+    source,
+    /export function getDailyReminderTargetDate\(now: Date = new Date\(\)\): Date/,
+    "daily reminder target date must be calculated by a dedicated helper",
+  );
+  assert.match(
+    source,
+    /const todayKey = formatReminderDateKey\(now\);[^]*const tomorrowKey = addDaysToDateKey\(todayKey, 1\);/,
+    "daily reminders must add one calendar day after resolving today's Jakarta date",
+  );
+  assert.match(
+    source,
+    /export async function runDailyReminders\(now: Date = new Date\(\)\)/,
+    "runDailyReminders must accept an injectable clock for timezone-bound tests and cron safety",
+  );
+  assertAppearsBefore(
+    source,
+    "const targetDate = getDailyReminderTargetDate(now);",
+    "prisma.reservation.findMany",
+    "the Jakarta target date must be chosen before querying reminder candidates",
+  );
+  assert.match(
+    source,
+    /date:\s*targetDate/,
+    "reservation reminder candidates must query the Jakarta-derived target date",
+  );
+  assert.doesNotMatch(
+    source,
+    /const tomorrow = new Date\(\);[^]*tomorrow\.setUTCDate\(tomorrow\.getUTCDate\(\) \+ 1\);/,
+    "daily reminders must not derive tomorrow from the UTC calendar",
+  );
+});
+
+
 test("admin session routes keep client-facing errors generic", () => {
   const routes = [
     "src/app/api/admin/sessions/route.ts",

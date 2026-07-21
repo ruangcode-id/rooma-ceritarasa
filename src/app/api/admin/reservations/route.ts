@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: message,
+          error: "Invalid date or status format",
         },
         { status: 400 }
       );
