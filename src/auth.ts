@@ -2,16 +2,25 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/infrastructure/database/prisma";
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
+import {
+  getAuthSecret,
+  getAuthTrustHost,
+  shouldUseSecureAuthCookies,
+} from "@/config/env";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  basePath: "/api/auth",
+  secret: getAuthSecret(),
+  trustHost: getAuthTrustHost(),
+  useSecureCookies: shouldUseSecureAuthCookies(),
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
   callbacks: {
+    ...authConfig.callbacks,
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
