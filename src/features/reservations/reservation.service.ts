@@ -31,6 +31,8 @@ export type CreateReservationResult = {
   expiresAt: Date | null;
   /** Token untuk cancel publik & check-in lookup (QR). */
   cancelToken: string;
+  /** Token rahasia khusus untuk memproses pembayaran publik. */
+  paymentToken: string;
 };
 
 function getReservationExpiry(partySize: number) {
@@ -238,6 +240,7 @@ export async function createPublicReservation(
 
     const expiresAt = isVipValid ? null : getReservationExpiry(input.partySize);
     const cancelToken = crypto.randomBytes(16).toString("hex");
+    const paymentToken = crypto.randomBytes(24).toString("hex");
 
     const reservation = await tx.reservation.create({
       data: {
@@ -249,6 +252,7 @@ export async function createPublicReservation(
         specialRequest: input.specialRequest ?? null,
         expiresAt,
         cancelToken,
+        paymentToken,
       },
     });
 
@@ -261,11 +265,12 @@ export async function createPublicReservation(
 
     return {
       reservationId: reservation.id,
-      guestId: guest.id,
+      guestId: reservation.guestId,
       status: reservation.status,
-      tableIds: selectedTables.map((table) => table.id),
+      tableIds: selectedTableIds,
       expiresAt: reservation.expiresAt,
       cancelToken: reservation.cancelToken!,
+      paymentToken: reservation.paymentToken!,
     };
   });
 
