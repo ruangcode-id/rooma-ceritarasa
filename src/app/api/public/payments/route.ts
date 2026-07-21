@@ -198,13 +198,7 @@ export async function POST(req: NextRequest) {
       { status: 201 }
     );
   } catch (error: unknown) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Internal Server Error";
-
     console.error("Public Payment Error:", error);
-
-    return jsonError(message, 500);
+    return jsonError("Terjadi kesalahan pada server. Silakan coba lagi.", 500);
   }
 }

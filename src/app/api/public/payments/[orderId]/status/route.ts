@@ -71,7 +71,7 @@ export async function GET(
       },
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
+    console.error("Public Payment Status Error:", error);
+    return NextResponse.json({ success: false, error: "Terjadi kesalahan pada server." }, { status: 500 });
   }
 }
