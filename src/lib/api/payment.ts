@@ -1,7 +1,7 @@
 import { ReservationPaymentType } from "@/features/payments/payment.types";
 
 export type CreatePaymentRequest = {
-  reservationId: string;
+  paymentToken: string;
   paymentType: ReservationPaymentType;
 };
 
@@ -51,8 +51,8 @@ export type PaymentStatusResponse = {
   amount?: number;
 };
 
-export async function getPaymentStatus(orderId: string): Promise<PaymentStatusResponse> {
-  const response = await fetch(`/api/public/payments/${orderId}/status`);
+export async function getPaymentStatus(orderId: string, paymentToken: string): Promise<PaymentStatusResponse> {
+  const response = await fetch(`/api/public/payments/${orderId}/status?paymentToken=${encodeURIComponent(paymentToken)}`);
 
   if (!response.ok) {
     throw new Error("Failed to fetch payment status");

@@ -5,6 +5,12 @@ import { jsonError, jsonSuccess } from "@/lib/api-envelope";
 
 import { createPayment } from "@/features/payments/payment.service";
 import { ReservationPaymentType } from "@/features/payments/payment.types";
+import rateLimit from "@/lib/rate-limit";
+
+const limiter = rateLimit({
+  uniqueTokenPerInterval: 500,
+  interval: 60000,
+});
 
 const DEPOSIT_POLICY = {
   noDepositMaxGuests: 2,
@@ -79,11 +85,18 @@ function getPaymentItemName(
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    try {
+      await limiter.check(10, ip);
+    } catch {
+      return jsonError("Terlalu banyak permintaan. Coba lagi nanti.", 429);
+    }
+
     const body = await req.json().catch(() => null);
 
     if (
       !body ||
-      typeof body.reservationId !== "string" ||
+      typeof body.paymentToken !== "string" ||
       !Object.values(ReservationPaymentType).includes(body.paymentType)
     ) {
       return jsonError("Invalid payload", 400);
@@ -91,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     const reservation = await prisma.reservation.findUnique({
       where: {
-        id: body.reservationId,
+        paymentToken: body.paymentToken,
       },
       include: {
         guest: true,
@@ -99,7 +112,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!reservation) {
-      return jsonError("Reservasi tidak ditemukan.", 404);
+      return jsonError("Reservasi tidak ditemukan atau token tidak valid.", 404);
     }
 
     const partySize = reservation.partySize;
@@ -126,6 +139,21 @@ export async function POST(req: NextRequest) {
     }
 
     const amount = depositAmount;
+
+    // Mencegah pembuatan transaksi Midtrans ganda jika user double-click atau retry terlalu cepat
+    const existingRecentPayment = await prisma.payment.findFirst({
+      where: {
+        reservationId: reservation.id,
+        status: "pending",
+        createdAt: {
+          gt: new Date(Date.now() - 1 * 60 * 1000), // 1 menit yang lalu
+        },
+      },
+    });
+
+    if (existingRecentPayment) {
+      return jsonError("Transaksi pembayaran sedang diproses. Mohon selesaikan pembayaran di pop-up yang aktif, atau tunggu 1 menit untuk mengulang.", 409);
+    }
 
     const result = await createPayment({
       reservationId: reservation.id,

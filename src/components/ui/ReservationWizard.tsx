@@ -48,6 +48,7 @@ type CreateReservationResult = {
   tableIds: string[];
   expiresAt: string | null;
   cancelToken: string;
+  paymentToken: string;
 };
 
 type ReservationPaymentResult = {
@@ -263,7 +264,7 @@ export default function ReservationWizard({
     }
   };
 
-  const createReservationPayment = async (reservationId: string) => {
+  const createReservationPayment = async (reservationId: string, paymentToken: string) => {
     setPaymentState("creating");
     setPaymentError(null);
 
@@ -280,7 +281,7 @@ export default function ReservationWizard({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          reservationId,
+          paymentToken,
           paymentType: "deposit",
         }),
       });
@@ -328,7 +329,7 @@ export default function ReservationWizard({
   const handleReservationSuccess = async (result: CreateReservationResult) => {
     setReservationResult(result);
     setStep(3);
-    await createReservationPayment(result.reservationId);
+    await createReservationPayment(result.reservationId, result.paymentToken);
   };
 
   // --- Calendar Helpers ---
