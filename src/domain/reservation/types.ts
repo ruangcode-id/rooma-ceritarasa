@@ -10,6 +10,11 @@ export interface ReservationEntity {
   specialRequest: string | null;
   internalNotes: string | null;
   cancelToken: string | null;
+  paymentToken: string | null;
+  checkInToken: string | null;
+  checkInTokenExpiresAt: Date | null;
+  expiresAt: Date | null;
+  reminderSentAt: Date | null;
   createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;

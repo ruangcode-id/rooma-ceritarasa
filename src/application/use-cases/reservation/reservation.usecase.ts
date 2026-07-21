@@ -51,6 +51,7 @@ export const PublicReservationUseCase = {
     }
 
     const cancelToken = crypto.randomBytes(16).toString("hex");
+    const checkInToken = crypto.randomBytes(24).toString("hex");
     const expiresAt = new Date(Date.now() + PAYMENT_EXPIRY_MS);
 
     const reservation = await createReservationTransaction(
@@ -66,6 +67,7 @@ export const PublicReservationUseCase = {
         specialRequest: input.specialRequest,
         status: ReservationStatus.pending,
         cancelToken,
+        checkInToken,
         expiresAt,
       },
       input.tableIds,
@@ -117,6 +119,7 @@ export async function createReservation(input: PublicReservationInput) {
     status: result.status,
     tableIds: result.tableIds,
     cancelToken: result.cancelToken,
+    checkInToken: result.checkInToken,
   };
 }
 

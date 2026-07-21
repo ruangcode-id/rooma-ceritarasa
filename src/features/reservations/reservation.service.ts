@@ -6,6 +6,7 @@ import {
   TableStatus,
 } from "@/generated/prisma/client";
 import { appEvents, EVENTS } from "@/lib/events";
+import { buildCheckInDeadline } from "@/infrastructure/check-in/grace";
 
 const RESERVATION_PENDING_EXPIRY_MINUTES = 15;
 
@@ -29,10 +30,12 @@ export type CreateReservationResult = {
   status: string;
   tableIds: string[];
   expiresAt: Date | null;
-  /** Token untuk cancel publik & check-in lookup (QR). */
+  /** Token rahasia khusus untuk pembatalan publik. */
   cancelToken: string;
   /** Token rahasia khusus untuk memproses pembayaran publik. */
   paymentToken: string;
+  /** Token khusus untuk QR dan lookup check-in. */
+  checkInToken: string;
 };
 
 function getReservationExpiry(partySize: number) {
@@ -241,6 +244,11 @@ export async function createPublicReservation(
     const expiresAt = isVipValid ? null : getReservationExpiry(input.partySize);
     const cancelToken = crypto.randomBytes(16).toString("hex");
     const paymentToken = crypto.randomBytes(24).toString("hex");
+    const checkInToken = crypto.randomBytes(24).toString("hex");
+    const checkInTokenExpiresAt = buildCheckInDeadline(
+      reservationDate,
+      session.startTime
+    );
 
     const reservation = await tx.reservation.create({
       data: {
@@ -253,6 +261,8 @@ export async function createPublicReservation(
         expiresAt,
         cancelToken,
         paymentToken,
+        checkInToken,
+        checkInTokenExpiresAt,
       },
     });
 
@@ -271,6 +281,7 @@ export async function createPublicReservation(
       expiresAt: reservation.expiresAt,
       cancelToken: reservation.cancelToken!,
       paymentToken: reservation.paymentToken!,
+      checkInToken: reservation.checkInToken!,
     };
   });
 

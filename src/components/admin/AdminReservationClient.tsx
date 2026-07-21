@@ -47,7 +47,7 @@ type ReservationRow = {
   partySize: number;
   date: string;
   createdAt: string;
-  cancelToken: string;
+  checkInToken: string | null;
   guest: {
     id: string;
     name: string;
@@ -255,7 +255,8 @@ export default function AdminReservationClient() {
   }
 
   function copyCheckInToken(reservation: ReservationRow) {
-    void navigator.clipboard.writeText(reservation.cancelToken);
+    if (!reservation.checkInToken) return;
+    void navigator.clipboard.writeText(reservation.checkInToken);
     setCopiedToken(reservation.id);
     window.setTimeout(() => setCopiedToken(null), 2000);
   }
@@ -316,7 +317,7 @@ export default function AdminReservationClient() {
               </span>
             ) : (
               <span className="truncate">
-                #{reservation.cancelToken?.substring(0, 8).toUpperCase() ?? 'N/A'}...
+                #{reservation.checkInToken?.substring(0, 8).toUpperCase() ?? 'N/A'}...
                 <span className="opacity-60"> (copy)</span>
               </span>
             )}

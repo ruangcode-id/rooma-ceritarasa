@@ -9,7 +9,7 @@ const CHECK_IN_QR_OPTIONS = {
 /** Content-ID untuk inline attachment email (Resend). */
 export const CHECK_IN_QR_CID = "check-in-qr";
 
-/** QR berisi token check-in (cancelToken) — cocok untuk scanner fisik di front desk. */
+/** QR berisi token khusus check-in — cocok untuk scanner fisik di front desk. */
 export async function generateCheckInQrDataUrl(token: string): Promise<string> {
   return QRCode.toDataURL(token.trim(), CHECK_IN_QR_OPTIONS);
 }

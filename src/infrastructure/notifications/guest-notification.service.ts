@@ -136,7 +136,7 @@ async function sendReservationEmailWithCheckInQr(params: {
       console.error("[guest-notify] QR email block failed:", error);
     }
   } else {
-    console.warn("[guest-notify] cancelToken missing — email tanpa QR.");
+    console.warn("[guest-notify] checkInToken missing — email tanpa QR.");
   }
 
   return sendTransactionalEmail({
@@ -180,7 +180,7 @@ export async function notifyGuestReservationConfirmed(reservationId: string) {
     return;
   }
 
-  const checkInCode = reservation.cancelToken?.trim() ?? "";
+  const checkInCode = reservation.checkInToken?.trim() ?? "";
   const vars: TemplateVars = {
     ...buildReservationVars(reservation),
     check_in_code: checkInCode,
@@ -212,9 +212,9 @@ export async function notifyGuestPaymentSuccess(reservationId: string) {
   const reservation = await getReservationNotifyContext(reservationId);
   if (!reservation) return;
 
-  const checkInCode = reservation.cancelToken?.trim() ?? "";
+  const checkInCode = reservation.checkInToken?.trim() ?? "";
   if (!checkInCode) {
-    console.warn("[guest-notify] cancelToken missing for reservation:", reservationId);
+    console.warn("[guest-notify] checkInToken missing for reservation:", reservationId);
   }
 
   const guestEmail = reservation.guest.email?.trim() ?? "";
