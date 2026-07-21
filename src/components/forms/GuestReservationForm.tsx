@@ -23,6 +23,7 @@ type CreateReservationResult = {
   expiresAt: string | null;
   cancelToken: string;
   paymentToken: string;
+  checkInToken: string;
 };
 
 export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vipToken, onSuccess, onBack }: GuestReservationFormProps) {

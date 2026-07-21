@@ -1,5 +1,6 @@
 import { prisma } from "@/infrastructure/database/prisma";
 import { ReservationStatus, Prisma, type Reservation } from "@/generated/prisma/client";
+import { buildCheckInDeadline } from "@/infrastructure/check-in/grace";
 
 export type GuestInput = {
   name: string;
@@ -14,6 +15,7 @@ export type ReservationInput = {
   specialRequest?: string;
   status: ReservationStatus;
   cancelToken: string;
+  checkInToken: string;
   expiresAt: Date;
 };
 
@@ -42,6 +44,11 @@ export async function createReservationTransaction(
       });
     }
 
+    const session = await tx.restaurantSession.findUniqueOrThrow({
+      where: { id: reservationInput.sessionId },
+      select: { startTime: true },
+    });
+
     const reservation = await tx.reservation.create({
       data: {
         guestId: guest.id,
@@ -51,6 +58,11 @@ export async function createReservationTransaction(
         specialRequest: reservationInput.specialRequest,
         status: reservationInput.status,
         cancelToken: reservationInput.cancelToken,
+        checkInToken: reservationInput.checkInToken,
+        checkInTokenExpiresAt: buildCheckInDeadline(
+          reservationInput.date,
+          session.startTime,
+        ),
         expiresAt: reservationInput.expiresAt,
       },
     });
@@ -89,7 +101,7 @@ export async function cancelReservationByToken(
   return { reservationId: found.id };
 }
 
-/** Lookup reservasi: UUID → id; selain itu → cancel_token (check-in Dev C). */
+/** Lookup check-in admin: UUID internal atau check_in_token QR. */
 export async function findReservationByLookup(
   lookup: string,
 ): Promise<(Reservation & { guest: { name: string } }) | null> {
@@ -105,7 +117,13 @@ export async function findReservationByLookup(
   }
 
   return prisma.reservation.findFirst({
-    where: { cancelToken: trimmed },
+    where: {
+      checkInToken: trimmed,
+      OR: [
+        { checkInTokenExpiresAt: null },
+        { checkInTokenExpiresAt: { gt: new Date() } },
+      ],
+    },
     include: { guest: { select: { name: true } } },
   });
 }
