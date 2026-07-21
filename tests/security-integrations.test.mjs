@@ -61,6 +61,70 @@ test("cron reminder authorization runs before reminder side effects", () => {
   );
 });
 
+test("admin session routes keep client-facing errors generic", () => {
+  const routes = [
+    "src/app/api/admin/sessions/route.ts",
+    "src/app/api/admin/sessions/[id]/route.ts",
+  ];
+
+  for (const route of routes) {
+    const source = readProjectFile(route);
+
+    assert.ok(
+      source.includes("console.error"),
+      `${route} should log the underlying error on the server`,
+    );
+    assert.equal(
+      /error:\s*message/.test(source) || /jsonError\(\s*message/.test(source),
+      false,
+      `${route} must not return raw error.message to clients`,
+    );
+  }
+});
+
+test("B5.P0 payment routes keep client-facing errors generic", () => {
+  const routes = [
+    {
+      file: "src/app/api/public/payments/route.ts",
+      serverError: "Terjadi kesalahan pada server. Silakan coba lagi.",
+    },
+    {
+      file: "src/app/api/public/payments/[orderId]/status/route.ts",
+      serverError: "Terjadi kesalahan pada server.",
+    },
+    {
+      file: "src/app/api/admin/payments/route.ts",
+      serverError: "Terjadi kesalahan internal pada server.",
+    },
+    {
+      file: "src/app/api/admin/payments/sync/route.ts",
+      serverError: "Terjadi kesalahan internal pada server.",
+    },
+    {
+      file: "src/app/api/admin/payments/[id]/refund/route.ts",
+      serverError: "Terjadi kesalahan internal pada server.",
+    },
+  ];
+
+  for (const { file, serverError } of routes) {
+    const source = readProjectFile(file);
+
+    assert.ok(
+      source.includes("console.error"),
+      `${file} should log the underlying error on the server`,
+    );
+    assert.ok(
+      source.includes(serverError),
+      `${file} should return a generic server error message`,
+    );
+    assert.equal(
+      /error:\s*message/.test(source) || /jsonError\(\s*message/.test(source),
+      false,
+      `${file} must not return raw error.message to clients`,
+    );
+  }
+});
+
 // A4: Rate Limiting — guard must run before any business logic
 test("A4: rate limit guard (429) runs before req.json() and createPublicReservation", () => {
   const source = readProjectFile("src/app/api/public/reservations/route.ts");
