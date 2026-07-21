@@ -40,9 +40,6 @@ export async function GET(req: NextRequest) {
   } catch (error: unknown) {
     console.error("ERROR GET /api/admin/sessions:", error);
 
-    const message = error instanceof Error ? error.message : "Internal Server Error";
-
-
     return NextResponse.json(
       { success: false, error: "Terjadi kesalahan internal pada server." },
       { status: 500 }
