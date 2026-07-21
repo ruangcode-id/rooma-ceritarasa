@@ -7,6 +7,8 @@ export async function POST() {
   const signoutResult = await signOut({ redirect: false });
 
   const cookiesToClear = [
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
     "session-token",
     "__Secure-session-token",
     "next-auth.session-token",

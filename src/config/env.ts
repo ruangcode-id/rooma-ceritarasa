@@ -49,6 +49,54 @@ export function getCronSecret(): string | null {
   return secret || null;
 }
 
+const PLACEHOLDER_AUTH_SECRETS = new Set([
+  "CHANGE_ME",
+  "CHANGE_ME_SECURE_PASSWORD",
+  "changeme",
+  "replace-with-a-strong-random-secret",
+  "your-secret",
+  "your_secret",
+]);
+
+function readEnv(name: string): string | null {
+  const value = process.env[name]?.trim();
+  return value || null;
+}
+
+function parseBooleanEnv(value: string | null): boolean | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return null;
+}
+
+export function getAuthSecret(): string | undefined {
+  const secret = readEnv("AUTH_SECRET") ?? readEnv("NEXTAUTH_SECRET");
+  if (!secret) return undefined;
+  if (PLACEHOLDER_AUTH_SECRETS.has(secret)) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("AUTH_SECRET must be a strong production secret.");
+    }
+    return undefined;
+  }
+  return secret;
+}
+
+export function getAuthUrl(): string | null {
+  return readEnv("AUTH_URL") ?? readEnv("NEXTAUTH_URL");
+}
+
+export function getAuthTrustHost(): boolean {
+  const explicit = parseBooleanEnv(readEnv("AUTH_TRUST_HOST"));
+  if (explicit !== null) return explicit;
+  return process.env.NODE_ENV === "production" || Boolean(getAuthUrl());
+}
+
+export function shouldUseSecureAuthCookies(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
 export function getCareerAdminEmail(): string | null {
   return process.env.CAREER_ADMIN_EMAIL?.trim() || null;
 }
