@@ -14,7 +14,7 @@ export async function DELETE(
     return NextResponse.json({ success: true, message: result.message });
   } catch (error: unknown) {
     if (error instanceof Error && error.message === "Blocked date not found") {
-      return NextResponse.json({ success: false, error: error.message }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Blocked date not found" }, { status: 404 });
     }
     return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
