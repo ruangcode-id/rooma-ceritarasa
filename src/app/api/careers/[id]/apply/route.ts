@@ -7,8 +7,12 @@ import {
   notifyAdminNewApplication,
   sendApplicationConfirmation,
 } from "@/features/careers/career-email.service";
+import rateLimit from "@/lib/rate-limit";
+import { headers } from "next/headers";
 
 export const runtime = "nodejs";
+
+const limiter = rateLimit({ uniqueTokenPerInterval: 500, interval: 3600000 }); // 1 jam
 
 const MAX_CV_SIZE_BYTES = 5 * 1024 * 1024;
 const idSchema = z.string().uuid("id harus berupa UUID yang valid.");
@@ -39,9 +43,7 @@ function mapRuntimeError(error: unknown) {
     }
 
     if (error.message.startsWith("Missing Cloudinary env")) {
-      return jsonError("Cloudinary belum dikonfigurasi.", 500, {
-        details: error.message,
-      });
+      return jsonError("Cloudinary belum dikonfigurasi.", 500);
     }
   }
 
@@ -56,6 +58,14 @@ export async function POST(
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) {
     return jsonValidationError(parsedId.error);
+  }
+
+  const headersList = await headers();
+  const ip = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown";
+  try {
+    await limiter.check(3, `apply_${ip}`);
+  } catch {
+    return jsonError("Terlalu banyak permintaan lamaran kerja. Silakan coba lagi nanti.", 429);
   }
 
   let formData: FormData;
@@ -90,8 +100,16 @@ export async function POST(
   }
 
   try {
+    const buffer = Buffer.from(await cv.arrayBuffer());
+    
+    // Check Magic Bytes untuk PDF (%PDF-)
+    const isPdfMagic = buffer.subarray(0, 5).toString("hex").toUpperCase() === "255044462D";
+    if (!isPdfMagic) {
+      return jsonError("Format file tidak valid atau file PDF palsu.", 400);
+    }
+
     const application = await createCareerApplication(parsedId.data, parsed.data, {
-      buffer: Buffer.from(await cv.arrayBuffer()),
+      buffer,
     });
 
     const [confirmationResult, adminNotificationResult] = await Promise.all([
