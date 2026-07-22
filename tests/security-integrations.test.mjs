@@ -195,7 +195,111 @@ test("B7.P1: daily reservation reminders use the Jakarta calendar day", () => {
   );
 });
 
+test("B1.P0: VIP token is cryptographically secure and public API avoids PII leakage", () => {
+  const serviceSource = readProjectFile("src/features/vip/vip.service.ts");
+  const publicRouteSource = readProjectFile("src/app/api/public/vip/[token]/route.ts");
 
+  assert.match(
+    serviceSource,
+    /TOKEN_BYTES\s*=\s*24;/,
+    "VIP token generator must define a 24-byte constant",
+  );
+  assert.match(
+    serviceSource,
+    /const token = crypto\.randomBytes\(TOKEN_BYTES\)\.toString\("hex"\);/,
+    "VIP token must be generated securely",
+  );
+  assert.doesNotMatch(
+    serviceSource,
+    /export async function getPublicVipCardByToken[^]*guest:\s*\{\s*select:\s*\{[^]*email:/,
+    "public VIP lookup must not leak the guest email",
+  );
+  assert.doesNotMatch(
+    serviceSource,
+    /export async function getPublicVipCardByToken[^]*guest:\s*\{\s*select:\s*\{[^]*phone:/,
+    "public VIP lookup must not leak the guest phone number",
+  );
+  
+  assert.match(
+    publicRouteSource,
+    /\.min\(20\)/,
+    "public API must reject short legacy VIP tokens (min 20 chars)",
+  );
+});
+
+test("B3.P0: Login endpoint applies rate limit and uses generic messages", () => {
+  const loginSource = readProjectFile("src/application/use-cases/auth/login.action.ts");
+
+  assert.match(
+    loginSource,
+    /limiter\.check\(5,\s*`login_\$\{ip\}_\$\{email\}`\)/,
+    "Login endpoint must have rate limiting based on IP and email",
+  );
+  assert.match(
+    loginSource,
+    /console\.warn\(`\[SECURITY\] Excessive login attempts/,
+    "Login endpoint must log excessive attempts to server console",
+  );
+  assert.match(
+    loginSource,
+    /error:\s*"Email atau password tidak valid\."/,
+    "Login must use generic invalid credential message",
+  );
+  assert.doesNotMatch(
+    loginSource,
+    /error:\s*"Akun tidak aktif atau tidak ditemukan\."/,
+    "Login must not differentiate user not found from invalid password",
+  );
+  assert.doesNotMatch(
+    loginSource,
+    /error:\s*"Email atau password salah\."/,
+    "Login must strictly use the single generic message",
+  );
+  assert.match(
+    loginSource,
+    /console\.error\("\[LOGIN DB ERROR\]"/,
+    "Login must catch database errors and log them on the server",
+  );
+});
+
+test("B4.P0: Upload endpoints enforce size limits, magic bytes, and rate limits", () => {
+  const gallerySource = readProjectFile("src/app/api/admin/gallery/route.ts");
+  const careerSource = readProjectFile("src/app/api/careers/[id]/apply/route.ts");
+
+  // Gallery Checks
+  assert.match(
+    gallerySource,
+    /image\.size > 8 \* 1024 \* 1024/,
+    "Gallery upload must reject files larger than 8MB",
+  );
+  assert.match(
+    gallerySource,
+    /const hex = buffer\.subarray\(0, 4\)\.toString\("hex"\)\.toUpperCase\(\);/,
+    "Gallery upload must verify image magic bytes",
+  );
+  assert.match(
+    gallerySource,
+    /return jsonError\("Cloudinary belum dikonfigurasi\.", 500\);/,
+    "Gallery must not leak Cloudinary configuration error details",
+  );
+
+  // Career Checks
+  assert.match(
+    careerSource,
+    /cv\.size > MAX_CV_SIZE_BYTES/,
+    "Career upload must reject large CV files",
+  );
+  assert.match(
+    careerSource,
+    /limiter\.check\(3,\s*`apply_\$\{ip\}`\)/,
+    "Career application must enforce rate limiting (3/hour per IP)",
+  );
+  assert.match(
+    careerSource,
+    /const isPdfMagic = buffer\.subarray\(0, 5\)\.toString\("hex"\)\.toUpperCase\(\) === "255044462D";/,
+    "Career application must verify PDF magic bytes (%PDF-)",
+  );
+});
 test("admin session routes keep client-facing errors generic", () => {
   const routes = [
     "src/app/api/admin/sessions/route.ts",
