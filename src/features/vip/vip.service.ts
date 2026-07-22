@@ -19,9 +19,9 @@ function buildVipPublicUrl(token: string) {
   return appUrl ? `${appUrl}/vip/${token}` : `/vip/${token}`;
 }
 
-async function generateUniqueVipToken() {
+export async function generateUniqueVipToken() {
   for (let attempt = 0; attempt < MAX_TOKEN_ATTEMPTS; attempt += 1) {
-    const token = crypto.randomBytes(TOKEN_BYTES).toString("base64url");
+    const token = crypto.randomBytes(TOKEN_BYTES).toString("hex");
     const existing = await prisma.vipCard.findUnique({
       where: { token },
       select: { id: true },

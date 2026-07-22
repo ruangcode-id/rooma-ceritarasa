@@ -31,7 +31,7 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
   const [error, setError] = useState<string | null>(null);
 
   const [vipLoading, setVipLoading] = useState(!!vipToken);
-  const [vipData, setVipData] = useState<{name: string, phone: string, email: string} | null>(null);
+  const [vipData, setVipData] = useState<{name: string} | null>(null);
 
   useEffect(() => {
     if (!vipToken) return;
@@ -40,11 +40,9 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
       try {
         const res = await fetch(`/api/public/vip/${vipToken}`);
         const data = await res.json();
-        if (data.success && data.data.guest) {
+        if (data.success && data.data) {
           setVipData({
-            name: data.data.guest.name,
-            phone: data.data.guest.phone,
-            email: data.data.guest.email || "",
+            name: data.data.guestName,
           });
         }
       } catch (err) {
@@ -157,9 +155,7 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
               name="guestPhone"
               type="tel"
               required
-              readOnly={!!vipData}
-              defaultValue={vipData?.phone}
-              className={`w-full border-b-2 px-0 py-2 text-base outline-none transition-all ${vipData ? "border-transparent bg-slate-50 text-slate-500 px-3 rounded" : "border-slate-200 bg-transparent text-slate-900 focus:border-slate-900"} placeholder:text-slate-300`}
+              className="w-full border-b-2 px-0 py-2 text-base outline-none transition-all border-slate-200 bg-transparent text-slate-900 focus:border-slate-900 placeholder:text-slate-300"
               placeholder="081234567890"
             />
           </div>
@@ -171,9 +167,7 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
               id="guestEmail"
               name="guestEmail"
               type="email"
-              readOnly={!!vipData}
-              defaultValue={vipData?.email}
-              className={`w-full border-b-2 px-0 py-2 text-base outline-none transition-all ${vipData ? "border-transparent bg-slate-50 text-slate-500 px-3 rounded" : "border-slate-200 bg-transparent text-slate-900 focus:border-slate-900"} placeholder:text-slate-300`}
+              className="w-full border-b-2 px-0 py-2 text-base outline-none transition-all border-slate-200 bg-transparent text-slate-900 focus:border-slate-900 placeholder:text-slate-300"
               placeholder="john@example.com"
             />
           </div>
