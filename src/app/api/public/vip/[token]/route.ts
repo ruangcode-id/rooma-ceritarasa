@@ -1,51 +1,30 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/infrastructure/database/prisma";
+import { z } from "zod";
+import { jsonError, jsonSuccess } from "@/lib/api-envelope";
+import { getPublicVipCardByToken } from "@/features/vip/vip.service";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
-) {
+// Minimal 20 karakter untuk menolak token pendek lama (RVIP-A8B9C2 = 11 karakter)
+const tokenParamSchema = z.string().trim().min(20).max(200);
+
+type RouteCtx = { params: Promise<{ token: string }> };
+
+export async function GET(_request: Request, context: RouteCtx) {
+  const { token } = await context.params;
+  const parsed = tokenParamSchema.safeParse(token);
+
+  if (!parsed.success) {
+    return jsonError("Token tidak valid atau terlalu pendek.", 400);
+  }
+
   try {
-    const { token } = await params;
+    const card = await getPublicVipCardByToken(parsed.data);
 
-    const vipCard = await prisma.vipCard.findUnique({
-      where: { token },
-      include: {
-        guest: {
-          select: {
-            id: true,
-            name: true,
-            phone: true,
-            email: true,
-          }
-        }
-      }
-    });
-
-    if (!vipCard || !vipCard.isActive) {
-      return NextResponse.json(
-        { success: false, error: "Token VIP tidak valid atau sudah tidak aktif." },
-        { status: 404 }
-      );
+    if (!card) {
+      return jsonError("Token VIP tidak valid atau sudah tidak aktif.", 404);
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          token: vipCard.token,
-          tier: vipCard.tier,
-          benefits: vipCard.benefits,
-          guest: vipCard.guest,
-        },
-      },
-      { status: 200 }
-    );
+    return jsonSuccess(card);
   } catch (error: unknown) {
     console.error("[GET VIP BY TOKEN ERROR]", error);
-    return NextResponse.json(
-      { success: false, error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return jsonError("Internal Server Error", 500);
   }
 }

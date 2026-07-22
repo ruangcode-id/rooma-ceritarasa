@@ -4,19 +4,15 @@ import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { z } from "zod";
 import QRCode from "qrcode";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import crypto from "crypto";
 import { VipTier } from "@/generated/prisma/client";
+import { generateUniqueVipToken } from "@/features/vip/vip.service";
 
 const assignVipSchema = z.object({
   guestId: z.string().uuid("Invalid Guest ID"),
   benefits: z.string().optional(),
 });
 
-function generateUniqueToken() {
-  // Generates something like RVIP-A8B9C2
-  const randomStr = crypto.randomBytes(3).toString("hex").toUpperCase();
-  return `RVIP-${randomStr}`;
-}
+
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,7 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 1. Generate token
-    const token = generateUniqueToken();
+    const token = await generateUniqueVipToken();
 
     // 2. Generate QR Code Buffer
     const qrBuffer = await QRCode.toBuffer(token, {

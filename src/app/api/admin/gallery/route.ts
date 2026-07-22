@@ -28,9 +28,7 @@ function formString(formData: FormData, key: string) {
 
 function mapRuntimeError(error: unknown) {
   if (error instanceof Error && error.message.startsWith("Missing Cloudinary env")) {
-    return jsonError("Cloudinary belum dikonfigurasi.", 500, {
-      details: error.message,
-    });
+    return jsonError("Cloudinary belum dikonfigurasi.", 500);
   }
 
   return null;
@@ -74,6 +72,10 @@ export async function POST(request: Request) {
     return jsonError("image wajib diisi.", 400);
   }
 
+  if (image.size > 8 * 1024 * 1024) {
+    return jsonError("Ukuran gambar maksimal 8MB.", 400);
+  }
+
   if (!image.type.startsWith("image/")) {
     return jsonError("File harus berupa image.", 400);
   }
@@ -92,6 +94,17 @@ export async function POST(request: Request) {
 
   try {
     const buffer = Buffer.from(await image.arrayBuffer());
+    
+    // Pengecekan Magic Bytes (Signature File)
+    const hex = buffer.subarray(0, 4).toString("hex").toUpperCase();
+    const isJpeg = hex.startsWith("FFD8FF");
+    const isPng = hex === "89504E47";
+    const isWebp = hex === "52494646" && buffer.subarray(8, 12).toString("hex").toUpperCase() === "57454250";
+
+    if (!isJpeg && !isPng && !isWebp) {
+      return jsonError("Format file tidak valid atau file palsu. Hanya mendukung JPEG, PNG, dan WebP.", 400);
+    }
+
     const galleryImage = await createGalleryImage(parsed.data, { buffer });
     return jsonSuccess(galleryImage, { status: 201 });
   } catch (error: unknown) {
