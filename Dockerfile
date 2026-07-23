@@ -6,6 +6,8 @@ RUN apk add --no-cache libc6-compat openssl
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./
+# Dummy URL cukup untuk `prisma generate` (tidak connect ke DB)
+ENV DATABASE_URL="postgresql://prisma:prisma@127.0.0.1:5432/prisma?schema=public"
 RUN npm ci
 
 # Stage 2: Build aplikasi Next.js
@@ -19,7 +21,11 @@ COPY . .
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_TELEMETRY_DISABLED=1
+# Dummy URL untuk generate; koneksi DB sungguhan hanya di runtime
+ENV DATABASE_URL="postgresql://prisma:prisma@127.0.0.1:5432/prisma?schema=public"
 
+# src/generated/prisma di-gitignore → wajib generate ulang di image
+RUN npx prisma generate
 RUN npm run build
 
 # Stage 3: Production runner
@@ -33,13 +39,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Salin package info untuk runtime scripts
 COPY package.json package-lock.json ./
-# Salin node_modules dari builder (termasuk Prisma client)
+# Salin node_modules dari builder (termasuk Prisma engines)
 COPY --from=builder /app/node_modules ./node_modules
 # Salin hasil build Next.js
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/next.config.ts ./next.config.ts
-# Prisma schema + migrations untuk migrate deploy saat startup
+# Prisma client custom output + schema/migrations
+COPY --from=builder /app/src/generated ./src/generated
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
