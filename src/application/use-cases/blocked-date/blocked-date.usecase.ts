@@ -1,4 +1,3 @@
-import { requireRole } from "@/lib/auth";
 import { BlockedDateRepository } from "@/infrastructure/repositories/blocked-date.repository";
 import {
   checkBlockedDateSchema,
@@ -41,16 +40,16 @@ export const BlockedDateUseCase = {
    * Admin/Owner: List all blocked dates
    */
   getBlockedDatesAction: async () => {
-    await requireRole(["admin", "owner"]);
     return BlockedDateRepository.getBlockedDates();
   },
 
   /**
    * Admin/Owner: Create blocked date(s) from a single date or a date range
    */
-  createBlockedDatesAction: async (data: unknown) => {
-    const user = await requireRole(["admin", "owner"]);
-
+  createBlockedDatesAction: async (
+    data: unknown,
+    createdByUserId?: string | null,
+  ) => {
     const parsed = createBlockedDateSchema.parse(data);
 
     let datesToBlock: Date[] = [];
@@ -67,16 +66,23 @@ export const BlockedDateUseCase = {
       datesToBlock = getDatesInRangeInclusive(start, end);
     }
 
-    const hasConfirmed = await BlockedDateRepository.hasConfirmedReservationsOnDates(datesToBlock);
+    const hasConfirmed =
+      await BlockedDateRepository.hasConfirmedReservationsOnDates(datesToBlock);
     if (hasConfirmed) {
-      throw new Error("Cannot block date(s) that already have confirmed reservations");
+      throw new Error(
+        "Cannot block date(s) that already have confirmed reservations",
+      );
     }
 
-    // Avoid duplicates (if any) by checking existing first
+    const createdBy =
+      typeof createdByUserId === "string" && createdByUserId.length > 0
+        ? createdByUserId
+        : null;
+
     const created = await BlockedDateRepository.createBlockedDates({
       dates: datesToBlock,
       reason: parsed.reason ?? null,
-      createdBy: user.id,
+      createdBy,
     });
 
     return created;
@@ -86,8 +92,6 @@ export const BlockedDateUseCase = {
    * Admin/Owner: Delete a blocked date by id
    */
   deleteBlockedDateAction: async (id: string) => {
-    await requireRole(["admin", "owner"]);
-
     const existing = await BlockedDateRepository.getBlockedDateById(id);
     if (!existing) throw new Error("Blocked date not found");
 
@@ -99,8 +103,6 @@ export const BlockedDateUseCase = {
    * Admin/Owner: Check if a date is blocked
    */
   checkBlockedDateAction: async (dateStr: string) => {
-    await requireRole(["admin", "owner"]);
-
     const parsed = checkBlockedDateSchema.parse({ date: dateStr });
     const date = parseDateOnlyUTC(parsed.date);
 
@@ -111,13 +113,19 @@ export const BlockedDateUseCase = {
   /**
    * Public: list blocked dates for a month/year (returns dates only, no reason)
    */
-  getPublicBlockedDatesAction: async (args: { month: unknown; year: unknown }) => {
+  getPublicBlockedDatesAction: async (args: {
+    month: unknown;
+    year: unknown;
+  }) => {
     const parsed = listPublicBlockedDatesSchema.parse(args);
 
     const start = new Date(Date.UTC(parsed.year, parsed.month - 1, 1));
     const end = new Date(Date.UTC(parsed.year, parsed.month, 0));
 
-    const blockedDates = await BlockedDateRepository.getBlockedDatesInRange(start, end);
+    const blockedDates = await BlockedDateRepository.getBlockedDatesInRange(
+      start,
+      end,
+    );
     return blockedDates.map((b) => toISODateOnly(startOfUTCDate(b.date)));
   },
 };
