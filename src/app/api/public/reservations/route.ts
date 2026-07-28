@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPublicReservation } from "@/features/reservations/reservation.service";
 import { publicReservationSchema } from "@/validations/reservation.validation";
 import rateLimit from "@/lib/rate-limit";
+import { getRateLimitClientKey } from "@/lib/client-ip";
 
 const limiter = rateLimit({
   uniqueTokenPerInterval: 500,
@@ -12,7 +13,7 @@ const limiter = rateLimit({
 export async function POST(req: NextRequest) {
   try {
     // A4: Rate Limiting
-    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+    const ip = getRateLimitClientKey(req.headers);
     try {
       await limiter.check(3, ip);
     } catch {

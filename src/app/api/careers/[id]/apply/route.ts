@@ -9,6 +9,7 @@ import {
 } from "@/features/careers/career-email.service";
 import rateLimit from "@/lib/rate-limit";
 import { headers } from "next/headers";
+import { getRateLimitClientKey } from "@/lib/client-ip";
 
 export const runtime = "nodejs";
 
@@ -61,7 +62,7 @@ export async function POST(
   }
 
   const headersList = await headers();
-  const ip = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown";
+  const ip = getRateLimitClientKey(headersList);
   try {
     await limiter.check(3, `apply_${ip}`);
   } catch {
