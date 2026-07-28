@@ -15,9 +15,10 @@ export const publicReservationSchema = z.object({
   guestName: guestNameSchema,
   guestPhone: guestPhoneSchema,
   guestEmail: z
-    .union([z.literal(""), z.string().trim().email("Email tidak valid.")])
-    .optional()
-    .transform((value) => (value === "" ? undefined : value)),
+    .string({ message: "Email wajib diisi." })
+    .trim()
+    .min(1, "Email wajib diisi.")
+    .email("Format email tidak valid."),
   sessionId: z.string().uuid("Session ID harus berupa UUID yang valid."),
   tableIds: z
     .array(

@@ -22,13 +22,25 @@ const OWNER_MENU = [
 ];
 
 interface OwnerSidebarProps {
+  user?: { name?: string | null; email?: string | null };
   isOpen?: boolean;
   onClose?: () => void;
 }
 
-export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarProps) {
+export default function OwnerSidebar({ user, isOpen = false, onClose }: OwnerSidebarProps) {
   const pathname = usePathname();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const userName = user?.name || "Owner";
+  const userEmail = user?.email || "owner@rooma.com";
+  const userInitials =
+    userName
+      .split(" ")
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "OW";
 
   return (
     <>
@@ -100,18 +112,18 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
         {/* User Profile & Sign Out Unified */}
         <div className="flex items-center justify-between rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
           <div className="flex items-center min-w-0">
-            <div className="h-9 w-9 flex-shrink-0 rounded-full bg-rose-800 flex items-center justify-center text-white font-medium text-sm">
-              OW
+            <div className="h-9 w-9 shrink-0 rounded-full bg-rose-800 flex items-center justify-center text-white font-medium text-sm">
+              {userInitials}
             </div>
             <div className="ml-3 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">Owner</p>
-              <p className="text-xs text-rose-300/60 truncate">owner@rooma.com</p>
+              <p className="text-sm font-semibold text-white truncate">{userName}</p>
+              <p className="text-xs text-rose-300/60 truncate">{userEmail}</p>
             </div>
           </div>
           <button 
             title="Sign Out"
             onClick={() => setShowLogoutConfirm(true)}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-rose-200/70 hover:bg-[#4a1019] hover:text-white transition-all duration-200"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-200/70 hover:bg-[#4a1019] hover:text-white transition-all duration-200"
           >
             <SignOut size={20} />
           </button>
