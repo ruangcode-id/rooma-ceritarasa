@@ -182,7 +182,7 @@ export default function AdminCheckInPage() {
         </button>
       </div>
 
-      <div className="relative flex min-h-[420px] w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <div className="relative flex min-h-105 w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <div
           className={`absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 ${
             status === "success"
