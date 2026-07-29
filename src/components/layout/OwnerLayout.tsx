@@ -4,7 +4,12 @@ import { useState } from "react";
 import OwnerSidebar from "./OwnerSidebar";
 import { List } from "@phosphor-icons/react";
 
-export default function OwnerLayout({ children }: { children: React.ReactNode }) {
+interface OwnerLayoutProps {
+  children: React.ReactNode;
+  user?: { name?: string | null; email?: string | null };
+}
+
+export default function OwnerLayout({ children, user }: OwnerLayoutProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -23,7 +28,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
         </button>
       </div>
 
-      <OwnerSidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <OwnerSidebar user={user} isOpen={isOpen} onClose={() => setIsOpen(false)} />
       
       {/* Add mt-16 on mobile to account for fixed top bar */}
       <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-10 overflow-y-auto mt-16 lg:mt-0">
