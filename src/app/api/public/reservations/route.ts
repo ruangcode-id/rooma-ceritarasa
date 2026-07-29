@@ -3,31 +3,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { createPublicReservation } from "@/features/reservations/reservation.service";
 import { publicReservationSchema } from "@/validations/reservation.validation";
 import rateLimit from "@/lib/rate-limit";
-import { getRateLimitClientKey } from "@/lib/client-ip";
-
-const RATE_LIMIT_WINDOW_MS = 3_600_000; // 1 hour
-
-function getReservationRateLimitPerHour() {
-  const raw = process.env.PUBLIC_RESERVATION_RATE_LIMIT_PER_HOUR;
-  const parsed = raw ? Number.parseInt(raw, 10) : 3;
-  if (!Number.isFinite(parsed) || parsed < 1) return 3;
-  // Cap to avoid accidental misconfig
-  return Math.min(parsed, 100);
-}
-
-const reservationRateLimit = getReservationRateLimitPerHour();
 
 const limiter = rateLimit({
   uniqueTokenPerInterval: 500,
-  interval: RATE_LIMIT_WINDOW_MS,
+  interval: 3600000, // 1 hour
 });
 
 export async function POST(req: NextRequest) {
   try {
-    // A4: Rate Limiting (atur via PUBLIC_RESERVATION_RATE_LIMIT_PER_HOUR)
-    const ip = getRateLimitClientKey(req.headers);
+    // A4: Rate Limiting
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
     try {
-      await limiter.check(reservationRateLimit, ip);
+      await limiter.check(3, ip);
     } catch {
       return NextResponse.json(
         { success: false, error: "Terlalu banyak permintaan (Rate limit exceeded). Silakan coba lagi nanti." },

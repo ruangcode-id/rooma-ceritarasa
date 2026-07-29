@@ -42,22 +42,13 @@ function formatDateId(value: Date): string {
   }).format(value);
 }
 
-function formatTimeFromSession(startTime: Date, endTime?: Date): string {
-  const formatSingle = (d: Date) =>
-    new Intl.DateTimeFormat("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: "UTC",
-    }).format(d).replace(":", ".");
-
-  const startStr = formatSingle(startTime);
-  if (endTime) {
-    const endStr = formatSingle(endTime);
-    return `${startStr} - ${endStr} WIB`;
-  }
-
-  return `${startStr} WIB`;
+function formatTimeFromSession(startTime: Date): string {
+  return new Intl.DateTimeFormat("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: REMINDER_TIME_ZONE,
+  }).format(startTime);
 }
 
 function formatReminderDateKey(date: Date): string {
@@ -199,12 +190,12 @@ function buildReservationVars(reservation: {
   date: Date;
   partySize: number;
   guest: { name: string };
-  session: { name: string; startTime: Date; endTime?: Date };
+  session: { name: string; startTime: Date };
 }): TemplateVars {
   return {
     nama: reservation.guest.name,
     tanggal: formatDateId(reservation.date),
-    waktu: formatTimeFromSession(reservation.session.startTime, reservation.session.endTime),
+    waktu: formatTimeFromSession(reservation.session.startTime),
     session: reservation.session.name,
     reservation_id: reservation.id.slice(0, 8),
     party_size: reservation.partySize,

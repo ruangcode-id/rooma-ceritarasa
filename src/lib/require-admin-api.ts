@@ -19,11 +19,5 @@ export async function requireAdminApiSession(): Promise<
       response: jsonError("Forbidden", 403),
     };
   }
-  if (!session.user.id) {
-    return {
-      ok: false,
-      response: jsonError("Unauthorized", 401),
-    };
-  }
   return { ok: true, userId: session.user.id };
 }

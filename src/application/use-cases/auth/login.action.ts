@@ -7,7 +7,6 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { headers } from "next/headers";
 import rateLimit from "@/lib/rate-limit";
-import { getRateLimitClientKey } from "@/lib/client-ip";
 
 const limiter = rateLimit({ uniqueTokenPerInterval: 500, interval: 60000 });
 
@@ -33,7 +32,7 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
   const { email, password } = parsed.data;
 
   const headersList = await headers();
-  const ip = getRateLimitClientKey(headersList);
+  const ip = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "unknown";
   
   try {
     await limiter.check(5, `login_${ip}_${email}`);

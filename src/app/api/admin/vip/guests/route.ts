@@ -16,25 +16,18 @@ export async function GET(req: NextRequest) {
       deletedAt: null,
     };
 
-    const andFilters: Prisma.GuestWhereInput[] = [];
-
     if (filter === "vip") {
-      andFilters.push({
-        OR: [{ isVip: true }, { vipCard: { isNot: null } }],
-      });
+      where.OR = [
+        { isVip: true },
+        { vipCard: { isNot: null } }
+      ];
     }
 
     if (search) {
-      andFilters.push({
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { phone: { contains: search, mode: "insensitive" } },
-        ],
-      });
-    }
-
-    if (andFilters.length > 0) {
-      where.AND = andFilters;
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { phone: { contains: search, mode: "insensitive" } },
+      ];
     }
 
     const guests = await prisma.guest.findMany({
