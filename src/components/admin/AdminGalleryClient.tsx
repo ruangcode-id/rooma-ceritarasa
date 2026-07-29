@@ -344,14 +344,14 @@ export default function AdminGalleryClient() {
                   className="w-full object-cover"
                 />
                 {/* Overlay on Hover */}
-                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
                   <div className="flex justify-between items-start w-full">
                     {img.category && (
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase bg-white/20 text-white backdrop-blur-md mb-2">
                         {img.category}
                       </span>
                     )}
-                    <div className="flex gap-1 bg-white/20 backdrop-blur-md rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity -translate-y-2.5 group-hover:translate-y-0">
+                    <div className="flex gap-1 bg-white/20 backdrop-blur-md rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity translate-y-[-10px] group-hover:translate-y-0">
                       <button onClick={() => handleEditClick(img)} className="text-white hover:text-primary px-1.5 py-0.5 rounded transition-colors text-xs font-bold">Edit</button>
                       <button onClick={() => handleDeleteClick(img)} className="text-red-300 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors text-xs font-bold">Delete</button>
                     </div>

@@ -56,13 +56,10 @@ export async function DELETE(
     const authResult = await requireOwnerApiSession();
     if (!authResult.ok) return authResult.response;
     const { id } = await params;
-    await UserUseCase.deleteUserAction(id, authResult.userId);
+    await UserUseCase.deleteUserAction(id);
 
     return NextResponse.json({ success: true, message: "User deactivated successfully" });
   } catch (error: unknown) {
-    if (error instanceof Error && error.message === "Cannot delete your own account") {
-      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-    }
     console.error("ERROR DELETE /api/owner/users/[id]:", error);
     return NextResponse.json(
       { success: false, error: "Failed to deactivate user" },
@@ -70,6 +67,5 @@ export async function DELETE(
     );
   }
 }
-
 
 

@@ -161,13 +161,12 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
           </div>
           <div>
             <label htmlFor="guestEmail" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-              Email *
+              Email <span className="text-slate-400 normal-case font-normal">(Opsional)</span>
             </label>
             <input
               id="guestEmail"
               name="guestEmail"
               type="email"
-              required
               className="w-full border-b-2 px-0 py-2 text-base outline-none transition-all border-slate-200 bg-transparent text-slate-900 focus:border-slate-900 placeholder:text-slate-300"
               placeholder="john@example.com"
             />
