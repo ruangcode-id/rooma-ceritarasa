@@ -10,6 +10,7 @@ import {
 import { ReservationPaymentType } from "@/features/payments/payment.types";
 import { PaymentStatus as DbPaymentStatus } from "@/generated/prisma/client";
 import rateLimit from "@/lib/rate-limit";
+import { getRateLimitClientKey } from "@/lib/client-ip";
 
 const limiter = rateLimit({
   uniqueTokenPerInterval: 500,
@@ -89,7 +90,7 @@ function getPaymentItemName(
 
 export async function POST(req: NextRequest) {
   try {
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
+    const ip = getRateLimitClientKey(req.headers);
     try {
       await limiter.check(10, ip);
     } catch {

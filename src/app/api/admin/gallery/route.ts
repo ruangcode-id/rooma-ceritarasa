@@ -31,6 +31,19 @@ function mapRuntimeError(error: unknown) {
     return jsonError("Cloudinary belum dikonfigurasi.", 500);
   }
 
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string" &&
+    (error as { message: string }).message.toLowerCase().includes("invalid cloud_name")
+  ) {
+    return jsonError(
+      "Konfigurasi Cloudinary tidak valid. Periksa CLOUDINARY_CLOUD_NAME.",
+      500,
+    );
+  }
+
   return null;
 }
 

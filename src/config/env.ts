@@ -94,6 +94,10 @@ export function getAuthTrustHost(): boolean {
 }
 
 export function shouldUseSecureAuthCookies(): boolean {
+  // Secure cookies hanya aman dipakai di HTTPS.
+  // Staging VPS via http://IP harus tetap bisa login sebelum domain/SSL siap.
+  const authUrl = getAuthUrl();
+  if (authUrl) return authUrl.startsWith("https://");
   return process.env.NODE_ENV === "production";
 }
 

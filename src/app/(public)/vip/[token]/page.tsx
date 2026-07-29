@@ -94,8 +94,8 @@ export default async function VipPage({
 
       {/* Abstract Background Elements (Subtle on white bg) */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none opacity-20">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-slate-200 blur-[120px]"></div>
-        <div className="absolute bottom-[10%] -right-[10%] w-[60%] h-[60%] rounded-full bg-primary/10 blur-[150px]"></div>
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-slate-200 blur-[120px]"></div>
+        <div className="absolute bottom-[10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-primary/10 blur-[150px]"></div>
       </div>
 
       <div className="relative z-10 max-w-lg w-full px-4 text-center">
@@ -107,7 +107,7 @@ export default async function VipPage({
         <div className="group perspective-1000 mb-12 relative animate-gift-bounce">
           <div className={`
             relative w-full aspect-[1.586/1] rounded-2xl p-5 sm:p-8
-            bg-gradient-to-br ${cardGradient}
+            bg-linear-to-br ${cardGradient}
             border border-white/10
             overflow-hidden
             transition-transform duration-700 ease-out
@@ -118,7 +118,7 @@ export default async function VipPage({
             {/* Shimmer Effect */}
             <div className="absolute inset-0 z-0 opacity-0 group-hover:opacity-30 transition-opacity duration-300">
               <div 
-                className="w-full h-full bg-gradient-to-r from-transparent via-white to-transparent" 
+                className="w-full h-full bg-linear-to-r from-transparent via-white to-transparent" 
                 style={{
                   transform: 'translateX(-150%) skewX(-12deg)',
                   animation: 'shimmer 2.5s infinite ease-in-out'
@@ -136,16 +136,16 @@ export default async function VipPage({
                 alt="Rooma" 
                 width={100} 
                 height={32} 
-                className="brightness-0 invert opacity-90 w-[70px] sm:w-[100px] h-auto"
+                className="brightness-0 invert opacity-90 w-17.5 sm:w-25 h-auto"
               />
-              <span className={`text-[9px] sm:text-xs font-bold tracking-[0.1em] sm:tracking-[0.2em] uppercase text-right leading-tight ${accentColor}`}>
+              <span className={`text-[9px] sm:text-xs font-bold tracking-widest sm:tracking-[0.2em] uppercase text-right leading-tight ${accentColor}`}>
                 {tierLabel}
               </span>
             </div>
 
             {/* Card Content (Middle) - Chip Simlation */}
             <div className="relative z-10 mt-4 sm:mt-6">
-              <div className="w-10 h-7 sm:w-12 sm:h-8 rounded bg-gradient-to-br from-amber-200/40 to-amber-500/20 border border-amber-100/30"></div>
+              <div className="w-10 h-7 sm:w-12 sm:h-8 rounded bg-linear-to-br from-amber-200/40 to-amber-500/20 border border-amber-100/30"></div>
             </div>
 
             {/* Card Content (Bottom) */}
@@ -159,7 +159,7 @@ export default async function VipPage({
                 </h2>
               </div>
               
-              <div className="bg-white p-1 sm:p-2 rounded flex-shrink-0">
+              <div className="bg-white p-1 sm:p-2 rounded shrink-0">
                 {invitation.qrCodeUrl ? (
                   <Image 
                     src={invitation.qrCodeUrl}

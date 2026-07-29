@@ -1,0 +1,35 @@
+# Production reverse proxy for Rooma Ceritarasa
+#
+# SITE_ADDRESS examples:
+#   - Domain (HTTPS otomatis via Let's Encrypt): roomaceritarasa.com
+#   - IP / HTTP sementara (tanpa domain): :80
+#
+# Set di .env.production:
+#   SITE_ADDRESS=roomaceritarasa.com
+#   ACME_EMAIL=admin@roomaceritarasa.com
+
+{
+	email {$ACME_EMAIL:admin@localhost}
+}
+
+{$SITE_ADDRESS::80} {
+	encode gzip zstd
+
+	header {
+		# Defense-in-depth (app juga set security headers di next.config.ts)
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	reverse_proxy app:3000 {
+		health_uri /api/health
+		health_interval 30s
+		health_timeout 5s
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

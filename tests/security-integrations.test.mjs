@@ -577,3 +577,58 @@ test("B6.P1: QR check-in token is separate from cancel token", () => {
   );
 });
 
+test("owner user CRUD: no redundant auth() calls inside UserUseCase and route passes userId to deleteUserAction", () => {
+  const useCaseSource = readProjectFile(
+    "src/application/use-cases/users/user.usecase.ts",
+  );
+  const routeSource = readProjectFile(
+    "src/app/api/owner/users/[id]/route.ts",
+  );
+
+  // 1. UserUseCase must NOT import or call requireRole (which triggers a second auth())
+  assert.doesNotMatch(
+    useCaseSource,
+    /import\s*{[^}]*requireRole[^}]*}/,
+    "UserUseCase must not import requireRole — auth is already enforced at route handler level",
+  );
+  assert.doesNotMatch(
+    useCaseSource,
+    /await\s+requireRole\s*\(/,
+    "UserUseCase must not call requireRole() — double auth() causes 403 under reverse proxy",
+  );
+
+  // 2. deleteUserAction must accept requestingUserId as second parameter (no internal auth())
+  assert.match(
+    useCaseSource,
+    /deleteUserAction\s*:\s*async\s*\(\s*id\s*:\s*string\s*,\s*requestingUserId\s*:\s*string\s*\)/,
+    "deleteUserAction must receive requestingUserId from caller, not call auth() internally",
+  );
+
+  // 3. The self-deletion guard must still exist inside deleteUserAction
+  assert.match(
+    useCaseSource,
+    /if\s*\(\s*requestingUserId\s*===\s*id\s*\)/,
+    "deleteUserAction must still guard against self-deletion via requestingUserId",
+  );
+
+  // 4. The DELETE route handler must pass authResult.userId to deleteUserAction
+  assert.match(
+    routeSource,
+    /deleteUserAction\s*\(\s*id\s*,\s*authResult\.userId\s*\)/,
+    "DELETE route handler must pass authResult.userId to deleteUserAction",
+  );
+
+  // 5. PATCH and DELETE handlers must call requireOwnerApiSession before the use case
+  assertAppearsBefore(
+    routeSource,
+    "requireOwnerApiSession",
+    "updateUserAction",
+    "PATCH: requireOwnerApiSession must be called before updateUserAction",
+  );
+  assertAppearsBefore(
+    routeSource,
+    "deleteUserAction",
+    "User deactivated successfully",
+    "DELETE: deleteUserAction must be called before success response",
+  );
+});
