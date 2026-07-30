@@ -371,7 +371,7 @@ export default function ReservationWizard({
               priority={idx === 0}
             />
           ))}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent z-10"></div>
+          <div className="absolute inset-0 bg-linear-to-t from-black/50 to-transparent z-10"></div>
         </div>
       )}
 

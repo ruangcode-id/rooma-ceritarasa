@@ -282,7 +282,7 @@ export default function AdminReservationClient() {
       className: "w-[19%] align-middle text-left",
       cell: (reservation) => (
         <div className="min-w-0">
-          <p className="break-words font-semibold text-slate-900">
+          <p className="wrap-break-word font-semibold text-slate-900">
             {reservation.session.name}
           </p>
           <p className="text-xs text-slate-500">
@@ -298,7 +298,7 @@ export default function AdminReservationClient() {
       className: "w-[23%] align-middle text-left",
       cell: (reservation) => (
         <div className="min-w-0">
-          <p className="break-words font-semibold text-slate-900">
+          <p className="wrap-break-word font-semibold text-slate-900">
             {reservation.guest.name}
           </p>
           <p className="break-all text-xs text-slate-500">

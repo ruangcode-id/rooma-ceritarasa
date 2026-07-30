@@ -28,7 +28,7 @@ export default async function PublicLayout({ children }: { children: React.React
         Untuk halaman selain beranda, bisa ditambahkan padding-top di halamannya sendiri.
       */}
       <main className="min-h-screen bg-slate-50 flex flex-col">
-        <div className="flex-grow">
+        <div className="grow">
           {children}
         </div>
         <Footer settings={settings} sessions={sessions} />
