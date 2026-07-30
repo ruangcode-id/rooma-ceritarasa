@@ -39,6 +39,18 @@ const HERO_IMAGES = [
   "/assets/slider6.webp",
 ];
 
+/**
+ * Tables that are physically expandable with extra chairs.
+ * Key = tableNumber, Value = base (default) seat count.
+ * These tables have been updated in DB to their max capacity.
+ * The badge informs guests that chairs can be added for larger groups.
+ */
+const EXPANDABLE_TABLES: Record<string, number> = {
+  "5":  4, // max 6 (2 extra chairs)
+  "8":  2, // max 3 (1 extra chair)
+  "10": 2, // max 3 (1 extra chair)
+} as const;
+
 type ModalType = "guests" | "date" | "time" | null;
 
 type CreateReservationResult = {
@@ -629,26 +641,40 @@ export default function ReservationWizard({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 {tables.map(table => {
                   const isSelected = selectedTableIds.includes(table.id);
+                  const isExpandable = table.tableNumber in EXPANDABLE_TABLES;
                   return (
                     <button
                       key={table.id}
                       onClick={() => toggleTable(table.id)}
                       disabled={!table.isAvailable}
                       className={`
-                        py-4 px-2 text-center transition-all flex flex-col items-center justify-center border-2
-                        ${!table.isAvailable 
-                          ? "bg-slate-200 border-slate-200 text-slate-400 cursor-not-allowed" // Abu-abu untuk terbooked
-                          : isSelected 
-                            ? "bg-slate-900 border-slate-900 text-white shadow-md" // Terpilih: hitam
-                            : "bg-white border-slate-900 text-slate-900 hover:bg-slate-100" // Tersedia: putih border hitam
+                        relative py-4 px-2 text-center transition-all flex flex-col items-center justify-center border-2
+                        ${!table.isAvailable
+                          ? "bg-slate-200 border-slate-200 text-slate-400 cursor-not-allowed"
+                          : isSelected
+                            ? "bg-slate-900 border-slate-900 text-white shadow-md"
+                            : "bg-white border-slate-900 text-slate-900 hover:bg-slate-100"
                         }
                       `}
                     >
+                      {/* Expandable badge — Tailwind v4 */}
+                      {isExpandable && table.isAvailable && (
+                        <span
+                          className={`absolute -top-2 -right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full leading-none ${
+                            isSelected
+                              ? "bg-amber-400 text-slate-900"
+                              : "bg-amber-100 text-amber-700 border border-amber-300"
+                          }`}
+                        >
+                          +seats
+                        </span>
+                      )}
                       <span className="font-bold text-sm md:text-base tracking-wide">
                         Table {table.tableNumber}
                       </span>
                       <span className="text-[10px] md:text-xs mt-1 opacity-80 uppercase tracking-widest">
-                        Cap: {table.capacity}
+                        Cap: {EXPANDABLE_TABLES[table.tableNumber] ?? table.capacity}
+                        {isExpandable && ` – ${table.capacity}`}
                       </span>
                     </button>
                   );
@@ -661,8 +687,8 @@ export default function ReservationWizard({
               <div className="mt-10 flex flex-col items-center animate-in fade-in duration-300">
                 {tables.filter(t => selectedTableIds.includes(t.id)).reduce((acc, t) => acc + t.capacity, 0) < partySize ? (
                   <p className="text-red-600 font-semibold mb-4 text-center">
-                    Kapasitas meja belum cukup untuk {partySize} Pax. <br/>
-                    Silakan pilih meja tambahan.
+                    Total seat capacity is not enough for {partySize} guests. <br />
+                    Please select an additional table.
                   </p>
                 ) : (
                   <>
