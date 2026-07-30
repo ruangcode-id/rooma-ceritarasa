@@ -211,6 +211,27 @@ function buildReservationVars(reservation: {
   };
 }
 
+const DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE = [
+  "Halo Kak *{{nama}}* 😊,",
+  "",
+  "Terima kasih. Reservasi Kakak di Rooma Ceritarasa telah berhasil dikonfirmasi.",
+  "",
+  "Berikut detail reservasinya:",
+  "",
+  "• Tanggal: {{tanggal}}",
+  "• Waktu: {{waktu}}",
+  "• Kode Check-in: {{check_in_code}}",
+  "",
+  "QR Code untuk proses check-in telah kami kirim ke email yang digunakan saat melakukan reservasi. Mohon tunjukkan QR Code tersebut atau kode check-in di atas kepada petugas saat kedatangan.",
+  "",
+  "Mohon hadir tepat waktu. Reservasi akan dibatalkan secara otomatis apabila keterlambatan melebihi 15 menit🙏🏻",
+  "",
+  "Sampai jumpa di Rooma Ceritarasa. Terima kasih telah melakukan reservasi.",
+  "",
+  "Salam hangat,",
+  " *Rooma Ceritarasa*",
+].join("\n");
+
 export async function notifyGuestReservationConfirmed(reservationId: string) {
   const reservation = await getReservationNotifyContext(reservationId);
   if (!reservation || reservation.status !== ReservationStatus.confirmed) {
@@ -227,9 +248,7 @@ export async function notifyGuestReservationConfirmed(reservationId: string) {
     reservation.guest.phone,
     "reservasi_konfirmasi",
     vars,
-    checkInCode
-      ? "Halo {{nama}}, reservasi Anda pada {{tanggal}} pukul {{waktu}} telah dikonfirmasi.\n\nKode check-in: {{check_in_code}}"
-      : "Halo {{nama}}, reservasi Anda pada {{tanggal}} pukul {{waktu}} telah dikonfirmasi. Terima kasih!",
+    DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE,
   );
 
   if (reservation.guest.email) {
@@ -262,51 +281,12 @@ export async function notifyGuestPaymentSuccess(reservationId: string) {
     email: guestEmail,
   };
 
-  const waFallback = guestEmail
-    ? [
-        "Halo {{nama}},",
-        "",
-        "Pembayaran DP Anda berhasil. Reservasi di Rooma Cerita Rasa sudah dikonfirmasi.",
-        "",
-        "Detail reservasi:",
-        "Tanggal: {{tanggal}}",
-        "Waktu: {{waktu}}",
-        checkInCode ? "Kode check-in: {{check_in_code}}" : null,
-        "",
-        "QR Code check-in sudah kami kirim ke email Anda ({{email}}).",
-        'Buka email bertitel "Pembayaran Berhasil — Rooma Cerita Rasa", lalu tunjukkan QR tersebut saat datang ke restoran.',
-        "",
-        "Belum menemukan emailnya? Cek folder Spam atau Promosi.",
-        "",
-        "Sampai jumpa!",
-        "— Tim Rooma Cerita Rasa",
-      ]
-        .filter((line) => line !== null)
-        .join("\n")
-    : [
-        "Halo {{nama}},",
-        "",
-        "Pembayaran DP Anda berhasil. Reservasi di Rooma Cerita Rasa sudah dikonfirmasi.",
-        "",
-        "Detail reservasi:",
-        "Tanggal: {{tanggal}}",
-        "Waktu: {{waktu}}",
-        checkInCode ? "Kode check-in: {{check_in_code}}" : null,
-        "",
-        "Tunjukkan kode check-in di atas saat datang ke restoran.",
-        "",
-        "Sampai jumpa!",
-        "— Tim Rooma Cerita Rasa",
-      ]
-        .filter((line) => line !== null)
-        .join("\n");
-
   // WA: teks saja (hemat Fonnte). QR dikirim lewat email.
   await sendWaFromTemplate(
     reservation.guest.phone,
     "payment_success",
     vars,
-    waFallback,
+    DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE,
   );
 
   if (guestEmail) {
