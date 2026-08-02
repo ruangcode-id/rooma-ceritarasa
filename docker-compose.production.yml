@@ -72,6 +72,8 @@ services:
       # Wajib di .env.production (jangan default :-:80 — ambigu di Compose)
       SITE_ADDRESS: ${SITE_ADDRESS:?SITE_ADDRESS is required}
       GRAFANA_ADDRESS: ${GRAFANA_ADDRESS:?GRAFANA_ADDRESS is required}
+      # Spasi-pisah, contoh: "103.10.20.30 114.5.6.0/24"
+      GRAFANA_ALLOWED_IPS: ${GRAFANA_ALLOWED_IPS:?GRAFANA_ALLOWED_IPS is required}
       ACME_EMAIL: ${ACME_EMAIL:-admin@localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
@@ -95,8 +97,17 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_ROOT_URL: https://${GRAFANA_ADDRESS:?GRAFANA_ADDRESS is required}
       GF_SERVER_DOMAIN: ${GRAFANA_ADDRESS:?GRAFANA_ADDRESS is required}
+      # Dipakai provisioning datasource (monitoring/grafana/provisioning/...)
+      POSTGRES_DB: ${POSTGRES_DB:-rooma_db}
+      GRAFANA_DB_USER: ${GRAFANA_DB_USER:-grafana_ro}
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:?GRAFANA_DB_PASSWORD is required}
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      db:
+        condition: service_healthy
     # Jangan expose port ke host — akses hanya lewat Caddy
     networks:
       - rooma_internal
