@@ -7,6 +7,9 @@
 #
 # GRAFANA_ADDRESS example:
 #   grafana.roomaceritarasa.com
+#
+# GRAFANA_ALLOWED_IPS: spasi-pisah (IP atau CIDR), contoh:
+#   103.10.20.30 114.5.6.0/24
 
 {
 	email {$ACME_EMAIL:admin@localhost}
@@ -43,7 +46,14 @@
 		-Server
 	}
 
-	reverse_proxy grafana:3000
+	# Hanya IP/CIDR di GRAFANA_ALLOWED_IPS yang boleh akses Grafana
+	@allowed remote_ip {$GRAFANA_ALLOWED_IPS}
+	handle @allowed {
+		reverse_proxy grafana:3000
+	}
+	handle {
+		respond "Forbidden" 403
+	}
 
 	log {
 		output stdout
