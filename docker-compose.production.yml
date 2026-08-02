@@ -69,7 +69,9 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      # Wajib di .env.production (jangan default :-:80 — ambigu di Compose)
+      SITE_ADDRESS: ${SITE_ADDRESS:?SITE_ADDRESS is required}
+      GRAFANA_ADDRESS: ${GRAFANA_ADDRESS:?GRAFANA_ADDRESS is required}
       ACME_EMAIL: ${ACME_EMAIL:-admin@localhost}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
@@ -78,8 +80,36 @@ services:
     depends_on:
       app:
         condition: service_healthy
+      grafana:
+        condition: service_started
     networks:
       - rooma_internal
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: rooma-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: https://${GRAFANA_ADDRESS:?GRAFANA_ADDRESS is required}
+      GF_SERVER_DOMAIN: ${GRAFANA_ADDRESS:?GRAFANA_ADDRESS is required}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    # Jangan expose port ke host — akses hanya lewat Caddy
+    networks:
+      - rooma_internal
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
 
 networks:
   rooma_internal:
@@ -89,3 +119,4 @@ volumes:
   rooma_pgdata:
   caddy_data:
   caddy_config:
+  grafana_data:
