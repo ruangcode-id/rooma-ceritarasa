@@ -7,10 +7,14 @@
 #   0 0 * * * /opt/rooma/scripts/vps-cron.sh reminders >> /var/log/rooma-cron.log 2>&1
 #   # Auto no-show — setiap 15 menit
 #   */15 * * * * /opt/rooma/scripts/vps-cron.sh no-show >> /var/log/rooma-cron.log 2>&1
+#   # Backup Postgres — setiap hari jam 03:00
+#   0 3 * * * /opt/rooma-ceritarasa/scripts/backup-db.sh >> /var/log/rooma-backup.log 2>&1
 #
-# Butuh env:
+# Butuh env (untuk reminders/no-show):
 #   APP_BASE_URL=https://your-domain.com   # atau http://127.0.0.1 jika Caddy di host yang sama
 #   CRON_SECRET=...
+#
+# Backup DB: lihat scripts/backup-db.sh (opsional BACKUP_DIR / BACKUP_RETENTION_DAYS di .env.production)
 
 set -euo pipefail
 
