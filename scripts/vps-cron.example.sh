@@ -1,52 +1,16 @@
 #!/usr/bin/env bash
-# Contoh cron VPS untuk Rooma Ceritarasa.
-# Salin ke VPS (mis. /opt/rooma/scripts/vps-cron.sh), chmod +x, lalu jadwalkan.
+# Dokumentasi saja — jalankan scripts/vps-cron.sh di production.
 #
-# Crontab contoh (waktu server = Asia/Jakarta lebih aman):
-#   # Reminder H-1 — setiap hari jam 00:00 WIB (sesuaikan)
-#   0 0 * * * /opt/rooma/scripts/vps-cron.sh reminders >> /var/log/rooma-cron.log 2>&1
-#   # Auto no-show — setiap 15 menit
-#   */15 * * * * /opt/rooma/scripts/vps-cron.sh no-show >> /var/log/rooma-cron.log 2>&1
-#   # Backup Postgres — setiap hari jam 03:00
+# scripts/vps-cron.sh membaca CRON_SECRET + NEXT_PUBLIC_APP_URL dari .env.production.
+#
+# Crontab (root), timezone Asia/Jakarta:
+#   0 0 * * * /opt/rooma-ceritarasa/scripts/vps-cron.sh reminders >> /var/log/rooma-cron.log 2>&1
+#   */15 * * * * /opt/rooma-ceritarasa/scripts/vps-cron.sh no-show >> /var/log/rooma-cron.log 2>&1
 #   0 3 * * * /opt/rooma-ceritarasa/scripts/backup-db.sh >> /var/log/rooma-backup.log 2>&1
 #
-# Butuh env (untuk reminders/no-show):
-#   APP_BASE_URL=https://your-domain.com   # atau http://127.0.0.1 jika Caddy di host yang sama
-#   CRON_SECRET=...
-#
-# Backup DB: lihat scripts/backup-db.sh (opsional BACKUP_DIR / BACKUP_RETENTION_DAYS di .env.production)
+# Tes manual:
+#   sudo bash /opt/rooma-ceritarasa/scripts/vps-cron.sh reminders
+#   sudo bash /opt/rooma-ceritarasa/scripts/vps-cron.sh no-show
 
-set -euo pipefail
-
-JOB="${1:-}"
-if [[ -z "$JOB" ]]; then
-  echo "Usage: $0 <reminders|no-show>" >&2
-  exit 1
-fi
-
-: "${APP_BASE_URL:?APP_BASE_URL is required}"
-: "${CRON_SECRET:?CRON_SECRET is required}"
-
-case "$JOB" in
-  reminders)
-    PATH_SUFFIX="/api/cron/reminders"
-    ;;
-  no-show)
-    PATH_SUFFIX="/api/cron/no-show"
-    ;;
-  *)
-    echo "Unknown job: $JOB" >&2
-    exit 1
-    ;;
-esac
-
-URL="${APP_BASE_URL%/}${PATH_SUFFIX}"
-echo "[$(date -Is)] Calling $URL"
-
-curl -fsS -X GET \
-  -H "Authorization: Bearer ${CRON_SECRET}" \
-  --max-time 60 \
-  "$URL"
-
-echo
-echo "[$(date -Is)] OK"
+echo "Gunakan scripts/vps-cron.sh (bukan file contoh ini)." >&2
+exit 1
