@@ -29,6 +29,22 @@ const parseDateOnlyUTC = (dateStr: string) => {
   return date;
 };
 
+const TABLE_MIN_PARTY: Record<string, number> = {
+  "T2": 3,
+  "2":  3,
+  "T5": 3,
+  "5":  3,
+  "T9": 4,
+  "9":  4,
+};
+
+function getMinPartyRequirement(tableNumber: string): number {
+  const cleanKey = tableNumber.replace(/^Table\s*/i, "").trim();
+  const withT = cleanKey.startsWith("T") ? cleanKey : `T${cleanKey}`;
+  const withoutT = cleanKey.replace(/^T/i, "");
+  return TABLE_MIN_PARTY[withT] ?? TABLE_MIN_PARTY[withoutT] ?? 1;
+}
+
 export const PublicReservationUseCase = {
   createReservationAction: async (input: PublicReservationInput) => {
     const dateObj = parseDateOnlyUTC(input.date);
@@ -48,6 +64,16 @@ export const PublicReservationUseCase = {
       throw new Error(
         `Kapasitas total meja yang dipilih (${totalCapacity} orang) tidak mencukupi untuk jumlah tamu (${input.partySize} orang). Silakan pilih meja tambahan.`,
       );
+    }
+
+    for (const table of selectedTables) {
+      const minParty = getMinPartyRequirement(table.tableNumber);
+      if (input.partySize < minParty) {
+        const displayNum = table.tableNumber.replace(/^Table\s*/i, "").replace(/^T/i, "");
+        throw new Error(
+          `Table ${displayNum} requires a minimum of ${minParty} guests.`
+        );
+      }
     }
 
     const cancelToken = crypto.randomBytes(16).toString("hex");

@@ -46,10 +46,30 @@ const HERO_IMAGES = [
  * The badge informs guests that chairs can be added for larger groups.
  */
 const EXPANDABLE_TABLES: Record<string, number> = {
-  "5":  4, // max 6 (2 extra chairs)
-  "8":  2, // max 3 (1 extra chair)
-  "10": 2, // max 3 (1 extra chair)
+  "T5": 4, // max 6 (2 extra chairs)
+  "5":  4,
+  "T8": 2, // max 3 (1 extra chair)
+  "8":  2,
+  "T10": 2, // max 3 (1 extra chair)
+  "10": 2,
 } as const;
+
+/** Minimum guest requirements per table number */
+const TABLE_MIN_PARTY: Record<string, number> = {
+  "T2": 3, // Min 3 pax
+  "2":  3,
+  "T5": 3, // Min 3 pax
+  "5":  3,
+  "T9": 4, // Min 4 pax
+  "9":  4,
+};
+
+function getMinParty(tableNumber: string): number {
+  const cleanKey = tableNumber.replace(/^Table\s*/i, "").trim();
+  const withT = cleanKey.startsWith("T") ? cleanKey : `T${cleanKey}`;
+  const withoutT = cleanKey.replace(/^T/i, "");
+  return TABLE_MIN_PARTY[withT] ?? TABLE_MIN_PARTY[withoutT] ?? 1;
+}
 
 type ModalType = "guests" | "date" | "time" | null;
 
@@ -259,7 +279,7 @@ export default function ReservationWizard({
         },
         onError: () => {
           setPaymentState("failed");
-          setPaymentError("Pembayaran belum berhasil. Silakan coba lagi.");
+          setPaymentError("Payment was not completed. Please try again.");
         },
         onClose: () => {
           setPaymentState("waiting_snap");
@@ -651,24 +671,32 @@ export default function ReservationWizard({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 {tables.map(table => {
                   const isSelected = selectedTableIds.includes(table.id);
-                  const isExpandable = table.tableNumber in EXPANDABLE_TABLES;
+                  const cleanNum = table.tableNumber.replace(/^Table\s*/i, "").trim();
+                  const withT = cleanNum.startsWith("T") ? cleanNum : `T${cleanNum}`;
+                  const isExpandable = withT in EXPANDABLE_TABLES || cleanNum in EXPANDABLE_TABLES;
+                  const minParty = getMinParty(table.tableNumber);
+                  const isTooLarge = partySize < minParty;
+                  const isDisabled = !table.isAvailable || isTooLarge;
+
                   return (
                     <button
                       key={table.id}
-                      onClick={() => toggleTable(table.id)}
-                      disabled={!table.isAvailable}
+                      onClick={() => !isDisabled && toggleTable(table.id)}
+                      disabled={isDisabled}
                       className={`
                         relative py-4 px-2 text-center transition-all flex flex-col items-center justify-center border-2
                         ${!table.isAvailable
                           ? "bg-slate-200 border-slate-200 text-slate-400 cursor-not-allowed"
-                          : isSelected
-                            ? "bg-slate-900 border-slate-900 text-white shadow-md"
-                            : "bg-white border-slate-900 text-slate-900 hover:bg-slate-100"
+                          : isTooLarge
+                            ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed"
+                            : isSelected
+                              ? "bg-slate-900 border-slate-900 text-white shadow-md"
+                              : "bg-white border-slate-900 text-slate-900 hover:bg-slate-100"
                         }
                       `}
                     >
                       {/* Expandable badge — Tailwind v4 */}
-                      {isExpandable && table.isAvailable && (
+                      {isExpandable && !isTooLarge && table.isAvailable && (
                         <span
                           className={`absolute -top-2 -right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full leading-none ${
                             isSelected
@@ -680,12 +708,17 @@ export default function ReservationWizard({
                         </span>
                       )}
                       <span className="font-bold text-sm md:text-base tracking-wide">
-                        Table {table.tableNumber.replace(/^Table\s*/i, "").replace(/^T/i, "")}
+                        Table {cleanNum.replace(/^T/i, "")}
                       </span>
                       <span className="text-[10px] md:text-xs mt-1 opacity-80 tracking-widest">
-                        Capacity: {EXPANDABLE_TABLES[table.tableNumber] ?? table.capacity}
+                        Capacity: {EXPANDABLE_TABLES[withT] ?? EXPANDABLE_TABLES[cleanNum] ?? table.capacity}
                         {isExpandable && ` – ${table.capacity}`}
                       </span>
+                      {isTooLarge && table.isAvailable && (
+                        <span className="text-[9px] font-bold uppercase tracking-wider mt-1 text-red-500 leading-none">
+                          Min. {minParty} guests
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -710,7 +743,7 @@ export default function ReservationWizard({
                             Deposit Information
                           </p>
                           <p className="text-sm leading-relaxed text-slate-600">
-                            Khusus reservasi akhir pekan untuk 2 pax akan dikenakan deposit sebesar <span className="font-semibold text-slate-900">Rp 75.000</span> pada tahap pembayaran.
+                            Weekend reservations for 2 guests require a deposit of <span className="font-semibold text-slate-900">Rp 75,000</span> at the payment step.
                           </p>
                         </div>
                       </div>
