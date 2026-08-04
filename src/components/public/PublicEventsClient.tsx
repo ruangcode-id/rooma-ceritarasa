@@ -6,7 +6,6 @@ import {
   ArrowRight,
   CalendarBlank,
   ForkKnife,
-  Sparkle,
   UsersThree,
 } from "@phosphor-icons/react";
 import { EventRequestForm } from "@/components/public/EventRequestForm";
@@ -96,15 +95,9 @@ export function PublicEventsClient({
 
       <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
-          <p className="text-xs uppercase tracking-[0.3em] text-slate-500">
-            What&apos;s Happening
-          </p>
-          <h2 className="mt-3 text-4xl font-semibold text-slate-950 sm:text-5xl">
+          <h2 className="text-4xl font-semibold text-slate-950 sm:text-5xl">
             Events at Rooma
           </h2>
-          <p className="mt-4 text-base leading-7 text-slate-600">
-            Discover our latest agenda or use it as inspiration to design your own experience.
-          </p>
         </div>
 
         {events.length > 0 ? (
@@ -158,8 +151,7 @@ export function PublicEventsClient({
           </div>
         ) : (
           <div className="mt-12 rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <Sparkle size={30} className="mx-auto text-primary" />
-            <h3 className="mt-4 text-2xl font-semibold text-slate-950">
+            <h3 className="text-2xl font-semibold text-slate-950">
               Latest agenda coming soon
             </h3>
             <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">
