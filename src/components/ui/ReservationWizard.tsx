@@ -680,7 +680,7 @@ export default function ReservationWizard({
                         </span>
                       )}
                       <span className="font-bold text-sm md:text-base tracking-wide">
-                        Table {table.tableNumber}
+                        Table {table.tableNumber.replace(/^Table\s*/i, "").replace(/^T/i, "")}
                       </span>
                       <span className="text-[10px] md:text-xs mt-1 opacity-80 tracking-widest">
                         Capacity: {EXPANDABLE_TABLES[table.tableNumber] ?? table.capacity}
