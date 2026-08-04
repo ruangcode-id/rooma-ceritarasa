@@ -28,7 +28,7 @@ const STEPS = [
     accentLight: "#1f06091a",
     highlights: [
       { icon: CalendarBlank, text: "Select an available date from the calendar" },
-      { icon: Clock,         text: "Pick a session — Lunch or Dinner" },
+      { icon: Clock,         text: "Pick a session" },
       { icon: Users,         text: "Set the number of guests (Pax)" },
     ],
     note: "Greyed-out dates are fully booked or unavailable.",
