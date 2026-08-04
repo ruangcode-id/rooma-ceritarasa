@@ -16,7 +16,7 @@ export default async function GalleryPage() {
     <div className="min-h-screen bg-white font-sans pt-32 pb-24 text-gray-900">
       <div className="max-w-7xl mx-auto px-4 md:px-8 text-center mb-16">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-8 leading-tight">
-          GALLERY
+          Gallery
         </h1>
       </div>
 

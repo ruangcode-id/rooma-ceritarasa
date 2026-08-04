@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfDay, getDay } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle, Info } from "@phosphor-icons/react";
+import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle, Info, WhatsappLogo } from "@phosphor-icons/react";
 import Image from "next/image";
 import Script from "next/script";
 import { GuestReservationForm } from "../forms/GuestReservationForm";
@@ -567,18 +567,18 @@ export default function ReservationWizard({
               <div className="p-6">
                 {!selectedDate ? (
                   <div className="text-center text-slate-500 py-8">
-                    Silakan pilih tanggal terlebih dahulu.
+                    Please select a date first.
                     <button 
                       onClick={() => setActiveModal("date")} 
                       className="block mx-auto mt-4 px-4 py-2 bg-slate-100 rounded-md text-sm text-slate-900"
                     >
-                      Pilih Tanggal
+                      Select Date
                     </button>
                   </div>
                 ) : loadingSessions ? (
                   <div className="flex justify-center py-12"><CircleNotch size={24} className="animate-spin text-slate-300" /></div>
                 ) : sessions.length === 0 ? (
-                  <div className="text-center text-slate-500 py-8">Tidak ada sesi tersedia pada tanggal ini.</div>
+                  <div className="text-center text-slate-500 py-8">No sessions available for this date.</div>
                 ) : (
                   <div className="grid grid-cols-1 gap-3">
                     {sessions.map(session => (
@@ -618,8 +618,18 @@ export default function ReservationWizard({
             <p className="text-slate-500 italic">
               Please select your preferred date and time to see available tables.
             </p>
-            <p className="text-sm text-slate-500 max-w-lg mx-auto">
-              If you need any assistance with your reservation, please don&apos;t hesitate to <a href="https://wa.me/6285725539262" target="_blank" rel="noopener noreferrer" className="text-[#1f0609] font-medium underline underline-offset-2 hover:text-[#3a0d13] transition-colors">reach out to our dedicated reservations team</a>.
+            <p className="text-sm text-slate-500 max-w-lg mx-auto leading-relaxed">
+              <WhatsappLogo size={18} weight="fill" className="inline-block text-[#25D366] shrink-0 mr-1.5 align-sub" />
+              If you need any assistance with your reservation, please don&apos;t hesitate to{" "}
+              <a
+                href="https://wa.me/6285725539262"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[#1f0609] underline underline-offset-2 transition-colors hover:text-[#3a0d13]"
+              >
+                reach out to our dedicated reservations team
+              </a>
+              .
             </p>
           </div>
         ) : (
@@ -635,7 +645,7 @@ export default function ReservationWizard({
               <div className="flex justify-center py-12"><CircleNotch size={32} className="animate-spin text-slate-400" /></div>
             ) : tables.length === 0 ? (
               <div className="text-center text-slate-500 py-8 bg-white rounded-lg border border-slate-100">
-                Mohon maaf, tidak ada meja kosong untuk sesi ini.
+                Sorry, no tables available for this session.
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
@@ -672,8 +682,8 @@ export default function ReservationWizard({
                       <span className="font-bold text-sm md:text-base tracking-wide">
                         Table {table.tableNumber}
                       </span>
-                      <span className="text-[10px] md:text-xs mt-1 opacity-80 uppercase tracking-widest">
-                        Cap: {EXPANDABLE_TABLES[table.tableNumber] ?? table.capacity}
+                      <span className="text-[10px] md:text-xs mt-1 opacity-80 tracking-widest">
+                        Capacity: {EXPANDABLE_TABLES[table.tableNumber] ?? table.capacity}
                         {isExpandable && ` – ${table.capacity}`}
                       </span>
                     </button>
@@ -707,7 +717,7 @@ export default function ReservationWizard({
                     )}
                     <button 
                       onClick={() => setStep(2)}
-                      className="px-12 py-4 bg-[#1f0609] text-white font-semibold uppercase tracking-widest hover:bg-[#3a0d13] hover:shadow-lg transition-all"
+                      className="px-12 py-4 bg-[#1f0609] text-white font-semibold tracking-widest hover:bg-[#3a0d13] hover:shadow-lg transition-all"
                     >
                       Continue Request
                     </button>
@@ -746,7 +756,7 @@ export default function ReservationWizard({
                <CheckCircle size={80} weight="fill" className="text-[#1f0609] relative z-10" />
              </div>
              
-             <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-widest mb-4 text-slate-900 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+             <h2 className="text-2xl md:text-3xl font-bold tracking-widest mb-4 text-slate-900 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
                {paymentState === "paid"
                  ? "Payment Received"
                  : paymentState === "not_required"
@@ -755,10 +765,10 @@ export default function ReservationWizard({
              </h2>
              <p className="text-slate-600 mb-8 leading-relaxed animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
                {paymentState === "paid"
-                 ? "Pembayaran deposit Anda sudah diterima. Tim kami akan mengonfirmasi detail reservasi melalui WhatsApp."
+                 ? "Your deposit payment has been received. Our team will confirm the reservation details via WhatsApp."
                  : paymentState === "not_required"
-                 ? "Reservasi Anda tidak memerlukan deposit. Tim kami akan segera menghubungi Anda melalui WhatsApp."
-                 : "Reservasi sudah tercatat. Selesaikan pembayaran deposit melalui Midtrans agar reservasi dapat dikonfirmasi."}
+                 ? "Your reservation does not require a deposit. Our team will contact you via WhatsApp shortly."
+                 : "Your reservation has been recorded. Please complete the deposit payment via Midtrans so your reservation can be confirmed."}
              </p>
 
              <div className="mb-8 border-y border-slate-200 py-5 text-left animate-fade-in-up" style={{ animationDelay: "0.5s" }}>
@@ -779,7 +789,7 @@ export default function ReservationWizard({
                      {paymentResult
                        ? formatRupiah(paymentResult.amount)
                        : paymentState === "creating"
-                       ? "Menyiapkan pembayaran"
+                       ? "Preparing payment"
                        : "-"}
                    </p>
                  </div>
@@ -787,7 +797,7 @@ export default function ReservationWizard({
 
                {paymentResult?.minimumOrder ? (
                  <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                   Minimum order untuk reservasi ini:{" "}
+                   Minimum order for this reservation:{" "}
                    {formatRupiah(paymentResult.minimumOrder)}.
                  </p>
                ) : null}
@@ -800,8 +810,8 @@ export default function ReservationWizard({
 
                {paymentState === "pending" ? (
                  <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                   Pembayaran sedang menunggu penyelesaian. Ikuti instruksi dari
-                   Midtrans sampai selesai.
+                   Payment is pending completion. Please follow the instructions from
+                   Midtrans to complete it.
                  </p>
                ) : null}
              </div>
@@ -814,11 +824,11 @@ export default function ReservationWizard({
                    disabled={!snapReady || paymentState === "creating"}
                    className="px-8 py-4 bg-slate-900 text-white font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                  >
-                   {paymentState === "paid" ? "Lihat Pembayaran" : "Bayar Deposit"}
+                   {paymentState === "paid" ? "View Payment" : "Pay Deposit"}
                  </button>
                ) : null}
                <button onClick={() => window.location.href = '/'} className="px-8 py-4 border-2 border-slate-900 text-slate-900 font-bold uppercase tracking-widest hover:bg-slate-50 transition-colors">
-                 Kembali ke Beranda
+                 Return to Home
                </button>
              </div>
            </div>
