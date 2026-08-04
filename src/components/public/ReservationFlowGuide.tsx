@@ -41,10 +41,11 @@ const STEPS = [
     accentLight: "#1e3a5f1a",
     highlights: [
       { icon: Armchair,      text: "Browse available tables for your session" },
-      { icon: Users,         text: "Select one or more tables to fit your group" },
+      { icon: Users,         text: "Select one or multiple tables if your group size requires extra seats" },
       { icon: Info,          text: "Weekend deposit notice may appear for 2-pax bookings" },
+      { icon: Info,          text: "Larger tables (T2, T5, T9) have minimum guest requirements" },
     ],
-    note: "Grey tables are already booked. You can select multiple tables.",
+    note: "Grey tables are booked or restricted for smaller groups. For large parties, select multiple tables to meet your total guest count.",
   },
   {
     number: "03",
@@ -194,7 +195,7 @@ export default function ReservationFlowGuide() {
       {/* ── Modal ──────────────────────────────────────── */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
+          className="fixed inset-0 z-100 flex items-end sm:items-center justify-center p-0 sm:p-4"
           style={{
             backgroundColor: modalVisible ? "rgba(15,23,42,0.5)" : "rgba(15,23,42,0)",
             backdropFilter:  modalVisible ? "blur(4px)" : "blur(0px)",
