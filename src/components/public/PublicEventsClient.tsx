@@ -76,8 +76,8 @@ export function PublicEventsClient({
   return (
     <div className="bg-[#fcfbf9] text-slate-900">
       {EVENT_POSTERS.length > 0 && (
-        <section className="relative min-h-[620px] w-full overflow-hidden pt-20 bg-slate-950">
-          <div className="flex h-[540px] w-full snap-x snap-mandatory overflow-x-auto [&::-webkit-scrollbar]:hidden">
+        <section className="relative min-h-155 w-full overflow-hidden pt-20 bg-slate-950">
+          <div className="flex h-135 w-full snap-x snap-mandatory overflow-x-auto [&::-webkit-scrollbar]:hidden">
             {EVENT_POSTERS.map((poster, idx) => (
               <div key={idx} className="relative w-full shrink-0 snap-center h-full">
                 <Image
@@ -107,7 +107,7 @@ export function PublicEventsClient({
                 key={event.id}
                 className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow duration-500 hover:shadow-2xl"
               >
-                <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
+                <div className="relative aspect-4/3 overflow-hidden bg-slate-100">
                   <Image
                     src={
                       event.imageUrl ||
