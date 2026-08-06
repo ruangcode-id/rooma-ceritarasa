@@ -227,7 +227,7 @@ export async function updateCareerJob(id: string, input: UpdateCareerJobInput) {
   return serializeAdminCareerJob(job);
 }
 
-export async function closeCareerJob(id: string) {
+export async function deleteCareerJob(id: string) {
   const existing = await prisma.careerJob.findUnique({
     where: { id },
     select: { id: true },
@@ -237,17 +237,22 @@ export async function closeCareerJob(id: string) {
     throw new Error("CAREER_JOB_NOT_FOUND");
   }
 
-  const job = await prisma.careerJob.update({
+  const job = await prisma.careerJob.delete({
     where: { id },
-    data: { isOpen: false },
-    include: {
-      _count: {
-        select: { applications: true },
-      },
-    },
   });
 
-  return serializeAdminCareerJob(job);
+  // Since it's deleted, we can just return a basic serialized version
+  // Applications are cascaded, so we don't need to return their count.
+  return {
+    id: job.id,
+    title: job.title,
+    description: job.description,
+    requirements: job.requirements,
+    deadline: job.deadline?.toISOString() || null,
+    isOpen: job.isOpen,
+    createdAt: job.createdAt.toISOString(),
+    _count: { applications: 0 },
+  };
 }
 
 export async function listPublicCareerJobs(query: PublicCareerListQuery) {
