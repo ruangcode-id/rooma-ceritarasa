@@ -96,6 +96,29 @@ export default function AdminCareersClient() {
     setIsAdding(true);
   };
 
+  const handleToggleStatus = async (job: CareerJob) => {
+    setIsSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/careers/${job.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isOpen: !job.isOpen }),
+      });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || data.message || "Failed to update status");
+
+      setJobs(jobs.map((j) => (j.id === job.id ? data.data : j)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setTimeout(() => setError(""), 5000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDeleteClick = (job: CareerJob) => {
     setDeleteJobPrompt(job);
   };
@@ -323,9 +346,18 @@ export default function AdminCareersClient() {
                   </div>
                 )}
                 
-                <div className="pt-3 mt-3 border-t border-slate-50 flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEditClick(job)} className="text-[11px] font-bold text-primary hover:bg-primary/10 px-3 py-1.5 rounded transition-colors uppercase tracking-wider">Edit</button>
-                  <button onClick={() => handleDeleteClick(job)} className="text-[11px] font-bold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded transition-colors uppercase tracking-wider">Delete</button>
+                <div className="pt-3 mt-3 border-t border-slate-50 flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => handleToggleStatus(job)} 
+                    disabled={isSaving}
+                    className={`text-[11px] font-bold px-2.5 py-1.5 rounded transition-colors uppercase tracking-wider ${
+                      job.isOpen ? "text-amber-600 hover:bg-amber-50" : "text-green-600 hover:bg-green-50"
+                    }`}
+                  >
+                    {job.isOpen ? "Close Job" : "Reopen Job"}
+                  </button>
+                  <button onClick={() => handleEditClick(job)} className="text-[11px] font-bold text-primary hover:bg-primary/10 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wider">Edit</button>
+                  <button onClick={() => handleDeleteClick(job)} className="text-[11px] font-bold text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wider">Delete</button>
                 </div>
               </div>
             </div>
