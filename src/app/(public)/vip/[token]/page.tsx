@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { Metadata } from "next";
+import { VipDownloadButton } from "@/components/public/VipDownloadButton";
 
 export const metadata: Metadata = {
   title: "VIP Invitation | Rooma Ceritarasa",
@@ -190,7 +191,13 @@ export default async function VipPage({
             We are delighted to invite you to experience an unforgettable culinary journey at Rooma Ceritarasa.
           </p>
           
-          <div className="animate-fade-in-delayed-2">
+          <div className="animate-fade-in-delayed-2 flex flex-col gap-3">
+            <VipDownloadButton
+              guestName={invitation.guestName}
+              token={invitation.token}
+              tier={invitation.vipTier}
+              qrCodeUrl={invitation.qrCodeUrl}
+            />
             <Link 
               href={`/reservasi?vipToken=${invitation.token}`}
               className="

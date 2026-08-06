@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MagnifyingGlass, Crown } from "@phosphor-icons/react";
+import { MagnifyingGlass, Crown, DownloadSimple } from "@phosphor-icons/react";
+import { downloadVipCardImage } from "@/lib/download-vip-card";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { format } from "date-fns";
@@ -193,12 +194,29 @@ export default function AdminVipClient() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       {guest.isVip ? (
-                        <button
-                          onClick={() => handleActionClick(guest)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                        >
-                          View Card
-                        </button>
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() =>
+                              downloadVipCardImage({
+                                guestName: guest.name,
+                                token: guest.vipCard?.token || "VIP-MEMBER",
+                                tier: guest.vipCard?.tier || "SILVER",
+                                qrCodeUrl: guest.vipCard?.qrCodeUrl,
+                              })
+                            }
+                            title="Download VIP Card (PNG)"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 transition-colors"
+                          >
+                            <DownloadSimple size={14} weight="bold" />
+                            Download
+                          </button>
+                          <button
+                            onClick={() => handleActionClick(guest)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+                          >
+                            View Card
+                          </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => handleActionClick(guest)}
