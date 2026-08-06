@@ -119,7 +119,10 @@ export async function createGalleryImage(
 export async function listAdminGalleryImages(query: AdminGalleryListQuery) {
   const where = {
     ...(query.category ? { category: query.category } : {}),
-    ...(query.isActive === undefined ? {} : { isActive: query.isActive }),
+    // Default to only active images so soft-deleted records don't reappear
+    // after page load. Admin can still pass isActive=false explicitly to
+    // see the full archive.
+    isActive: query.isActive ?? true,
   };
   const skip = (query.page - 1) * query.limit;
 
