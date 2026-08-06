@@ -17,7 +17,7 @@ export default function LoginPage() {
           priority
         />
         {/* dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#1f0609] via-[#1f0609]/30 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-[#1f0609] via-[#1f0609]/30 to-transparent" />
 
         {/* Brand quote */}
         <div className="absolute bottom-12 left-8 right-8 text-white">

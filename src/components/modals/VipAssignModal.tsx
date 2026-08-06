@@ -53,7 +53,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
       <div 
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
         onClick={handleClose}
@@ -126,7 +126,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
             // DIGITAL CARD DISPLAY
             <div className="flex flex-col items-center">
               {/* Card UI */}
-              <div className="w-full max-w-[320px] rounded-3xl bg-gradient-to-br from-[#2a080d] to-[#120205] p-1 shadow-2xl relative overflow-hidden group">
+              <div className="w-full max-w-[320px] rounded-3xl bg-linear-to-br from-[#2a080d] to-[#120205] p-1 shadow-2xl relative overflow-hidden group">
                 <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
                 <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl"></div>
                 

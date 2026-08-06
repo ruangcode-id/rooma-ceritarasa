@@ -466,7 +466,7 @@ export function GuestCrmClient() {
       className: "w-[24%] align-middle text-left",
       cell: (guest) => (
         <div className="min-w-0">
-          <p className="break-words font-semibold text-slate-900">
+          <p className="wrap-break-word font-semibold text-slate-900">
             {guest.name}
           </p>
           <p className="mt-1 text-xs text-slate-500">
@@ -657,7 +657,7 @@ export function GuestCrmClient() {
                 </p>
                 <h2
                   id="guest-detail-dialog-title"
-                  className="mt-2 break-words text-2xl font-semibold text-slate-950"
+                  className="mt-2 wrap-break-word text-2xl font-semibold text-slate-950"
                 >
                   {selectedGuest.name}
                 </h2>
@@ -832,7 +832,7 @@ function ProfileValue({ label, value }: { label: string; value: string }) {
       <p className="text-xs uppercase tracking-[0.15em] text-slate-500">
         {label}
       </p>
-      <p className="mt-1 break-words font-semibold text-slate-900">{value}</p>
+      <p className="mt-1 wrap-break-word font-semibold text-slate-900">{value}</p>
     </div>
   );
 }
