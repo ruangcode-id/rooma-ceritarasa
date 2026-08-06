@@ -126,6 +126,20 @@ export const BlockedDateUseCase = {
       start,
       end,
     );
-    return blockedDates.map((b) => toISODateOnly(startOfUTCDate(b.date)));
+    const dbBlocked = blockedDates.map((b) => toISODateOnly(startOfUTCDate(b.date)));
+
+    // Auto-block every Monday (getUTCDay() === 1) in the requested month
+    const mondayBlocked: string[] = [];
+    let cursor = startOfUTCDate(start);
+    const endTime = startOfUTCDate(end).getTime();
+    while (cursor.getTime() <= endTime) {
+      if (cursor.getUTCDay() === 1) {
+        mondayBlocked.push(toISODateOnly(cursor));
+      }
+      cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000);
+    }
+
+    // Merge and deduplicate
+    return [...new Set([...dbBlocked, ...mondayBlocked])];
   },
 };
