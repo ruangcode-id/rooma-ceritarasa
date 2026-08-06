@@ -544,7 +544,9 @@ export default function ReservationWizard({
                 
                 <div className="grid grid-cols-7 mb-2">
                   {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(day => (
-                    <div key={day} className="text-center text-[10px] uppercase font-bold text-slate-400 py-2">
+                    <div key={day} className={`text-center text-[10px] uppercase font-bold py-2 ${
+                      day === "MON" ? "text-red-400" : "text-slate-400"
+                    }`}>
                       {day}
                     </div>
                   ))}
@@ -559,21 +561,29 @@ export default function ReservationWizard({
                       const dateStr = format(day, "yyyy-MM-dd");
                       const isPast = isBefore(day, today);
                       const isBlocked = blockedDates.has(dateStr);
+                      const isMonday = getDay(day) === 1;
                       const isSelected = selectedDate && isSameDay(day, selectedDate);
-                      const isDisabled = isPast || isBlocked;
+                      const isDisabled = isPast || isBlocked || isMonday;
                       
                       return (
                         <button
                           key={idx}
                           onClick={() => handleDateSelect(day)}
                           disabled={isDisabled}
+                          title={isMonday ? "Closed on Monday" : undefined}
                           className={`
-                            py-3 text-center text-sm font-medium transition-colors
+                            py-3 text-center text-sm font-medium transition-colors relative
                             ${isDisabled ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}
+                            ${isMonday && !isPast ? "bg-red-50" : ""}
                             ${isSelected ? "bg-[#1f0609] text-white" : (!isDisabled && "hover:bg-slate-100 text-slate-700")}
                           `}
                         >
                           {format(day, "d")}
+                          {isMonday && !isPast && (
+                            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-[7px] font-bold text-red-400 leading-none">
+                              TUTUP
+                            </span>
+                          )}
                         </button>
                       );
                     })}

@@ -3,7 +3,7 @@ import { jsonError, jsonSuccess, jsonValidationError } from "@/lib/api-envelope"
 import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { updateCareerJobSchema } from "@/features/careers/career.validation";
 import {
-  closeCareerJob,
+  deleteCareerJob,
   getAdminCareerJob,
   updateCareerJob,
 } from "@/features/careers/career.service";
@@ -111,7 +111,7 @@ export async function DELETE(
   }
 
   try {
-    const job = await closeCareerJob(parsedId.data);
+    const job = await deleteCareerJob(parsedId.data);
     return jsonSuccess(job);
   } catch (error: unknown) {
     const mappedError = mapCareerError(error);

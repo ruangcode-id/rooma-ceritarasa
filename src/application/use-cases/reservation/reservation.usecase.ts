@@ -53,6 +53,11 @@ export const PublicReservationUseCase = {
       throw new Error(`Tanggal ${input.date} tidak tersedia untuk reservasi.`);
     }
 
+    // Reservations on Mondays are not allowed — the restaurant is closed
+    if (dateObj.getUTCDay() === 1) {
+      throw new Error("Reservations cannot be made on Mondays. The restaurant is closed every Monday.");
+    }
+
     await checkMultipleTablesAvailability(input.tableIds, input.sessionId, input.date);
 
     const selectedTables = await prisma.table.findMany({

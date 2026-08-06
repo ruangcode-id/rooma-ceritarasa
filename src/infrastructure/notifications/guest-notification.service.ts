@@ -36,7 +36,7 @@ async function loadEmailTemplates(): Promise<Record<string, string>> {
 }
 
 function formatDateId(value: Date): string {
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("en-US", {
     dateStyle: "long",
     timeZone: REMINDER_TIME_ZONE,
   }).format(value);
@@ -212,24 +212,24 @@ function buildReservationVars(reservation: {
 }
 
 const DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE = [
-  "Halo Kak *{{nama}}* 😊,",
+  "Hello *{{nama}}* 😊,",
   "",
-  "Terima kasih. Reservasi Kakak di Rooma Ceritarasa telah berhasil dikonfirmasi.",
+  "Thank you! Your reservation at Rooma Ceritarasa has been successfully confirmed.",
   "",
-  "Berikut detail reservasinya:",
+  "Here are your reservation details:",
   "",
-  "• Tanggal: {{tanggal}}",
-  "• Waktu: {{waktu}}",
-  "• Kode Check-in: {{check_in_code}}",
+  "• Date: {{tanggal}}",
+  "• Time: {{waktu}}",
+  "• Check-in Code: {{check_in_code}}",
   "",
-  "QR Code untuk proses check-in telah kami kirim ke email yang digunakan saat melakukan reservasi. Mohon tunjukkan QR Code tersebut atau kode check-in di atas kepada petugas saat kedatangan.",
+  "A QR Code for check-in has been sent to your email. Please present the QR Code or Check-in Code upon arrival.",
   "",
-  "Mohon hadir tepat waktu. Reservasi akan dibatalkan secara otomatis apabila keterlambatan melebihi 15 menit🙏🏻",
+  "Please arrive on time. Reservations will be automatically cancelled if arrival exceeds 15 minutes🙏🏻",
   "",
-  "Sampai jumpa di Rooma Ceritarasa. Terima kasih telah melakukan reservasi.",
+  "We look forward to welcoming you to Rooma Ceritarasa.",
   "",
-  "Salam hangat,",
-  " *Rooma Ceritarasa*",
+  "Warm regards,",
+  "*Rooma Ceritarasa*",
 ].join("\n");
 
 export async function notifyGuestReservationConfirmed(reservationId: string) {
@@ -254,11 +254,11 @@ export async function notifyGuestReservationConfirmed(reservationId: string) {
   if (reservation.guest.email) {
     await sendReservationEmailWithCheckInQr({
       to: reservation.guest.email,
-      subject: "Konfirmasi Reservasi — Rooma Cerita Rasa",
+      subject: "Reservation Confirmation — Rooma Ceritarasa",
       templateKey: "reservasi_konfirmasi",
       vars,
       fallbackHtml:
-        "<p>Halo {{nama}},</p><p>Reservasi Anda pada <strong>{{tanggal}}</strong> pukul <strong>{{waktu}}</strong> telah dikonfirmasi.</p>",
+        "<p>Hello {{nama}},</p><p>Your reservation on <strong>{{tanggal}}</strong> at <strong>{{waktu}}</strong> has been confirmed.</p>",
       checkInCode,
     });
   }
@@ -292,14 +292,14 @@ export async function notifyGuestPaymentSuccess(reservationId: string) {
   if (guestEmail) {
     await sendReservationEmailWithCheckInQr({
       to: guestEmail,
-      subject: "Pembayaran Berhasil — Rooma Cerita Rasa",
+      subject: "Payment Successful — Rooma Ceritarasa",
       templateKey: "payment_success",
       vars,
       fallbackHtml: checkInCode
-        ? `<p>Halo {{nama}},</p>
-<p>Pembayaran untuk reservasi <strong>{{reservation_id}}</strong> berhasil.</p>
-<p>Reservasi {{tanggal}} pukul {{waktu}} telah dikonfirmasi.</p>`
-        : "<p>Halo {{nama}},</p><p>Pembayaran untuk reservasi <strong>{{reservation_id}}</strong> berhasil.</p>",
+        ? `<p>Hello {{nama}},</p>
+<p>Payment for reservation <strong>{{reservation_id}}</strong> was successful.</p>
+<p>Your reservation on <strong>{{tanggal}}</strong> at <strong>{{waktu}}</strong> has been confirmed.</p>`
+        : "<p>Hello {{nama}},</p><p>Payment for reservation <strong>{{reservation_id}}</strong> was successful.</p>",
       checkInCode,
     });
   }
@@ -319,7 +319,7 @@ export async function sendReservationReminder(reservationId: string) {
     reservation.guest.phone,
     "reservasi_reminder_h1",
     vars,
-    "Reminder: besok reservasi Anda di Rooma Cerita Rasa, {{tanggal}} pukul {{waktu}}.",
+    "Reminder: Tomorrow is your reservation at Rooma Ceritarasa on {{tanggal}} at {{waktu}}.",
   );
 
   if (waResult.sent) {

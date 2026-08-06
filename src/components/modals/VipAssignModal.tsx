@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, Crown, ShieldCheck } from "@phosphor-icons/react";
+import { X, Crown, ShieldCheck, DownloadSimple } from "@phosphor-icons/react";
+import { downloadVipCardImage } from "@/lib/download-vip-card";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import Image from "next/image";
 import type { GuestRow } from "@/components/admin/AdminVipClient";
@@ -53,7 +54,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
       <div 
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
         onClick={handleClose}
@@ -126,7 +127,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
             // DIGITAL CARD DISPLAY
             <div className="flex flex-col items-center">
               {/* Card UI */}
-              <div className="w-full max-w-[320px] rounded-3xl bg-gradient-to-br from-[#2a080d] to-[#120205] p-1 shadow-2xl relative overflow-hidden group">
+              <div className="w-full max-w-[320px] rounded-3xl bg-linear-to-br from-[#2a080d] to-[#120205] p-1 shadow-2xl relative overflow-hidden group">
                 <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
                 <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/20 blur-3xl"></div>
                 
@@ -179,10 +180,25 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
               </div>
 
               {/* Actions */}
-              <p className="text-slate-500 text-xs text-center mt-6 px-4">
-                Digital VIP card is now active. Guests can show the QR Code or mention the Token serial number when visiting.
-              </p>
-              
+              <div className="mt-6 flex flex-col items-center gap-3 w-full">
+                <button
+                  onClick={() =>
+                    downloadVipCardImage({
+                      guestName: guest.name,
+                      token: activeVipCard?.token || "VIP-MEMBER",
+                      tier: activeVipCard?.tier || "SILVER",
+                      qrCodeUrl: activeVipCard?.qrCodeUrl,
+                    })
+                  }
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 shadow-md transition-all active:scale-95 text-sm cursor-pointer"
+                >
+                  <DownloadSimple size={20} weight="bold" />
+                  Download VIP Card (PNG)
+                </button>
+                <p className="text-slate-500 text-xs text-center px-4">
+                  Digital VIP card is active. Guests can present this card, show the QR Code, or mention the Token serial number.
+                </p>
+              </div>
             </div>
           )}
         </div>

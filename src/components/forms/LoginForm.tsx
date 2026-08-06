@@ -40,7 +40,7 @@ export default function LoginForm() {
         >
           <Envelope
             size={16}
-            className={`flex-shrink-0 transition-colors duration-200 ${
+            className={`shrink-0 transition-colors duration-200 ${
               emailFocused ? "text-[#1f0609]" : "text-slate-300"
             }`}
           />
@@ -75,7 +75,7 @@ export default function LoginForm() {
         >
           <Lock
             size={16}
-            className={`flex-shrink-0 transition-colors duration-200 ${
+            className={`shrink-0 transition-colors duration-200 ${
               passFocused ? "text-[#1f0609]" : "text-slate-300"
             }`}
           />
@@ -94,7 +94,7 @@ export default function LoginForm() {
             type="button"
             onClick={() => setShowPassword((prev) => !prev)}
             aria-label={showPassword ? "Hide password" : "Show password"}
-            className="flex-shrink-0 text-slate-300 hover:text-[#1f0609] transition-colors"
+            className="shrink-0 text-slate-300 hover:text-[#1f0609] transition-colors"
           >
             {showPassword ? <EyeSlash size={16} /> : <Eye size={16} />}
           </button>
@@ -107,7 +107,7 @@ export default function LoginForm() {
           className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 px-4 py-3 animate-in fade-in slide-in-from-top-2 duration-300"
           role="alert"
         >
-          <Warning size={16} className="mt-0.5 flex-shrink-0 text-red-500" weight="fill" />
+          <Warning size={16} className="mt-0.5 shrink-0 text-red-500" weight="fill" />
           <p className="text-xs font-medium leading-relaxed text-red-600">
             {state.error}
           </p>
