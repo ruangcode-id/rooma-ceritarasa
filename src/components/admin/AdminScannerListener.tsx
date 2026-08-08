@@ -88,6 +88,22 @@ export function AdminScannerListener() {
         tableDisplay: data.data.tableDisplay,
       });
 
+      // Broadcast to other open Admin tabs
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        try {
+          const channel = new BroadcastChannel("rooma_admin_notifications");
+          channel.postMessage({
+            type: "CHECK_IN_ALERT",
+            title: "Check-In Tamu",
+            body: `Check-in OK · ${data.data.guestName} (${data.data.tableDisplay})`,
+            url: `/admin/reservations?detail=${data.data.reservationId}`,
+          });
+          channel.close();
+        } catch {
+          // Ignore broadcast error
+        }
+      }
+
       // Auto dismiss after 5 seconds
       setTimeout(() => setToast(null), 5000);
     } catch (err) {
