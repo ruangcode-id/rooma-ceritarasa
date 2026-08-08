@@ -202,6 +202,7 @@ export default function AdminVipClient() {
                                 token: guest.vipCard?.token || "VIP-MEMBER",
                                 tier: guest.vipCard?.tier || "SILVER",
                                 qrCodeUrl: guest.vipCard?.qrCodeUrl,
+                                issuedAt: guest.vipCard?.issuedAt,
                               })
                             }
                             title="Download VIP Card (PNG)"
