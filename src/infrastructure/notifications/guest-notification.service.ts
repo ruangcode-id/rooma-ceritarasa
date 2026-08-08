@@ -190,6 +190,11 @@ async function getReservationNotifyContext(reservationId: string) {
     include: {
       guest: { select: { name: true, phone: true, email: true } },
       session: { select: { name: true, startTime: true, endTime: true } },
+      reservationTables: {
+        include: {
+          table: { select: { tableNumber: true } },
+        },
+      },
     },
   });
 }
@@ -200,7 +205,22 @@ function buildReservationVars(reservation: {
   partySize: number;
   guest: { name: string };
   session: { name: string; startTime: Date; endTime?: Date };
+  reservationTables?: Array<{ table: { tableNumber: string } }>;
 }): TemplateVars {
+  const rawTables = (reservation.reservationTables || [])
+    .map((rt) => rt.table.tableNumber)
+    .filter(Boolean);
+
+  const formattedTables =
+    rawTables.length > 0
+      ? rawTables
+          .map((t) => {
+            const clean = t.replace(/^Table\s*/i, "").trim();
+            return `Table ${clean}`;
+          })
+          .join(", ")
+      : "-";
+
   return {
     nama: reservation.guest.name,
     tanggal: formatDateId(reservation.date),
@@ -208,6 +228,9 @@ function buildReservationVars(reservation: {
     session: reservation.session.name,
     reservation_id: reservation.id.slice(0, 8),
     party_size: reservation.partySize,
+    meja: formattedTables,
+    table: formattedTables,
+    table_number: formattedTables,
   };
 }
 
@@ -220,6 +243,7 @@ const DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE = [
   "",
   "• Date: {{tanggal}}",
   "• Time: {{waktu}}",
+  "• Reserved Table: {{table}}",
   "• Check-in Code: {{check_in_code}}",
   "",
   "A QR Code for check-in has been sent to your email. Please present the QR Code or Check-in Code upon arrival.",
@@ -258,7 +282,7 @@ export async function notifyGuestReservationConfirmed(reservationId: string) {
       templateKey: "reservasi_konfirmasi",
       vars,
       fallbackHtml:
-        "<p>Hello {{nama}},</p><p>Your reservation on <strong>{{tanggal}}</strong> at <strong>{{waktu}}</strong> has been confirmed.</p>",
+        "<p>Hello {{nama}},</p><p>Your reservation on <strong>{{tanggal}}</strong> at <strong>{{waktu}}</strong> (<strong>{{table}}</strong>) has been confirmed.</p>",
       checkInCode,
     });
   }
@@ -298,7 +322,7 @@ export async function notifyGuestPaymentSuccess(reservationId: string) {
       fallbackHtml: checkInCode
         ? `<p>Hello {{nama}},</p>
 <p>Payment for reservation <strong>{{reservation_id}}</strong> was successful.</p>
-<p>Your reservation on <strong>{{tanggal}}</strong> at <strong>{{waktu}}</strong> has been confirmed.</p>`
+<p>Your reservation on <strong>{{tanggal}}</strong> at <strong>{{waktu}}</strong> (<strong>{{table}}</strong>) has been confirmed.</p>`
         : "<p>Hello {{nama}},</p><p>Payment for reservation <strong>{{reservation_id}}</strong> was successful.</p>",
       checkInCode,
     });
@@ -319,7 +343,7 @@ export async function sendReservationReminder(reservationId: string) {
     reservation.guest.phone,
     "reservasi_reminder_h1",
     vars,
-    "Reminder: Tomorrow is your reservation at Rooma Ceritarasa on {{tanggal}} at {{waktu}}.",
+    "Reminder: Tomorrow is your reservation at Rooma Ceritarasa on {{tanggal}} at {{waktu}} ({{table}}).",
   );
 
   if (waResult.sent) {
