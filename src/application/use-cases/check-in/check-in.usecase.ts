@@ -40,15 +40,26 @@ export const CheckInUseCase = {
       throw new Error("Reservation not found");
     }
 
+    const reservationDetails = await ReservationRepo.findReservationByIdForAdmin(reservationId);
+    const guestName = reservationDetails?.guest.name ?? "Guest";
+    const rawTables = (reservationDetails?.reservationTables || [])
+      .map((rt) => rt.table.tableNumber)
+      .filter(Boolean);
+    const tableDisplay =
+      rawTables.length > 0
+        ? rawTables.map((t) => (t.toLowerCase().startsWith("table") ? t : `Table ${t}`)).join(", ")
+        : "-";
+    const sessionName = reservationDetails?.session.name ?? "";
+
     if (parsed.action === "no_show") {
       await markReservationNoShow(reservationId);
       await broadcastStaffNotification({
         type: "check_in",
         title: "Reservasi no-show",
-        body: `Status no-show dicatat · ${reservationId.slice(0, 8)}…`,
+        body: `Status no-show dicatat · ${guestName} (${tableDisplay})`,
         relatedId: reservationId,
       });
-      return { reservationId, action: "no_show" as const };
+      return { reservationId, action: "no_show" as const, guestName, tableDisplay, sessionName };
     }
 
     await markReservationCheckedIn(reservationId, userId);
@@ -56,9 +67,16 @@ export const CheckInUseCase = {
     await broadcastStaffNotification({
       type: "check_in",
       title: "Check-in tamu",
-      body: `Check-in OK · ${reservationId.slice(0, 8)}…`,
+      body: `Check-in OK · ${guestName} (${tableDisplay})`,
       relatedId: reservationId,
     });
-    return { reservationId, action: "check_in" as const };
+
+    return {
+      reservationId,
+      action: "check_in" as const,
+      guestName,
+      tableDisplay,
+      sessionName,
+    };
   },
 };

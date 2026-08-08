@@ -105,7 +105,17 @@ export async function cancelReservationByToken(
 export async function findReservationByLookup(
   lookup: string,
 ): Promise<(Reservation & { guest: { name: string } }) | null> {
-  const trimmed = lookup.trim();
+  let trimmed = lookup.trim();
+
+  // Strip query strings if present (e.g. ?confirm=true)
+  trimmed = trimmed.split("?")[0]?.trim() ?? trimmed;
+
+  // If lookup contains a URL or path (e.g. https://domain.com/check-in/CK-XXXX), extract token
+  if (trimmed.includes("/")) {
+    const parts = trimmed.split("/").filter(Boolean);
+    trimmed = parts[parts.length - 1] ?? trimmed;
+  }
+
   const uuidRegex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
