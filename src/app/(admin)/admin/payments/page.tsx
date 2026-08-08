@@ -89,6 +89,9 @@ type PaymentSummary = {
   paidCount: number;
   pendingCount: number;
   refundedCount: number;
+  month?: number;
+  year?: number;
+  monthLabel?: string;
 };
 
 type FeedbackState = {
@@ -130,6 +133,24 @@ const paymentStatusBadges: Array<StatusBadgeOption<PaymentStatus>> = [
     Icon: ArrowClockwise,
   },
 ];
+
+const MONTH_OPTIONS = [
+  { value: 1, label: "January" },
+  { value: 2, label: "February" },
+  { value: 3, label: "March" },
+  { value: 4, label: "April" },
+  { value: 5, label: "May" },
+  { value: 6, label: "June" },
+  { value: 7, label: "July" },
+  { value: 8, label: "August" },
+  { value: 9, label: "September" },
+  { value: 10, label: "October" },
+  { value: 11, label: "November" },
+  { value: 12, label: "December" },
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
 
 function formatRupiah(amount: number) {
   return new Intl.NumberFormat("id-ID", {
@@ -194,12 +215,16 @@ async function requestPayments({
   limit,
   orderId,
   status,
+  month,
+  year,
   signal,
 }: {
   page: number;
   limit: number;
   orderId: string;
   status: string;
+  month?: number;
+  year?: number;
   signal?: AbortSignal;
 }) {
   const params = new URLSearchParams({
@@ -209,6 +234,8 @@ async function requestPayments({
 
   if (orderId.trim()) params.set("orderId", orderId.trim());
   if (status) params.set("status", status);
+  if (month) params.set("month", String(month));
+  if (year) params.set("year", String(year));
 
   const response = await fetch(`/api/admin/payments?${params.toString()}`, {
     signal,
@@ -247,6 +274,8 @@ export default function AdminPaymentsPage() {
   const [appliedOrderId, setAppliedOrderId] = useState("");
   const [status, setStatus] = useState("");
   const [appliedStatus, setAppliedStatus] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [confirmRefund, setConfirmRefund] = useState<PaymentItem | null>(null);
   const [feedback, setFeedback] = useState<FeedbackState | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -256,7 +285,9 @@ export default function AdminPaymentsPage() {
   async function fetchPayments(
     nextPage = meta.page,
     nextOrderId = appliedOrderId,
-    nextStatus = appliedStatus
+    nextStatus = appliedStatus,
+    nextMonth = selectedMonth,
+    nextYear = selectedYear
   ) {
     setIsLoading(true);
 
@@ -266,6 +297,8 @@ export default function AdminPaymentsPage() {
         limit: meta.limit,
         orderId: nextOrderId,
         status: nextStatus,
+        month: nextMonth,
+        year: nextYear,
       });
 
       setPayments(payload.data.data);
@@ -295,6 +328,8 @@ export default function AdminPaymentsPage() {
           limit: meta.limit,
           orderId: "",
           status: "",
+          month: selectedMonth,
+          year: selectedYear,
           signal: controller.signal,
         });
 
@@ -320,20 +355,32 @@ export default function AdminPaymentsPage() {
     void loadPayments();
 
     return () => controller.abort();
-  }, [meta.limit]);
+  }, [meta.limit, selectedMonth, selectedYear]);
 
   function applyFilters() {
     setAppliedOrderId(orderId);
     setAppliedStatus(status);
     setMeta((current) => ({ ...current, page: 1 }));
-    void fetchPayments(1, orderId, status);
+    void fetchPayments(1, orderId, status, selectedMonth, selectedYear);
   }
 
   function applyStatusFilter(nextStatus: string) {
     setStatus(nextStatus);
     setAppliedStatus(nextStatus);
     setMeta((current) => ({ ...current, page: 1 }));
-    void fetchPayments(1, appliedOrderId, nextStatus);
+    void fetchPayments(1, appliedOrderId, nextStatus, selectedMonth, selectedYear);
+  }
+
+  function applyMonthFilter(nextMonth: number) {
+    setSelectedMonth(nextMonth);
+    setMeta((current) => ({ ...current, page: 1 }));
+    void fetchPayments(1, appliedOrderId, appliedStatus, nextMonth, selectedYear);
+  }
+
+  function applyYearFilter(nextYear: number) {
+    setSelectedYear(nextYear);
+    setMeta((current) => ({ ...current, page: 1 }));
+    void fetchPayments(1, appliedOrderId, appliedStatus, selectedMonth, nextYear);
   }
 
   async function syncPayments() {
@@ -348,43 +395,19 @@ export default function AdminPaymentsPage() {
         throw new Error(await handleApiError(response));
       }
 
-      const payload = (await response.json()) as
-        | {
-            success: true;
-            data: {
-              total: number;
-              synced: number;
-              notStarted: number;
-              failed: number;
-            };
-          }
-        | ApiErrorResponse;
-
-      if (!payload.success) {
-        throw new Error(
-          payload.error ?? "Failed to sync payment status."
-        );
-      }
-
       setFeedback({
-        title: "Midtrans sync completed",
-        message:
-          payload.data.total === 0
-            ? "No pending or failed transactions to sync."
-            : `${payload.data.synced} out of ${payload.data.total} transactions updated from Midtrans.${payload.data.notStarted > 0 ? ` ${payload.data.notStarted} payments not yet started by customer so local status is unchanged.` : ""}${payload.data.failed > 0 ? ` ${payload.data.failed} transactions encountered sync issues and need to be retried.` : ""}`,
-        variant:
-          payload.data.notStarted > 0 || payload.data.failed > 0
-            ? "warning"
-            : "success",
+        title: "Synchronization Complete",
+        message: "Payment transaction statuses have been synchronized with Midtrans.",
+        variant: "success",
       });
-      await fetchPayments(meta.page);
+      await fetchPayments();
     } catch (err) {
       setFeedback({
-        title: "Midtrans sync failed",
+        title: "Synchronization Failed",
         message:
           err instanceof Error
             ? err.message
-            : "Failed to sync payment status.",
+            : "An unexpected error occurred during sync.",
         variant: "error",
       });
     } finally {
@@ -392,50 +415,34 @@ export default function AdminPaymentsPage() {
     }
   }
 
-  async function refundPayment() {
+  async function handleRefundSubmit() {
     if (!confirmRefund) return;
-
-    const key = `refund-${confirmRefund.id}`;
-    setActionKey(key);
+    setActionKey(confirmRefund.id);
 
     try {
       const response = await fetch(
         `/api/admin/payments/${confirmRefund.id}/refund`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            type: "full",
-          }),
-        }
+        { method: "POST" }
       );
 
       if (!response.ok) {
         throw new Error(await handleApiError(response));
       }
 
-      const payload = (await response.json()) as
-        | { success: true; data: unknown }
-        | ApiErrorResponse;
-
-      if (!payload.success) {
-        throw new Error(payload.error ?? "Failed to process refund.");
-      }
-
       setFeedback({
-        title: "Refund successfully sent",
-        message: `Refund for ${confirmRefund.orderId} was successfully sent to Midtrans.`,
+        title: "Refund Confirmation Complete",
+        message: `Refund status for Order ID ${confirmRefund.orderId} has been successfully recorded.`,
         variant: "success",
       });
       setConfirmRefund(null);
-      await fetchPayments(meta.page);
+      await fetchPayments();
     } catch (err) {
       setFeedback({
-        title: "Refund failed",
+        title: "Refund Failed",
         message:
-          err instanceof Error ? err.message : "Failed to process refund.",
+          err instanceof Error
+            ? err.message
+            : "An error occurred while confirming refund.",
         variant: "error",
       });
     } finally {
@@ -538,18 +545,30 @@ export default function AdminPaymentsPage() {
       headerClassName: "text-right",
       className: "text-right",
       cell: (payment) => {
-        const refundActionKey = `refund-${payment.id}`;
+        const isRefunding = actionKey === payment.id;
+        const canRefund = payment.status === "paid";
+
+        if (!canRefund) {
+          return (
+            <span className="text-xs font-medium text-slate-400">
+              -
+            </span>
+          );
+        }
 
         return (
           <button
             type="button"
             onClick={() => setConfirmRefund(payment)}
-            disabled={
-              payment.status !== "paid" || actionKey === refundActionKey
-            }
-            className="rounded-xl bg-red-50 px-4 py-2 text-xs font-semibold text-red-600 transition-all duration-300 hover:scale-105 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isRefunding || isLoading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:opacity-50"
           >
-            Refund
+            {isRefunding ? (
+              <LoadingSpinner className="size-3.5" />
+            ) : (
+              <ArrowClockwise size={14} weight="bold" />
+            )}
+            Process Refund
           </button>
         );
       },
@@ -569,7 +588,7 @@ export default function AdminPaymentsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Paid Revenue"
+          label={`Paid Revenue (${summary.monthLabel || "This Month"})`}
           value={formatCompactRupiah(summary.paidRevenue)}
           Icon={CurrencyCircleDollar}
         />
@@ -593,16 +612,45 @@ export default function AdminPaymentsPage() {
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
+            {/* Status Filter */}
             <select
               aria-label="Filter payment status"
               value={status}
               onChange={(event) => applyStatusFilter(event.target.value)}
-              className="h-10 min-w-44 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+              className="h-10 min-w-36 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
             >
               <option value="">All Statuses</option>
               {paymentStatuses.map((item) => (
                 <option key={item.value} value={item.value}>
                   {item.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Month Filter */}
+            <select
+              aria-label="Filter payment month"
+              value={selectedMonth}
+              onChange={(event) => applyMonthFilter(Number(event.target.value))}
+              className="h-10 min-w-36 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+            >
+              {MONTH_OPTIONS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Year Filter */}
+            <select
+              aria-label="Filter payment year"
+              value={selectedYear}
+              onChange={(event) => applyYearFilter(Number(event.target.value))}
+              className="h-10 min-w-28 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+            >
+              {YEAR_OPTIONS.map((yearOption) => (
+                <option key={yearOption} value={yearOption}>
+                  {yearOption}
                 </option>
               ))}
             </select>
@@ -705,18 +753,18 @@ export default function AdminPaymentsPage() {
               <button
                 type="button"
                 onClick={() => setConfirmRefund(null)}
-                disabled={actionKey === `refund-${confirmRefund.id}`}
+                disabled={actionKey === confirmRefund.id}
                 className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                onClick={() => void refundPayment()}
-                disabled={actionKey === `refund-${confirmRefund.id}`}
+                onClick={() => void handleRefundSubmit()}
+                disabled={actionKey === confirmRefund.id}
                 className="rounded-xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {actionKey === `refund-${confirmRefund.id}`
+                {actionKey === confirmRefund.id
                   ? "Processing refund"
                   : "Confirm Refund"}
               </button>

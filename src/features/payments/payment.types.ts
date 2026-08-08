@@ -53,6 +53,8 @@ export type PaymentListQuery = {
   limit?: number;
   status?: PaymentStatus;
   orderId?: string;
+  month?: number;
+  year?: number;
 };
 
 export type PaymentRecord = {
@@ -79,6 +81,9 @@ export type PaymentSummary = {
   paidCount: number;
   pendingCount: number;
   refundedCount: number;
+  month?: number;
+  year?: number;
+  monthLabel?: string;
 };
 
 export type BulkPaymentSyncResult = {

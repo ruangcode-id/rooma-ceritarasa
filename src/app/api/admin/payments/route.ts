@@ -15,11 +15,16 @@ export async function GET(req: NextRequest) {
     const orderId = searchParams.get("orderId") ?? undefined;
     const statusParam = searchParams.get("status");
 
+    const monthParam = searchParams.get("month");
+    const yearParam = searchParams.get("year");
+    const month = monthParam ? parseInt(monthParam, 10) : undefined;
+    const year = yearParam ? parseInt(yearParam, 10) : undefined;
+
     const status = Object.values(PaymentStatus).includes(statusParam as PaymentStatus)
       ? (statusParam as PaymentStatus)
       : undefined;
 
-    const result = await listPayments({ page, limit, status, orderId });
+    const result = await listPayments({ page, limit, status, orderId, month, year });
 
     const totalPages = limit > 0 ? Math.ceil(result.total / limit) : 1;
 
