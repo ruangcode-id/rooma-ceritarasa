@@ -1,12 +1,14 @@
 /**
  * Helper to generate and download a high-resolution PNG of a VIP Digital Member Card.
- * Runs completely client-side using HTML5 Canvas with crossOrigin handling.
+ * Keeps original premium dark card layout with correct "Rooma Ceritarasa" branding
+ * and a prominent large centered QR code / barcode.
  */
 export async function downloadVipCardImage(params: {
   guestName: string;
   token: string;
   tier?: string;
   qrCodeUrl?: string | null;
+  issuedAt?: string | null;
 }): Promise<void> {
   const width = 900;
   const height = 540;
@@ -57,12 +59,12 @@ export async function downloadVipCardImage(params: {
   drawRoundedRect(20, 20, width - 40, height - 40, 24);
   ctx.stroke();
 
-  // 2. Header Brand
-  ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-  ctx.font = "bold 18px sans-serif";
-  ctx.fillText("ROOM A CERITARASA", 55, 75);
+  // 2. Header Brand: "Rooma Ceritarasa" (Top Left)
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 22px Georgia, serif";
+  ctx.fillText("Rooma Ceritarasa", 55, 75);
 
-  // VIP Member Badge
+  // VIP Tier Badge (Top Right)
   const tierText = (params.tier || "VIP MEMBER").toUpperCase();
   ctx.fillStyle = "#fbbf24";
   ctx.font = "italic bold 24px Georgia, serif";
@@ -70,7 +72,7 @@ export async function downloadVipCardImage(params: {
   ctx.fillText(tierText, width - 55, 75);
   ctx.textAlign = "left"; // reset
 
-  // 3. Gold Metallic Chip
+  // 3. Gold Metallic Chip (Mid Left)
   const chipGrad = ctx.createLinearGradient(55, 140, 145, 200);
   chipGrad.addColorStop(0, "#fef08a");
   chipGrad.addColorStop(0.5, "#d97706");
@@ -89,7 +91,44 @@ export async function downloadVipCardImage(params: {
   ctx.moveTo(100, 140); ctx.lineTo(100, 200);
   ctx.stroke();
 
-  // 4. Guest Name Section
+  // 4. Large Centered Barcode / QR Code Box (PROMINENT CENTER)
+  const boxSize = 270;
+  const qrBoxX = (width - boxSize) / 2; // 315
+  const qrBoxY = (height - boxSize) / 2; // 135
+
+  const qrSrc =
+    params.qrCodeUrl ||
+    `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${params.token}&margin=0`;
+
+  await new Promise<void>((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      // White Rounded Background Box for QR
+      ctx.fillStyle = "#ffffff";
+      drawRoundedRect(qrBoxX, qrBoxY, boxSize, boxSize, 24);
+      ctx.fill();
+
+      // QR Image inside box with margin
+      const padding = 18;
+      const imgSize = boxSize - padding * 2; // 234px
+      ctx.drawImage(img, qrBoxX + padding, qrBoxY + padding, imgSize, imgSize);
+      resolve();
+    };
+    img.onerror = () => {
+      ctx.fillStyle = "#ffffff";
+      drawRoundedRect(qrBoxX, qrBoxY, boxSize, boxSize, 24);
+      ctx.fill();
+
+      ctx.fillStyle = "#000000";
+      ctx.font = "bold 12px monospace";
+      ctx.fillText(params.token.slice(0, 16), qrBoxX + 20, qrBoxY + 135);
+      resolve();
+    };
+    img.src = qrSrc;
+  });
+
+  // 5. Guest Name & Token Section (Bottom Left - Original Structure)
   ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
   ctx.font = "bold 13px sans-serif";
   ctx.fillText("SPECIALLY ISSUED TO", 55, 410);
@@ -97,10 +136,9 @@ export async function downloadVipCardImage(params: {
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 34px sans-serif";
 
-  // Truncate name if too long to avoid overlapping QR code
-  let displayName = params.guestName;
-  if (displayName.length > 22) {
-    displayName = `${displayName.slice(0, 20)}...`;
+  let displayName = params.guestName.toUpperCase();
+  if (displayName.length > 28) {
+    displayName = `${displayName.slice(0, 26)}...`;
   }
   ctx.fillText(displayName, 55, 450);
 
@@ -109,45 +147,7 @@ export async function downloadVipCardImage(params: {
   ctx.font = "bold 18px monospace";
   ctx.fillText(`TOKEN: ${params.token}`, 55, 488);
 
-  // 5. QR Code Draw (Bottom Right)
-  const qrSrc =
-    params.qrCodeUrl ||
-    `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${params.token}&margin=0`;
-
-  await new Promise<void>((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const qrSize = 160;
-      const qrX = width - qrSize - 65;
-      const qrY = height - qrSize - 55;
-
-      // QR White Background Card
-      ctx.fillStyle = "#ffffff";
-      drawRoundedRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24, 20);
-      ctx.fill();
-
-      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-      resolve();
-    };
-    img.onerror = () => {
-      // Draw fallback text box if QR image fails to load
-      const qrSize = 160;
-      const qrX = width - qrSize - 65;
-      const qrY = height - qrSize - 55;
-      ctx.fillStyle = "#ffffff";
-      drawRoundedRect(qrX - 12, qrY - 12, qrSize + 24, qrSize + 24, 20);
-      ctx.fill();
-
-      ctx.fillStyle = "#000000";
-      ctx.font = "bold 12px monospace";
-      ctx.fillText(params.token, qrX + 10, qrY + 80);
-      resolve();
-    };
-    img.src = qrSrc;
-  });
-
-  // 6. Trigger Download
+  // 6. Trigger PNG Download
   const dataUrl = canvas.toDataURL("image/png");
   const a = document.createElement("a");
   const filename = `VIP-Card-${params.guestName.replace(/[^a-zA-Z0-9]/g, "-")}.png`;

@@ -23,17 +23,8 @@ export default async function VipPage({
   }
 
   // Determine VIP card styling based on tier
-  let cardGradient = "from-black via-[#111] to-black"; // PLATINUM default
-  let accentColor = "text-slate-300";
-  const tierLabel = "VIP MEMBER";
-
-  if (invitation.vipTier === "GOLD") {
-    cardGradient = "from-black via-[#111] to-black";
-    accentColor = "text-yellow-500";
-  } else if (invitation.vipTier === "SILVER") {
-    cardGradient = "from-black via-[#111] to-black";
-    accentColor = "text-slate-100";
-  }
+  const tierLabel = (invitation.vipTier || "SILVER").toUpperCase();
+  const cardGradient = "from-[#2a080d] via-[#150306] to-[#0a0103]";
 
   return (
     <div className="min-h-screen bg-white pt-24 pb-20 font-sans text-slate-900 relative overflow-hidden flex flex-col items-center justify-center">
@@ -132,55 +123,62 @@ export default async function VipPage({
 
             {/* Card Content (Top) */}
             <div className="relative z-10 flex justify-between items-start gap-2">
-              <Image 
-                src="/assets/logo_no_background.png" 
-                alt="Rooma" 
-                width={100} 
-                height={32} 
-                className="brightness-0 invert opacity-90 w-17.5 sm:w-25 h-auto"
-              />
-              <span className={`text-[9px] sm:text-xs font-bold tracking-widest sm:tracking-[0.2em] uppercase text-right leading-tight ${accentColor}`}>
+              <div>
+                <h3 className="text-white font-serif font-bold text-lg sm:text-2xl tracking-tight leading-none">
+                  Rooma Ceritarasa
+                </h3>
+                <p className="text-white/40 text-[8px] sm:text-[10px] font-bold tracking-widest uppercase mt-1">
+                  Exclusive VIP Membership
+                </p>
+              </div>
+              <span className="text-amber-400 font-serif italic font-bold text-sm sm:text-xl tracking-wider uppercase">
                 {tierLabel}
               </span>
             </div>
 
-            {/* Card Content (Middle) - Chip Simlation */}
-            <div className="relative z-10 mt-4 sm:mt-6">
-              <div className="w-10 h-7 sm:w-12 sm:h-8 rounded bg-linear-to-br from-amber-200/40 to-amber-500/20 border border-amber-100/30"></div>
-            </div>
-
-            {/* Card Content (Bottom) */}
-            <div className="relative z-10 mt-auto flex justify-between items-end gap-2">
-              <div className="min-w-0">
-                <p className="text-[8px] sm:text-[10px] tracking-widest uppercase text-white/50 mb-0.5 sm:mb-1">
-                  Specially Issued To
-                </p>
-                <h2 className="text-base sm:text-2xl font-bold text-white tracking-wider drop-shadow-md truncate">
-                  {invitation.guestName}
-                </h2>
-              </div>
+            {/* Card Content (Middle) - Centered Metallic Chip & Large QR Code */}
+            <div className="relative z-10 my-auto flex items-center justify-between gap-4 py-2">
+              {/* Metallic Chip */}
+              <div className="w-10 h-7 sm:w-12 sm:h-8 rounded bg-linear-to-br from-amber-200/40 to-amber-500/20 border border-amber-100/30 shrink-0"></div>
               
-              <div className="bg-white p-1 sm:p-2 rounded shrink-0">
+              {/* Large Centered Barcode / QR Code Box */}
+              <div className="bg-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-2xl shrink-0 mx-auto">
                 {invitation.qrCodeUrl ? (
                   <Image 
                     src={invitation.qrCodeUrl}
                     alt="VIP QR Code"
-                    width={80}
-                    height={80}
-                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+                    width={140}
+                    height={140}
+                    className="w-24 h-24 sm:w-36 sm:h-36 object-contain"
                     unoptimized
                   />
                 ) : (
                   <Image 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${invitation.token}&margin=0`}
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${invitation.token}&margin=0`}
                     alt="VIP QR Code Fallback"
-                    width={80}
-                    height={80}
-                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
+                    width={140}
+                    height={140}
+                    className="w-24 h-24 sm:w-36 sm:h-36 object-contain"
                     unoptimized
                   />
                 )}
               </div>
+
+              {/* Spacer on right for symmetry */}
+              <div className="w-10 sm:w-12 shrink-0 opacity-0"></div>
+            </div>
+
+            {/* Card Content (Bottom) */}
+            <div className="relative z-10 flex flex-col justify-end text-left">
+              <p className="text-[8px] sm:text-[10px] tracking-widest uppercase text-white/50 mb-0.5">
+                Specially Issued To
+              </p>
+              <h2 className="text-base sm:text-2xl font-bold text-white tracking-wider drop-shadow-md truncate uppercase">
+                {invitation.guestName}
+              </h2>
+              <p className="text-[9px] sm:text-xs font-mono text-amber-400 tracking-wider truncate mt-0.5">
+                TOKEN: {invitation.token}
+              </p>
             </div>
           </div>
         </div>
