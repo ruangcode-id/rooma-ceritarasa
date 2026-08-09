@@ -870,7 +870,7 @@ export default function ReservationWizard({
                    {paymentState === "paid" ? "View Payment" : "Pay Deposit"}
                  </button>
                ) : null}
-               <button onClick={() => window.location.href = '/'} className="px-8 py-4 border-2 border-slate-900 text-slate-900 font-bold uppercase tracking-widest hover:bg-slate-50 transition-colors">
+               <button onClick={() => { window.location.replace('/'); }} className="px-8 py-4 border-2 border-slate-900 text-slate-900 font-bold uppercase tracking-widest hover:bg-slate-50 transition-colors cursor-pointer">
                  Return to Home
                </button>
              </div>

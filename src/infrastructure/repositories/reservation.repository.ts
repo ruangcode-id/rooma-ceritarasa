@@ -189,7 +189,7 @@ export async function getAdminReservations(filters: AdminReservationFilters) {
       take: limit,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       include: {
-        guest: { select: { id: true, name: true, phone: true } },
+        guest: { select: { id: true, name: true, phone: true, notes: true, isVip: true } },
         session: { select: { id: true, name: true, startTime: true, endTime: true } },
         reservationTables: {
           include: {

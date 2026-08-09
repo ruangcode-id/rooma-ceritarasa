@@ -21,7 +21,7 @@ export async function GET(
     const reservation = await prisma.reservation.findUnique({
       where: { id },
       include: {
-        guest: { select: { id: true, name: true, phone: true, email: true } },
+        guest: { select: { id: true, name: true, phone: true, email: true, notes: true, isVip: true } },
         session: { select: { id: true, name: true, startTime: true, endTime: true } },
         reservationTables: {
           include: { table: { select: { id: true, tableNumber: true, capacity: true } } }
