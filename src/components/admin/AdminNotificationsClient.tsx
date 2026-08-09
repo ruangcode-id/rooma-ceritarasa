@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { enUS as localeId } from "date-fns/locale";
@@ -11,11 +12,16 @@ import {
   CreditCard,
   MapPinLine,
   CalendarX,
-  Info
+  Info,
+  Crown
 } from "@phosphor-icons/react";
 import { useNotifications, NotificationItem } from "@/hooks/useNotifications";
+import VipCheckInDetailModal from "@/components/modals/VipCheckInDetailModal";
 
-function getNotificationIcon(type: string) {
+function getNotificationIcon(type: string, title?: string | null) {
+  if (title?.includes("👑") || title?.includes("VIP")) {
+    return <Crown size={20} weight="fill" className="text-amber-500" />;
+  }
   switch (type) {
     case "new_reservation":
       return <CalendarCheck size={20} className="text-blue-500" />;
@@ -30,7 +36,10 @@ function getNotificationIcon(type: string) {
   }
 }
 
-function getNotificationLink(type: string, relatedId?: string | null) {
+function getNotificationLink(type: string, relatedId?: string | null, title?: string | null) {
+  if (title?.includes("👑") || title?.includes("VIP")) {
+    return relatedId ? `/admin/vip?vipGuest=${relatedId}` : "/admin/vip";
+  }
   switch (type) {
     case "new_reservation":
     case "cancellation":
@@ -44,6 +53,11 @@ function getNotificationLink(type: string, relatedId?: string | null) {
 }
 
 export default function AdminNotificationsClient() {
+  const searchParams = useSearchParams();
+  const detailNotifParam = searchParams.get("detailNotif");
+
+  const [selectedVipNotif, setSelectedVipNotif] = useState<NotificationItem | null>(null);
+
   const {
     notifications,
     isLoading: isNotifLoading,
@@ -51,7 +65,14 @@ export default function AdminNotificationsClient() {
     markAllRead,
     toastMessage,
     clearToast,
-  } = useNotifications(1, 50); // Just fetch 50 for now
+  } = useNotifications(1, 50);
+
+  useEffect(() => {
+    if (detailNotifParam && notifications.length > 0) {
+      const match = notifications.find((n: NotificationItem) => n.id === detailNotifParam);
+      if (match) setSelectedVipNotif(match);
+    }
+  }, [detailNotifParam, notifications]);
 
   // Simple Toast UI
   useEffect(() => {
@@ -108,7 +129,7 @@ export default function AdminNotificationsClient() {
                 }`}
               >
                 <div className={`mt-1 shrink-0 rounded-full p-2 ${!notif.isRead ? "bg-primary/10" : "bg-slate-100"}`}>
-                  {getNotificationIcon(notif.type)}
+                  {getNotificationIcon(notif.type, notif.title)}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
@@ -123,16 +144,26 @@ export default function AdminNotificationsClient() {
                     {notif.body}
                   </p>
                   <div className="mt-3 flex items-center gap-4">
-                    <Link
-                      href={getNotificationLink(notif.type, notif.relatedId)}
-                      className="text-xs font-semibold text-primary hover:underline"
-                    >
-                      View Details
-                    </Link>
+                    {notif.title?.includes("👑") || notif.title?.includes("VIP") ? (
+                      <button
+                        onClick={() => setSelectedVipNotif(notif)}
+                        className="text-xs font-bold text-amber-600 hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <Crown size={14} weight="fill" />
+                        View VIP Check-in Detail
+                      </button>
+                    ) : (
+                      <Link
+                        href={getNotificationLink(notif.type, notif.relatedId, notif.title)}
+                        className="text-xs font-semibold text-primary hover:underline"
+                      >
+                        View Details
+                      </Link>
+                    )}
                     {!notif.isRead && (
                       <button
                         onClick={() => markAsRead([notif.id])}
-                        className="text-xs font-medium text-slate-500 hover:text-slate-900"
+                        className="text-xs font-medium text-slate-500 hover:text-slate-900 cursor-pointer"
                       >
                         Mark as Read
                       </button>
@@ -149,6 +180,14 @@ export default function AdminNotificationsClient() {
           </ul>
         )}
       </section>
+
+      {/* Modal VIP Check-In Detail */}
+      {selectedVipNotif && (
+        <VipCheckInDetailModal
+          notification={selectedVipNotif}
+          onClose={() => setSelectedVipNotif(null)}
+        />
+      )}
     </div>
   );
 }

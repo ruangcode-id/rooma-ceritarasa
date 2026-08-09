@@ -142,7 +142,7 @@ export async function findReservationByIdForAdmin(id: string) {
   return prisma.reservation.findUnique({
     where: { id },
     include: {
-      guest: { select: { id: true, name: true, phone: true } },
+      guest: { select: { id: true, name: true, phone: true, isVip: true, notes: true } },
       session: { select: { id: true, name: true } },
       checkIn: true,
       reservationTables: {

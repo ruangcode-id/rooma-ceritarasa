@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { MapPinLine, CalendarCheck, X, ArrowRight } from "@phosphor-icons/react";
+import { MapPinLine, CalendarCheck, X, ArrowRight, Crown } from "@phosphor-icons/react";
 
 type NotificationToast = {
   id: string;
@@ -184,8 +184,16 @@ export default function GlobalNotificationToast() {
 
   if (!activeToast) return null;
 
+  const isVip = activeToast.title.includes("👑") || activeToast.title.includes("VIP");
+
   const handleCardClick = () => {
-    if (activeToast.url) {
+    if (isVip) {
+      if (activeToast.id.startsWith("bc-")) {
+        router.push("/admin/notifications");
+      } else {
+        router.push(`/admin/notifications?detailNotif=${activeToast.id}`);
+      }
+    } else if (activeToast.url) {
       router.push(activeToast.url);
     }
     setActiveToast(null);
@@ -195,14 +203,22 @@ export default function GlobalNotificationToast() {
     <div className="fixed bottom-6 right-6 z-100 flex max-w-md w-full animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto">
       <div
         onClick={handleCardClick}
-        className="w-full rounded-2xl p-4 bg-slate-950/95 border border-amber-500/40 text-white shadow-2xl shadow-amber-950/40 backdrop-blur-xl flex items-start gap-3 text-left cursor-pointer hover:border-amber-400 transition-all group relative overflow-hidden"
+        className={`w-full rounded-2xl p-4 text-white shadow-2xl backdrop-blur-xl flex items-start gap-3 text-left cursor-pointer transition-all group relative overflow-hidden ${
+          isVip 
+            ? "bg-linear-to-br from-[#2a080d] via-[#150306] to-[#0a0103] border-2 border-amber-500/60 shadow-amber-900/50 hover:border-amber-400" 
+            : "bg-slate-950/95 border border-amber-500/40 shadow-amber-950/40 hover:border-amber-400"
+        }`}
       >
         {/* Glow accent */}
-        <div className="absolute -right-12 -bottom-12 w-32 h-32 rounded-full bg-amber-500/10 blur-2xl pointer-events-none"></div>
+        <div className={`absolute -right-12 -bottom-12 w-32 h-32 rounded-full blur-2xl pointer-events-none ${isVip ? "bg-amber-500/20" : "bg-amber-500/10"}`}></div>
 
         {/* Icon Badge */}
         <div className="shrink-0 mt-0.5">
-          {activeToast.type === "check_in" ? (
+          {isVip ? (
+            <div className="rounded-xl bg-linear-to-br from-amber-400 to-amber-600 p-2.5 text-black shadow-lg shadow-amber-500/30">
+              <Crown size={24} weight="fill" />
+            </div>
+          ) : activeToast.type === "check_in" ? (
             <div className="rounded-xl bg-amber-500/20 p-2.5 text-amber-400 border border-amber-500/30">
               <MapPinLine size={24} weight="fill" />
             </div>
@@ -215,9 +231,9 @@ export default function GlobalNotificationToast() {
 
         {/* Content */}
         <div className="flex-1 min-w-0 pr-4">
-          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-            {activeToast.type === "check_in" ? "Guest Check-In Alert" : "Reservation Update"}
+          <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${isVip ? "text-amber-300" : "text-amber-400"}`}>
+            <span className={`w-1.5 h-1.5 rounded-full animate-ping ${isVip ? "bg-amber-300" : "bg-amber-400"}`}></span>
+            {isVip ? "VIP Arrival Alert" : activeToast.type === "check_in" ? "Guest Check-In Alert" : "Reservation Update"}
           </div>
 
           <h4 className="text-sm font-bold text-white mt-0.5 group-hover:text-amber-300 transition-colors">

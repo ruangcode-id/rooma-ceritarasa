@@ -6,14 +6,12 @@ import { downloadVipCardImage } from "@/lib/download-vip-card";
 type VipDownloadButtonProps = {
   guestName: string;
   token: string;
-  tier?: string;
   qrCodeUrl?: string | null;
 };
 
 export function VipDownloadButton({
   guestName,
   token,
-  tier,
   qrCodeUrl,
 }: VipDownloadButtonProps) {
   return (
@@ -22,7 +20,6 @@ export function VipDownloadButton({
         downloadVipCardImage({
           guestName,
           token,
-          tier,
           qrCodeUrl,
         })
       }

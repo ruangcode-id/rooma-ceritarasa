@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Crown, ShieldCheck, DownloadSimple } from "@phosphor-icons/react";
+import { X, Crown, ShieldCheck, DownloadSimple, Copy, Check } from "@phosphor-icons/react";
 import { downloadVipCardImage } from "@/lib/download-vip-card";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import Image from "next/image";
@@ -17,6 +17,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [benefits, setBenefits] = useState("");
+  const [copiedToken, setCopiedToken] = useState(false);
   
   // Track if we just successfully assigned VIP so we can show the card immediately
   const [newlyAssignedCard, setNewlyAssignedCard] = useState<GuestRow["vipCard"] | null>(null);
@@ -95,7 +96,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
                   value={benefits}
                   onChange={(e) => setBenefits(e.target.value)}
                   placeholder="Example: No minimum spend in the Private room..."
-                  className="w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none min-h-[100px]"
+                  className="w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none min-h-25"
                 />
               </div>
 
@@ -139,7 +140,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
                     </p>
                   </div>
                   <span className="text-amber-400 font-serif italic font-bold text-sm sm:text-lg tracking-wider">
-                    {(activeVipCard?.tier || "SILVER").toUpperCase()}
+                    VIP MEMBER
                   </span>
                 </div>
 
@@ -187,20 +188,47 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
                   <h2 className="text-sm sm:text-xl font-bold text-white tracking-wider drop-shadow-md truncate uppercase">
                     {guest.name}
                   </h2>
-                  <p className="text-[8px] sm:text-xs font-mono text-amber-400 tracking-wider truncate mt-0.5">
-                    TOKEN: {activeVipCard?.token}
-                  </p>
                 </div>
               </div>
 
               {/* Actions */}
               <div className="mt-6 flex flex-col items-center gap-3 w-full">
+                {/* Copy Token Code Box */}
+                {activeVipCard?.token && (
+                  <div className="w-full rounded-xl bg-slate-50 border border-slate-200 p-3 flex items-center justify-between gap-3 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">VIP Token / Code</p>
+                      <p className="font-mono text-slate-800 font-semibold truncate select-all">{activeVipCard.token}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(activeVipCard.token);
+                        setCopiedToken(true);
+                        setTimeout(() => setCopiedToken(false), 2000);
+                      }}
+                      className="shrink-0 flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors shadow-xs cursor-pointer active:scale-95"
+                    >
+                      {copiedToken ? (
+                        <>
+                          <Check size={16} weight="bold" className="text-emerald-600" />
+                          <span className="text-emerald-600">Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={16} weight="bold" />
+                          <span>Copy Code</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
                 <button
                   onClick={() =>
                     downloadVipCardImage({
                       guestName: guest.name,
                       token: activeVipCard?.token || "VIP-MEMBER",
-                      tier: activeVipCard?.tier || "SILVER",
                       qrCodeUrl: activeVipCard?.qrCodeUrl,
                       issuedAt: activeVipCard?.issuedAt,
                     })
@@ -211,7 +239,7 @@ export default function VipAssignModal({ guest, onClose }: VipAssignModalProps) 
                   Download VIP Card (PNG)
                 </button>
                 <p className="text-slate-500 text-xs text-center px-4">
-                  Digital VIP card is active. Guests can present this card, show the QR Code, or mention the Token serial number.
+                  Digital VIP card is active. Copy the code above for manual check-in if the scanner is unavailable.
                 </p>
               </div>
             </div>

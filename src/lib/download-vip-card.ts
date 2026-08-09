@@ -6,7 +6,6 @@
 export async function downloadVipCardImage(params: {
   guestName: string;
   token: string;
-  tier?: string;
   qrCodeUrl?: string | null;
   issuedAt?: string | null;
 }): Promise<void> {
@@ -64,8 +63,8 @@ export async function downloadVipCardImage(params: {
   ctx.font = "bold 22px Georgia, serif";
   ctx.fillText("Rooma Ceritarasa", 55, 75);
 
-  // VIP Tier Badge (Top Right)
-  const tierText = (params.tier || "VIP MEMBER").toUpperCase();
+  // VIP Member Badge (Top Right)
+  const tierText = "VIP MEMBER";
   ctx.fillStyle = "#fbbf24";
   ctx.font = "italic bold 24px Georgia, serif";
   ctx.textAlign = "right";
@@ -142,10 +141,7 @@ export async function downloadVipCardImage(params: {
   }
   ctx.fillText(displayName, 55, 450);
 
-  // Token Serial Code
-  ctx.fillStyle = "#f59e0b";
-  ctx.font = "bold 18px monospace";
-  ctx.fillText(`TOKEN: ${params.token}`, 55, 488);
+
 
   // 6. Trigger PNG Download
   const dataUrl = canvas.toDataURL("image/png");

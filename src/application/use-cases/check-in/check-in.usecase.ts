@@ -5,6 +5,7 @@ import {
   markReservationNoShow,
 } from "@/infrastructure/repositories/check-in.repository";
 import { broadcastStaffNotification } from "@/infrastructure/notifications/broadcast-staff";
+import { prisma } from "@/infrastructure/database/prisma";
 
 export const adminCheckInBodySchema = z
   .object({
@@ -32,12 +33,65 @@ async function resolveReservationId(body: AdminCheckInBody): Promise<string | nu
   return null;
 }
 
+async function extractLookupToken(lookup: string): Promise<string> {
+  let trimmed = lookup.trim();
+  trimmed = trimmed.split("?")[0]?.trim() ?? trimmed;
+  if (trimmed.includes("/")) {
+    const parts = trimmed.split("/").filter(Boolean);
+    trimmed = parts[parts.length - 1] ?? trimmed;
+  }
+  return trimmed;
+}
+
 export const CheckInUseCase = {
   async execute(userId: string, body: unknown) {
     const parsed = adminCheckInBodySchema.parse(body);
+
+    // 1. Check if lookup is a VIP Card Token
+    if (parsed.lookup) {
+      const token = await extractLookupToken(parsed.lookup);
+      const vipCard = await prisma.vipCard.findUnique({
+        where: { token },
+        include: { guest: true },
+      });
+
+      if (vipCard && vipCard.isActive) {
+        const guestName = vipCard.guest.name;
+        const tableDisplay = "VIP Area / Meja VIP";
+        const guestNotes = vipCard.benefits || vipCard.guest.notes || null;
+
+        await prisma.vipArrivalLog.create({
+          data: {
+            guestId: vipCard.guestId,
+            checkedInBy: userId,
+            notes: guestNotes,
+          },
+        });
+
+        await broadcastStaffNotification({
+          type: "check_in",
+          title: "👑 VIP Arrival Alert",
+          body: `Kedatangan Tamu VIP · ${guestName} (Silakan arahkan ke Meja VIP)`,
+          relatedId: vipCard.guestId,
+        });
+
+        return {
+          reservationId: null,
+          action: "check_in" as const,
+          guestName,
+          tableDisplay,
+          sessionName: "VIP Walk-in",
+          isVip: true,
+          isVipWalkIn: true,
+          guestNotes,
+        };
+      }
+    }
+
+    // 2. Standard Reservation Lookup
     const reservationId = await resolveReservationId(parsed);
     if (!reservationId) {
-      throw new Error("Reservation not found");
+      throw new Error("Data tidak ditemukan. Pastikan QR atau Token valid.");
     }
 
     const reservationDetails = await ReservationRepo.findReservationByIdForAdmin(reservationId);
@@ -50,23 +104,25 @@ export const CheckInUseCase = {
         ? rawTables.map((t) => (t.toLowerCase().startsWith("table") ? t : `Table ${t}`)).join(", ")
         : "-";
     const sessionName = reservationDetails?.session.name ?? "";
+    const isVip = reservationDetails?.guest.isVip || false;
+    const guestNotes = reservationDetails?.specialRequest || reservationDetails?.guest.notes || null;
 
     if (parsed.action === "no_show") {
       await markReservationNoShow(reservationId);
       await broadcastStaffNotification({
         type: "check_in",
-        title: "Reservasi no-show",
+        title: isVip ? "👑 VIP Reservasi no-show" : "Reservasi no-show",
         body: `Status no-show dicatat · ${guestName} (${tableDisplay})`,
         relatedId: reservationId,
       });
-      return { reservationId, action: "no_show" as const, guestName, tableDisplay, sessionName };
+      return { reservationId, action: "no_show" as const, guestName, tableDisplay, sessionName, isVip, guestNotes };
     }
 
     await markReservationCheckedIn(reservationId, userId);
 
     await broadcastStaffNotification({
       type: "check_in",
-      title: "Check-in tamu",
+      title: isVip ? "👑 VIP Check-In Alert" : "Check-in tamu",
       body: `Check-in OK · ${guestName} (${tableDisplay})`,
       relatedId: reservationId,
     });
@@ -77,6 +133,8 @@ export const CheckInUseCase = {
       guestName,
       tableDisplay,
       sessionName,
+      isVip,
+      guestNotes,
     };
   },
 };

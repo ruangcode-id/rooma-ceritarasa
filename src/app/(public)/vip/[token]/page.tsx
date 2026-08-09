@@ -22,8 +22,8 @@ export default async function VipPage({
     notFound();
   }
 
-  // Determine VIP card styling based on tier
-  const tierLabel = (invitation.vipTier || "SILVER").toUpperCase();
+  // Determine VIP card styling
+  const tierLabel = "VIP MEMBER";
   const cardGradient = "from-[#2a080d] via-[#150306] to-[#0a0103]";
 
   return (
@@ -176,9 +176,6 @@ export default async function VipPage({
               <h2 className="text-base sm:text-2xl font-bold text-white tracking-wider drop-shadow-md truncate uppercase">
                 {invitation.guestName}
               </h2>
-              <p className="text-[9px] sm:text-xs font-mono text-amber-400 tracking-wider truncate mt-0.5">
-                TOKEN: {invitation.token}
-              </p>
             </div>
           </div>
         </div>
@@ -193,7 +190,6 @@ export default async function VipPage({
             <VipDownloadButton
               guestName={invitation.guestName}
               token={invitation.token}
-              tier={invitation.vipTier}
               qrCodeUrl={invitation.qrCodeUrl}
             />
             <Link 
