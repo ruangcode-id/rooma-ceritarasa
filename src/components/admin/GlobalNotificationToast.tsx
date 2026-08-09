@@ -128,28 +128,34 @@ export default function GlobalNotificationToast() {
     };
   }, [triggerToast]);
 
-  // Listen to WebPush ServiceWorker events
+  // Unlock Web Audio API on first user interaction so chime plays reliably
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === "PUSH_NOTIFICATION_RECEIVED") {
-        const payload = event.data.payload;
-        const notifType = payload.type === "check_in" ? "check_in" : "general";
-        triggerToast({
-          id: `push-${Date.now()}`,
-          type: notifType,
-          title: payload.title || "Notification",
-          body: payload.body || "",
-          url: payload.data?.url || "/admin/reservations",
-          timestamp: Date.now(),
-        });
+    const unlockAudio = () => {
+      try {
+        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          const buffer = ctx.createBuffer(1, 1, 22050);
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          source.start(0);
+        }
+      } catch {
+        // ignore errors
       }
+      document.removeEventListener("click", unlockAudio);
+      document.removeEventListener("touchstart", unlockAudio);
     };
 
-    navigator.serviceWorker.addEventListener("message", handleMessage);
-    return () => navigator.serviceWorker.removeEventListener("message", handleMessage);
-  }, [triggerToast]);
+    document.addEventListener("click", unlockAudio);
+    document.addEventListener("touchstart", unlockAudio);
+
+    return () => {
+      document.removeEventListener("click", unlockAudio);
+      document.removeEventListener("touchstart", unlockAudio);
+    };
+  }, []);
 
   // Listen to BroadcastChannel cross-tab events
   useEffect(() => {
