@@ -305,7 +305,6 @@ export async function getVipInvitationByToken(token: string) {
   return {
     token: vipCard.token,
     guestName: vipCard.guest.name,
-    vipTier: vipCard.tier,
     benefits: vipCard.benefits,
     qrCodeUrl: vipCard.qrCodeUrl,
   };

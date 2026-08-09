@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import QRCode from "qrcode";
-import type { VipTier } from "@/generated/prisma/client";
+
 import { prisma } from "@/infrastructure/database/prisma";
 import type {
   AdminVipListQuery,
@@ -36,7 +36,6 @@ export async function generateUniqueVipToken() {
 function serializeAdminVipCard(card: {
   id: string;
   guestId: string;
-  tier: VipTier;
   token: string;
   qrCodeUrl: string | null;
   benefits: string | null;
@@ -58,7 +57,6 @@ function serializeAdminVipCard(card: {
       phone: card.guest.phone,
       email: card.guest.email,
     },
-    tier: card.tier,
     token: card.token,
     qrCodeUrl: card.qrCodeUrl,
     benefits: card.benefits,
@@ -106,7 +104,6 @@ export async function assignVipCard(input: AssignVipCardInput) {
     const created = await tx.vipCard.create({
       data: {
         guestId: guest.id,
-        tier: input.tier,
         token,
         qrCodeUrl,
         benefits: input.benefits,
@@ -136,7 +133,6 @@ export async function assignVipCard(input: AssignVipCardInput) {
 
 export async function listVipCards(query: AdminVipListQuery) {
   const where = {
-    ...(query.tier ? { tier: query.tier } : {}),
     ...(query.isActive === undefined ? {} : { isActive: query.isActive }),
   };
 
@@ -191,7 +187,6 @@ export async function getPublicVipCardByToken(token: string) {
 
   return {
     guestName: card.guest.name,
-    tier: card.tier,
     benefits: card.benefits,
     issuedAt: card.issuedAt.toISOString(),
     isActive: card.isActive,

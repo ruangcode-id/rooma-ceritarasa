@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MagnifyingGlass, Crown, DownloadSimple } from "@phosphor-icons/react";
+import { useSearchParams } from "next/navigation";
+import {
+  MagnifyingGlass,
+  Crown,
+  DownloadSimple,
+} from "@phosphor-icons/react";
 import { downloadVipCardImage } from "@/lib/download-vip-card";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -12,7 +17,6 @@ import { handleApiError } from "@/lib/handle-api-error";
 
 export type VipCardData = {
   id: string;
-  tier: string;
   token: string;
   qrCodeUrl: string | null;
   benefits: string | null;
@@ -31,14 +35,19 @@ export type GuestRow = {
 };
 
 export default function AdminVipClient() {
+  const searchParams = useSearchParams();
+  const vipGuestParam = searchParams.get("vipGuest");
+
   const [guests, setGuests] = useState<GuestRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [error, setError] = useState("");
-  
   const [selectedGuest, setSelectedGuest] = useState<GuestRow | null>(null);
+  const [guestToRevoke, setGuestToRevoke] = useState<GuestRow | null>(null);
+  const [isRevoking, setIsRevoking] = useState(false);
 
+  // Fetch Guests
   useEffect(() => {
     const controller = new AbortController();
     const fetchGuests = async () => {
@@ -55,16 +64,18 @@ export default function AdminVipClient() {
         if (!res.ok) throw new Error(await handleApiError(res));
 
         const payload = await res.json();
-        
-        if (!payload.success) {
-          throw new Error(payload.error || "Failed to fetch guest data");
-        }
-        
+        if (!payload.success) throw new Error(payload.error || "Failed to fetch guests");
+
         const formattedData = payload.data.map((g: GuestRow) => ({
           ...g,
           isVip: g.isVip || !!g.vipCard,
         }));
         setGuests(formattedData);
+
+        if (vipGuestParam) {
+          const match = formattedData.find((g: GuestRow) => g.id === vipGuestParam);
+          if (match) setSelectedGuest(match);
+        }
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
         setError(err instanceof Error ? err.message : "Error unknown");
@@ -78,7 +89,7 @@ export default function AdminVipClient() {
       clearTimeout(debounce);
       controller.abort();
     };
-  }, [search, filter]);
+  }, [search, filter, vipGuestParam]);
 
   const handleActionClick = (guest: GuestRow) => {
     setSelectedGuest(guest);
@@ -87,9 +98,34 @@ export default function AdminVipClient() {
   const handleModalClose = (wasAssigned: boolean) => {
     setSelectedGuest(null);
     if (wasAssigned) {
-      // Refresh list to show updated VIP status
-      setFilter("vip"); // Jump to VIP tab automatically or just refresh
+      setFilter("vip");
       setSearch("");
+    }
+  };
+
+  const handleRevoke = async () => {
+    if (!guestToRevoke) return;
+    setIsRevoking(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/vip/${guestToRevoke.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
+      const payload = await res.json();
+      if (!payload.success) throw new Error(payload.error || "Failed to revoke VIP");
+
+      setGuests((prev) =>
+        prev.map((g) =>
+          g.id === guestToRevoke.id ? { ...g, isVip: false, vipCard: null } : g
+        )
+      );
+      setGuestToRevoke(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error unknown");
+    } finally {
+      setIsRevoking(false);
     }
   };
 
@@ -104,14 +140,15 @@ export default function AdminVipClient() {
         />
       </header>
 
-      <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      {/* Main Table Section */}
+      <section className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
         {/* Filters */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex rounded-lg bg-slate-100 p-1 w-full sm:w-auto">
             <button
               onClick={() => setFilter("all")}
               className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                filter === "all" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                filter === "all" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-700"
               }`}
             >
               All Guests
@@ -119,10 +156,10 @@ export default function AdminVipClient() {
             <button
               onClick={() => setFilter("vip")}
               className={`flex-1 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
-                filter === "vip" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                filter === "vip" ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              VIP Members
+              VIP Members Only
             </button>
           </div>
 
@@ -144,9 +181,9 @@ export default function AdminVipClient() {
           <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600 border border-red-100">{error}</div>
         ) : null}
 
-        {/* Table */}
+        {/* Members Table */}
         <div className="overflow-x-auto rounded-xl border border-slate-200">
-          <table className="w-full min-w-[600px] text-left text-sm">
+          <table className="w-full min-w-150 text-left text-sm">
             <thead className="bg-slate-50 font-semibold text-slate-600">
               <tr>
                 <th className="px-4 py-3">Guest Name</th>
@@ -200,7 +237,6 @@ export default function AdminVipClient() {
                               downloadVipCardImage({
                                 guestName: guest.name,
                                 token: guest.vipCard?.token || "VIP-MEMBER",
-                                tier: guest.vipCard?.tier || "SILVER",
                                 qrCodeUrl: guest.vipCard?.qrCodeUrl,
                                 issuedAt: guest.vipCard?.issuedAt,
                               })
@@ -216,6 +252,12 @@ export default function AdminVipClient() {
                             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
                           >
                             View Card
+                          </button>
+                          <button
+                            onClick={() => setGuestToRevoke(guest)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors"
+                          >
+                            Revoke VIP
                           </button>
                         </div>
                       ) : (
@@ -241,6 +283,39 @@ export default function AdminVipClient() {
           guest={selectedGuest} 
           onClose={handleModalClose} 
         />
+      )}
+
+      {/* Modal Revoke Confirmation */}
+      {guestToRevoke && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
+            onClick={() => !isRevoking && setGuestToRevoke(null)}
+          />
+          <div className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-slate-900">Revoke VIP Status?</h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Are you sure you want to revoke VIP membership for <strong>{guestToRevoke.name}</strong>? This action will deactivate their digital card.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                disabled={isRevoking}
+                onClick={() => setGuestToRevoke(null)}
+                className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isRevoking}
+                onClick={handleRevoke}
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isRevoking ? <LoadingSpinner className="size-4" /> : null}
+                Yes, Revoke VIP
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
