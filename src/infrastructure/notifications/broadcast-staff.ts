@@ -7,7 +7,6 @@ export async function broadcastStaffNotification(params: {
   title: string;
   body: string;
   relatedId?: string | null;
-  sendPush?: boolean;
 }): Promise<void> {
   const staff = await prisma.user.findMany({
     where: { isActive: true, role: { in: ["admin", "owner"] } },
@@ -21,7 +20,6 @@ export async function broadcastStaffNotification(params: {
         title: params.title,
         body: params.body,
         relatedId: params.relatedId ?? null,
-        sendPush: params.sendPush,
       }),
     ),
   );

@@ -6,9 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import { enUS as localeId } from "date-fns/locale";
 import {
   Bell,
-  CheckCircle,
   CircleNotch,
-  WarningCircle,
   CalendarCheck,
   CreditCard,
   MapPinLine,
@@ -16,7 +14,6 @@ import {
   Info
 } from "@phosphor-icons/react";
 import { useNotifications, NotificationItem } from "@/hooks/useNotifications";
-import { usePushSubscription } from "@/hooks/usePushSubscription";
 
 function getNotificationIcon(type: string) {
   switch (type) {
@@ -56,14 +53,6 @@ export default function AdminNotificationsClient() {
     clearToast,
   } = useNotifications(1, 50); // Just fetch 50 for now
 
-  const {
-    isSupported,
-    isSubscribed,
-    isLoading: isPushLoading,
-    error: pushError,
-    subscribe,
-  } = usePushSubscription();
-
   // Simple Toast UI
   useEffect(() => {
     if (toastMessage) {
@@ -78,54 +67,6 @@ export default function AdminNotificationsClient() {
 
   return (
     <div className="space-y-6">
-      {/* Push Notification Settings Card */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-5 items-start sm:items-center justify-between">
-          <div className="flex items-start gap-4">
-            <div className={`p-3 rounded-xl ${isSubscribed ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
-              <Bell size={24} weight={isSubscribed ? "fill" : "regular"} />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900">Web Push Notifications</h3>
-              <p className="text-sm text-slate-500 mt-1">
-                Receive real-time notifications on this device when there is a new reservation or payment.
-              </p>
-              {pushError && (
-                <p className="text-xs text-red-600 flex items-center gap-1 mt-2">
-                  <WarningCircle size={14} weight="fill" />
-                  {pushError}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="shrink-0">
-            {!isSupported ? (
-              <span className="inline-block px-3 py-1.5 bg-slate-100 text-slate-500 text-sm font-medium rounded-lg">
-                Browser Not Supported
-              </span>
-            ) : isSubscribed ? (
-              <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 border border-green-200 text-sm font-semibold rounded-xl">
-                <CheckCircle size={18} weight="fill" />
-                Active
-              </span>
-            ) : (
-              <button
-                onClick={subscribe}
-                disabled={isPushLoading}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 hover:scale-[1.02] active:scale-95 disabled:opacity-70 disabled:cursor-wait"
-              >
-                {isPushLoading ? (
-                  <CircleNotch size={18} className="animate-spin" />
-                ) : (
-                  <Bell size={18} weight="bold" />
-                )}
-                Enable on this Device
-              </button>
-            )}
-          </div>
-        </div>
-      </section>
-
       {/* Notifications List */}
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="flex items-center justify-between border-b border-slate-100 p-5 sm:px-6">
@@ -163,7 +104,7 @@ export default function AdminNotificationsClient() {
               <li
                 key={notif.id}
                 className={`flex items-start gap-4 p-5 sm:px-6 transition-colors hover:bg-slate-50 ${
-                  !notif.isRead ? "bg-primary/[0.02]" : ""
+                  !notif.isRead ? "bg-primary/2" : ""
                 }`}
               >
                 <div className={`mt-1 shrink-0 rounded-full p-2 ${!notif.isRead ? "bg-primary/10" : "bg-slate-100"}`}>
