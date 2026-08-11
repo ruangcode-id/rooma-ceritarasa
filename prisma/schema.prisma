@@ -96,6 +96,7 @@ model User {
   jobListings         JobListing[]        @relation("CreatedByUser")
   notifications       Notification[]      @relation("UserNotifications")
   pushSubscriptions   PushSubscription[]  @relation("UserPushSubscriptions")
+  specialOpenDates    SpecialOpenDate[]   @relation("SpecialOpenCreatedByUser")
 
   @@map("users")
 }
@@ -230,6 +231,19 @@ model BlockedDate {
   creator User? @relation("CreatedByUser", fields: [createdBy], references: [id])
 
   @@map("blocked_dates")
+}
+
+model SpecialOpenDate {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date      DateTime @db.Date
+  reason    String?  @db.VarChar(200)
+  createdBy String?  @map("created_by") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  creator User? @relation("SpecialOpenCreatedByUser", fields: [createdBy], references: [id])
+
+  @@map("special_open_dates")
 }
 
 // -----------------------------------------------

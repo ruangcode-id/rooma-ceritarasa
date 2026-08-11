@@ -5,6 +5,7 @@ import {
   type CancelReservationInput,
 } from "@/validations/reservation.validation";
 import { BlockedDateRepository } from "@/infrastructure/repositories/blocked-date.repository";
+import { SpecialOpenDateRepository } from "@/infrastructure/repositories/special-open-date.repository";
 import { checkMultipleTablesAvailability } from "@/features/tables/table.service";
 import {
   cancelReservationByToken,
@@ -53,9 +54,12 @@ export const PublicReservationUseCase = {
       throw new Error(`Tanggal ${input.date} tidak tersedia untuk reservasi.`);
     }
 
-    // Reservations on Mondays are not allowed — the restaurant is closed
+    // Reservations on Mondays are not allowed unless explicitly registered as Special Open
     if (dateObj.getUTCDay() === 1) {
-      throw new Error("Reservations cannot be made on Mondays. The restaurant is closed every Monday.");
+      const isSpecialOpen = await SpecialOpenDateRepository.isDateSpecialOpen(dateObj);
+      if (!isSpecialOpen) {
+        throw new Error("Reservations cannot be made on Mondays. The restaurant is closed every Monday.");
+      }
     }
 
     await checkMultipleTablesAvailability(input.tableIds, input.sessionId, input.date);
