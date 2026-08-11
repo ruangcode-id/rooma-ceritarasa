@@ -1,4 +1,5 @@
 import { BlockedDateRepository } from "@/infrastructure/repositories/blocked-date.repository";
+import { SpecialOpenDateRepository } from "@/infrastructure/repositories/special-open-date.repository";
 import {
   checkBlockedDateSchema,
   createBlockedDateSchema,
@@ -128,13 +129,25 @@ export const BlockedDateUseCase = {
     );
     const dbBlocked = blockedDates.map((b) => toISODateOnly(startOfUTCDate(b.date)));
 
-    // Auto-block every Monday (getUTCDay() === 1) in the requested month
+    // Fetch special open dates in range to override Monday closing
+    const specialOpenDates = await SpecialOpenDateRepository.getSpecialOpenDatesInRange(
+      start,
+      end,
+    );
+    const specialOpenKeys = new Set(
+      specialOpenDates.map((s) => toISODateOnly(startOfUTCDate(s.date))),
+    );
+
+    // Auto-block Mondays (getUTCDay() === 1) unless explicitly registered as Special Open
     const mondayBlocked: string[] = [];
     let cursor = startOfUTCDate(start);
     const endTime = startOfUTCDate(end).getTime();
     while (cursor.getTime() <= endTime) {
       if (cursor.getUTCDay() === 1) {
-        mondayBlocked.push(toISODateOnly(cursor));
+        const dateStr = toISODateOnly(cursor);
+        if (!specialOpenKeys.has(dateStr)) {
+          mondayBlocked.push(dateStr);
+        }
       }
       cursor = new Date(cursor.getTime() + 24 * 60 * 60 * 1000);
     }
