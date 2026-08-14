@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { MapPinLine, CalendarCheck, X, ArrowRight, Crown } from "@phosphor-icons/react";
+import { MapPinLine, CalendarCheck, X, ArrowRight, Crown, CheckCircle, XCircle } from "@phosphor-icons/react";
 
-type NotificationToast = {
+export type NotificationToast = {
   id: string;
-  type: "check_in" | "new_reservation" | "general";
+  type: "check_in" | "new_reservation" | "general" | "success" | "error";
   title: string;
   body: string;
   url?: string;
@@ -14,7 +14,7 @@ type NotificationToast = {
 };
 
 // Web Audio API chime for pop-up notification sound
-function playNotificationChime(type: "check_in" | "new_reservation" | "general") {
+function playNotificationChime(type: NotificationToast["type"]) {
   try {
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
@@ -25,7 +25,7 @@ function playNotificationChime(type: "check_in" | "new_reservation" | "general")
     gain.connect(ctx.destination);
 
     const now = ctx.currentTime;
-    if (type === "check_in") {
+    if (type === "check_in" || type === "success") {
       // Gentle double chime (D5 -> A5)
       osc.type = "sine";
       osc.frequency.setValueAtTime(587.33, now);
@@ -34,6 +34,14 @@ function playNotificationChime(type: "check_in" | "new_reservation" | "general")
       gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
       osc.start(now);
       osc.stop(now + 0.35);
+    } else if (type === "error") {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.setValueAtTime(200, now + 0.1);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
     } else {
       osc.type = "sine";
       osc.frequency.setValueAtTime(523.25, now); // C5
@@ -53,10 +61,15 @@ export default function GlobalNotificationToast() {
   const [activeToast, setActiveToast] = useState<NotificationToast | null>(null);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const initialFetchDoneRef = useRef(false);
+  const handledRelatedIdsRef = useRef<Set<string>>(new Set());
 
-  const triggerToast = useCallback((toast: NotificationToast) => {
+  const triggerToast = useCallback((toast: NotificationToast, relatedId?: string | null) => {
     if (seenIdsRef.current.has(toast.id)) return;
     seenIdsRef.current.add(toast.id);
+
+    if (relatedId) {
+      handledRelatedIdsRef.current.add(relatedId);
+    }
 
     setActiveToast(toast);
     playNotificationChime(toast.type);
@@ -98,17 +111,23 @@ export default function GlobalNotificationToast() {
         // Look for unseen check_in or new_reservation notifications
         for (const notif of notifs) {
           if (!seenIdsRef.current.has(notif.id) && isSubscribed) {
+            // Deduplicate if we already showed this check-in locally
+            if (notif.relatedId && handledRelatedIdsRef.current.has(notif.relatedId)) {
+              seenIdsRef.current.add(notif.id);
+              continue;
+            }
+
             const notifType = notif.type === "check_in" ? "check_in" : notif.type === "new_reservation" ? "new_reservation" : "general";
             const targetUrl = notif.relatedId ? `/admin/reservations?detail=${notif.relatedId}` : "/admin/reservations";
 
             triggerToast({
               id: notif.id,
               type: notifType,
-              title: notif.title || "Check-In Notification",
-              body: notif.body || "A guest has checked in for their reservation.",
+              title: notif.title || "Guest Check-In",
+              body: notif.body || "Guest has been checked in.",
               url: targetUrl,
               timestamp: Date.now(),
-            });
+            }, notif.relatedId);
             break; // Show one toast at a time
           }
         }
@@ -157,6 +176,19 @@ export default function GlobalNotificationToast() {
     };
   }, []);
 
+  // Listen to Custom Event from AdminScannerListener (Local Toast Event)
+  useEffect(() => {
+    const handleLocalToast = (e: Event) => {
+      const evt = e as CustomEvent<NotificationToast & { relatedId?: string }>;
+      triggerToast(evt.detail, evt.detail.relatedId);
+    };
+
+    window.addEventListener("LOCAL_TOAST_EVENT", handleLocalToast);
+    return () => {
+      window.removeEventListener("LOCAL_TOAST_EVENT", handleLocalToast);
+    };
+  }, [triggerToast]);
+
   // Listen to BroadcastChannel cross-tab events
   useEffect(() => {
     if (typeof window === "undefined" || !("BroadcastChannel" in window)) return;
@@ -185,10 +217,12 @@ export default function GlobalNotificationToast() {
   if (!activeToast) return null;
 
   const isVip = activeToast.title.includes("👑") || activeToast.title.includes("VIP");
+  const isError = activeToast.type === "error";
+  const isSuccess = activeToast.type === "success";
 
   const handleCardClick = () => {
     if (isVip) {
-      if (activeToast.id.startsWith("bc-")) {
+      if (activeToast.id.startsWith("bc-") || activeToast.id.startsWith("local-")) {
         router.push("/admin/notifications");
       } else {
         router.push(`/admin/notifications?detailNotif=${activeToast.id}`);
@@ -199,24 +233,51 @@ export default function GlobalNotificationToast() {
     setActiveToast(null);
   };
 
+  // Determine styles based on type
+  let containerStyle = "bg-slate-950/95 border border-amber-500/40 shadow-amber-950/40 hover:border-amber-400";
+  let glowStyle = "bg-amber-500/10";
+  let headerColor = "text-amber-400";
+  let headerDotColor = "bg-amber-400";
+
+  if (isVip) {
+    containerStyle = "bg-linear-to-br from-[#2a080d] via-[#150306] to-[#0a0103] border-2 border-amber-500/60 shadow-amber-900/50 hover:border-amber-400";
+    glowStyle = "bg-amber-500/20";
+    headerColor = "text-amber-300";
+    headerDotColor = "bg-amber-300";
+  } else if (isSuccess) {
+    containerStyle = "bg-slate-950/95 border border-green-500/40 shadow-green-950/30 hover:border-green-400";
+    glowStyle = "bg-green-500/10";
+    headerColor = "text-green-400";
+    headerDotColor = "bg-green-400";
+  } else if (isError) {
+    containerStyle = "bg-slate-950/95 border border-red-500/40 shadow-red-950/30 hover:border-red-400";
+    glowStyle = "bg-red-500/10";
+    headerColor = "text-red-400";
+    headerDotColor = "bg-red-400";
+  }
+
   return (
     <div className="fixed bottom-6 right-6 z-100 flex max-w-md w-full animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto">
       <div
         onClick={handleCardClick}
-        className={`w-full rounded-2xl p-4 text-white shadow-2xl backdrop-blur-xl flex items-start gap-3 text-left cursor-pointer transition-all group relative overflow-hidden ${
-          isVip 
-            ? "bg-linear-to-br from-[#2a080d] via-[#150306] to-[#0a0103] border-2 border-amber-500/60 shadow-amber-900/50 hover:border-amber-400" 
-            : "bg-slate-950/95 border border-amber-500/40 shadow-amber-950/40 hover:border-amber-400"
-        }`}
+        className={`w-full rounded-2xl p-4 text-white shadow-2xl backdrop-blur-xl flex items-start gap-3 text-left cursor-pointer transition-all group relative overflow-hidden ${containerStyle}`}
       >
         {/* Glow accent */}
-        <div className={`absolute -right-12 -bottom-12 w-32 h-32 rounded-full blur-2xl pointer-events-none ${isVip ? "bg-amber-500/20" : "bg-amber-500/10"}`}></div>
+        <div className={`absolute -right-12 -bottom-12 w-32 h-32 rounded-full blur-2xl pointer-events-none ${glowStyle}`}></div>
 
         {/* Icon Badge */}
         <div className="shrink-0 mt-0.5">
           {isVip ? (
             <div className="rounded-xl bg-linear-to-br from-amber-400 to-amber-600 p-2.5 text-black shadow-lg shadow-amber-500/30">
               <Crown size={24} weight="fill" />
+            </div>
+          ) : isSuccess ? (
+            <div className="rounded-xl bg-green-500/20 p-2.5 text-green-400 border border-green-500/30">
+              <CheckCircle size={24} weight="fill" />
+            </div>
+          ) : isError ? (
+            <div className="rounded-xl bg-red-500/20 p-2.5 text-red-400 border border-red-500/30">
+              <XCircle size={24} weight="fill" />
             </div>
           ) : activeToast.type === "check_in" ? (
             <div className="rounded-xl bg-amber-500/20 p-2.5 text-amber-400 border border-amber-500/30">
@@ -231,12 +292,12 @@ export default function GlobalNotificationToast() {
 
         {/* Content */}
         <div className="flex-1 min-w-0 pr-4">
-          <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${isVip ? "text-amber-300" : "text-amber-400"}`}>
-            <span className={`w-1.5 h-1.5 rounded-full animate-ping ${isVip ? "bg-amber-300" : "bg-amber-400"}`}></span>
-            {isVip ? "VIP Arrival Alert" : activeToast.type === "check_in" ? "Guest Check-In Alert" : "Reservation Update"}
+          <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${headerColor}`}>
+            <span className={`w-1.5 h-1.5 rounded-full animate-ping ${headerDotColor}`}></span>
+            {isVip ? "VIP Arrival Alert" : isError ? "Check-In Failed" : isSuccess ? "Global Front Desk Scanner" : activeToast.type === "check_in" ? "Guest Check-In Alert" : "Reservation Update"}
           </div>
 
-          <h4 className="text-sm font-bold text-white mt-0.5 group-hover:text-amber-300 transition-colors">
+          <h4 className="text-sm font-bold text-white mt-0.5 group-hover:opacity-80 transition-opacity">
             {activeToast.title}
           </h4>
 
@@ -245,7 +306,7 @@ export default function GlobalNotificationToast() {
           </p>
 
           {activeToast.url && (
-            <div className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold text-amber-400 group-hover:text-amber-300 transition-colors">
+            <div className={`mt-2.5 inline-flex items-center gap-1 text-[11px] font-bold ${headerColor} group-hover:opacity-80 transition-opacity`}>
               <span>View Reservation Details</span>
               <ArrowRight size={12} weight="bold" className="group-hover:translate-x-0.5 transition-transform" />
             </div>
