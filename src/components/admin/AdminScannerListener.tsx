@@ -1,54 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { CheckCircle, XCircle, MapPinLine, X } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
-
-type CheckInResultToast = {
-  id: string;
-  type: "success" | "error";
-  title: string;
-  message: string;
-  guestName?: string;
-  tableDisplay?: string;
-};
-
-// Simple Web Audio API chime sound for instant audio feedback
-function playChimeSound(type: "success" | "error") {
-  try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    const now = ctx.currentTime;
-    if (type === "success") {
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(587.33, now); // D5
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.15); // A5
-      gain.gain.setValueAtTime(0.3, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-      osc.start(now);
-      osc.stop(now + 0.35);
-    } else {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(300, now);
-      osc.frequency.setValueAtTime(200, now + 0.1);
-      gain.gain.setValueAtTime(0.3, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-      osc.start(now);
-      osc.stop(now + 0.3);
-    }
-  } catch {
-    // Ignore audio errors if audio context is blocked
-  }
-}
+import type { NotificationToast } from "./GlobalNotificationToast";
 
 export function AdminScannerListener() {
-  const [toast, setToast] = useState<CheckInResultToast | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const bufferRef = useRef("");
@@ -78,15 +34,22 @@ export function AdminScannerListener() {
         throw new Error(data.error ?? "Check-in failed. Code is invalid.");
       }
 
-      playChimeSound("success");
-      setToast({
-        id: Date.now().toString(),
-        type: "success",
-        title: "Check-In Successful!",
-        message: `Reservation ${data.data.reservationId.slice(0, 8).toUpperCase()} checked in.`,
-        guestName: data.data.guestName,
-        tableDisplay: data.data.tableDisplay,
-      });
+      // Dispatch local toast for instant UI response (GlobalNotificationToast handles the UI and Chime)
+      window.dispatchEvent(
+        new CustomEvent<NotificationToast & { relatedId?: string }>("LOCAL_TOAST_EVENT", {
+          detail: {
+            id: `local-${Date.now()}`,
+            type: "success",
+            title: data.data.isVipWalkIn ? "VIP Check-In Successful!" : "Check-In Successful!",
+            body: data.data.reservationId
+              ? `Reservation ${data.data.reservationId.slice(0, 8).toUpperCase()} checked in.`
+              : `VIP Guest checked in.`,
+            url: data.data.reservationId ? `/admin/reservations?detail=${data.data.reservationId}` : undefined,
+            relatedId: data.data.reservationId, // This prevents GlobalNotificationToast from double popping
+            timestamp: Date.now(),
+          },
+        })
+      );
 
       // Broadcast to other open Admin tabs
       if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -96,27 +59,28 @@ export function AdminScannerListener() {
             type: "CHECK_IN_ALERT",
             title: "Guest Check-In",
             body: `Check-in OK · ${data.data.guestName} (${data.data.tableDisplay})`,
-            url: `/admin/reservations?detail=${data.data.reservationId}`,
+            url: data.data.reservationId ? `/admin/reservations?detail=${data.data.reservationId}` : undefined,
           });
           channel.close();
         } catch {
           // Ignore broadcast error
         }
       }
-
-      // Auto dismiss after 5 seconds
-      setTimeout(() => setToast(null), 5000);
     } catch (err) {
-      playChimeSound("error");
       const errMsg = err instanceof Error ? err.message : String(err);
-      setToast({
-        id: Date.now().toString(),
-        type: "error",
-        title: "Check-In Failed",
-        message: errMsg,
-      });
-
-      setTimeout(() => setToast(null), 5000);
+      
+      // Dispatch error toast locally
+      window.dispatchEvent(
+        new CustomEvent<NotificationToast>("LOCAL_TOAST_EVENT", {
+          detail: {
+            id: `local-err-${Date.now()}`,
+            type: "error",
+            title: "Check-In Failed",
+            body: errMsg,
+            timestamp: Date.now(),
+          },
+        })
+      );
     } finally {
       setIsProcessing(false);
     }
@@ -176,65 +140,6 @@ export function AdminScannerListener() {
     };
   }, [isProcessing, processCheckInCode]);
 
-  if (!toast) return null;
-
-  return (
-    <div className="fixed top-5 right-5 z-100 flex max-w-md w-full animate-in slide-in-from-top-5 duration-300 pointer-events-auto">
-      <div
-        className={`w-full rounded-2xl p-4 text-white shadow-2xl backdrop-blur-xl flex items-start gap-3 text-left transition-all group relative overflow-hidden ${
-          toast.type === "success"
-            ? "bg-slate-950/95 border border-green-500/40 shadow-green-950/30 hover:border-green-400"
-            : "bg-slate-950/95 border border-red-500/40 shadow-red-950/30 hover:border-red-400"
-        }`}
-      >
-        {/* Glow accent */}
-        <div className={`absolute -right-12 -bottom-12 w-32 h-32 rounded-full blur-2xl pointer-events-none ${
-          toast.type === "success" ? "bg-green-500/10" : "bg-red-500/10"
-        }`}></div>
-
-        <div className="shrink-0 mt-0.5">
-          {toast.type === "success" ? (
-            <div className="rounded-xl bg-green-500/20 p-2.5 text-green-400 border border-green-500/30">
-              <CheckCircle size={24} weight="fill" />
-            </div>
-          ) : (
-            <div className="rounded-xl bg-red-500/20 p-2.5 text-red-400 border border-red-500/30">
-              <XCircle size={24} weight="fill" />
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0 pr-4">
-          <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${
-            toast.type === "success" ? "text-green-400" : "text-red-400"
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full animate-ping ${
-              toast.type === "success" ? "bg-green-400" : "bg-red-400"
-            }`}></span>
-            Global Front Desk Scanner
-          </div>
-          <h4 className={`text-sm font-bold text-white mt-0.5 transition-colors ${
-            toast.type === "success" ? "group-hover:text-green-300" : "group-hover:text-red-300"
-          }`}>
-            {toast.title}
-          </h4>
-          
-          {toast.guestName ? (
-            <p className="text-xs text-slate-300 mt-1 leading-relaxed wrap-break-word">
-              <span className="font-bold text-white">{toast.guestName}</span> · Assigned Table: <span className="font-bold text-white">{toast.tableDisplay}</span>
-            </p>
-          ) : (
-            <p className="text-xs text-slate-300 mt-1 leading-relaxed wrap-break-word">{toast.message}</p>
-          )}
-        </div>
-
-        <button
-          onClick={() => setToast(null)}
-          className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors shrink-0"
-        >
-          <X size={16} weight="bold" />
-        </button>
-      </div>
-    </div>
-  );
+  // This component now acts strictly as an invisible logic controller
+  return null;
 }
