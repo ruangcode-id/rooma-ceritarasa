@@ -33,13 +33,13 @@ export function registerNotificationEventHandlers(): void {
       });
 
       const isConfirmed = payload.status === ReservationStatus.confirmed;
-      let title = isConfirmed ? "Reservasi Baru (Terkonfirmasi)" : "Reservasi Baru (Menunggu DP)";
-      let body = `Reservasi #${payload.reservationId.slice(0, 8).toUpperCase()}`;
+      let title = isConfirmed ? "New Reservation (Confirmed)" : "New Reservation (Awaiting DP)";
+      let body = `Reservation #${payload.reservationId.slice(0, 8).toUpperCase()}`;
 
       if (reservation) {
         const formattedDate = format(new Date(reservation.date), "dd MMM yyyy", { locale: localeId });
-        const statusLabel = isConfirmed ? "Status: Terkonfirmasi" : "Status: Menunggu Pembayaran DP";
-        body = `Atas nama ${reservation.guest.name} (${reservation.partySize} pax) untuk tanggal ${formattedDate} (${reservation.session.name}). ${statusLabel}.`;
+        const statusLabel = isConfirmed ? "Status: Confirmed" : "Status: Awaiting Down Payment";
+        body = `For ${reservation.guest.name} (${reservation.partySize} pax) on ${formattedDate} (${reservation.session.name}). ${statusLabel}.`;
       }
 
       await broadcastStaffNotification({
@@ -66,11 +66,11 @@ export function registerNotificationEventHandlers(): void {
         },
       });
 
-      const guestText = reservation?.guest.name ? ` atas nama ${reservation.guest.name}` : "";
+      const guestText = reservation?.guest.name ? ` for ${reservation.guest.name}` : "";
       await broadcastStaffNotification({
         type: "cancellation",
-        title: "Reservasi Dibatalkan",
-        body: `Reservasi #${payload.reservationId.slice(0, 8).toUpperCase()}${guestText} telah dibatalkan oleh tamu.`,
+        title: "Reservation Cancelled",
+        body: `Reservation #${payload.reservationId.slice(0, 8).toUpperCase()}${guestText} has been cancelled by the guest.`,
         relatedId: payload.reservationId,
       });
     } catch (error) {

@@ -51,7 +51,7 @@ export default async function PublicCheckInPage({ params, searchParams }: CheckI
       await markReservationCheckedIn(reservation.id, "SELF_CHECK_IN");
       await broadcastStaffNotification({
         type: "check_in",
-        title: "Check-in Tamu (Self/QR)",
+        title: "Guest Check-in (Self/QR)",
         body: `Check-in OK · ${reservation.guest.name} (${reservation.reservationTables.map(rt => rt.table.tableNumber).join(", ") || "-"})`,
         relatedId: reservation.id,
       });

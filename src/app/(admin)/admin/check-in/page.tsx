@@ -69,9 +69,9 @@ export default function AdminCheckInPage() {
 
       setStatus("success");
       setMessage(
-        `Check-in successful! Reservation ${data.data.reservationId
-          .slice(0, 8)
-          .toUpperCase()} has been marked as present.`,
+        data.data.reservationId
+          ? `Check-in successful! Reservation ${data.data.reservationId.slice(0, 8).toUpperCase()} has been marked as present.`
+          : `VIP Check-in successful! Welcome back, ${data.data.guestName}.`
       );
 
       setTimeout(() => {
@@ -114,11 +114,13 @@ export default function AdminCheckInPage() {
 
     if (e.key === "Enter") {
       e.preventDefault();
+      e.stopPropagation();
       flushScanBuffer();
       return;
     }
 
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.stopPropagation();
       scanBufferRef.current += e.key;
       setLookupCode(scanBufferRef.current);
 

@@ -113,11 +113,13 @@ export default function AdminVipCheckInPage() {
 
     if (e.key === "Enter") {
       e.preventDefault();
+      e.stopPropagation();
       flushScanBuffer();
       return;
     }
 
     if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.stopPropagation();
       scanBufferRef.current += e.key;
       setLookupCode(scanBufferRef.current);
 

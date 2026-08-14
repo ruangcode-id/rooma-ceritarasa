@@ -167,8 +167,8 @@ export default function GlobalNotificationToast() {
         triggerToast({
           id: `bc-${Date.now()}`,
           type: "check_in",
-          title: event.data.title || "Check-In Tamu",
-          body: event.data.body || "Tamu telah di-check-in.",
+          title: event.data.title || "Guest Check-In",
+          body: event.data.body || "Guest has been checked in.",
           url: event.data.url || "/admin/reservations",
           timestamp: Date.now(),
         });

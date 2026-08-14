@@ -94,7 +94,7 @@ export function AdminScannerListener() {
           const channel = new BroadcastChannel("rooma_admin_notifications");
           channel.postMessage({
             type: "CHECK_IN_ALERT",
-            title: "Check-In Tamu",
+            title: "Guest Check-In",
             body: `Check-in OK · ${data.data.guestName} (${data.data.tableDisplay})`,
             url: `/admin/reservations?detail=${data.data.reservationId}`,
           });
@@ -181,46 +181,56 @@ export function AdminScannerListener() {
   return (
     <div className="fixed top-5 right-5 z-100 flex max-w-md w-full animate-in slide-in-from-top-5 duration-300 pointer-events-auto">
       <div
-        className={`w-full rounded-2xl p-4 shadow-2xl border backdrop-blur-xl flex items-start gap-3 text-left transition-all ${
+        className={`w-full rounded-2xl p-4 text-white shadow-2xl backdrop-blur-xl flex items-start gap-3 text-left transition-all group relative overflow-hidden ${
           toast.type === "success"
-            ? "bg-slate-900/95 text-white border-green-500/40 shadow-green-950/30"
-            : "bg-slate-900/95 text-white border-red-500/40 shadow-red-950/30"
+            ? "bg-slate-950/95 border border-green-500/40 shadow-green-950/30 hover:border-green-400"
+            : "bg-slate-950/95 border border-red-500/40 shadow-red-950/30 hover:border-red-400"
         }`}
       >
+        {/* Glow accent */}
+        <div className={`absolute -right-12 -bottom-12 w-32 h-32 rounded-full blur-2xl pointer-events-none ${
+          toast.type === "success" ? "bg-green-500/10" : "bg-red-500/10"
+        }`}></div>
+
         <div className="shrink-0 mt-0.5">
           {toast.type === "success" ? (
-            <div className="rounded-xl bg-green-500/20 p-2 text-green-400 border border-green-500/30">
+            <div className="rounded-xl bg-green-500/20 p-2.5 text-green-400 border border-green-500/30">
               <CheckCircle size={24} weight="fill" />
             </div>
           ) : (
-            <div className="rounded-xl bg-red-500/20 p-2 text-red-400 border border-red-500/30">
+            <div className="rounded-xl bg-red-500/20 p-2.5 text-red-400 border border-red-500/30">
               <XCircle size={24} weight="fill" />
             </div>
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1">
-              <MapPinLine size={14} weight="bold" />
-              Global Front Desk Scanner
-            </span>
+        <div className="flex-1 min-w-0 pr-4">
+          <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${
+            toast.type === "success" ? "text-green-400" : "text-red-400"
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full animate-ping ${
+              toast.type === "success" ? "bg-green-400" : "bg-red-400"
+            }`}></span>
+            Global Front Desk Scanner
           </div>
-          <h4 className="text-sm font-bold text-white mt-0.5">{toast.title}</h4>
+          <h4 className={`text-sm font-bold text-white mt-0.5 transition-colors ${
+            toast.type === "success" ? "group-hover:text-green-300" : "group-hover:text-red-300"
+          }`}>
+            {toast.title}
+          </h4>
           
           {toast.guestName ? (
-            <div className="mt-1.5 rounded-lg bg-white/10 p-2 text-xs border border-white/10 space-y-0.5">
-              <p className="font-bold text-amber-300 uppercase">{toast.guestName}</p>
-              <p className="text-white/80 font-mono">Assigned Table: <span className="font-bold text-white">{toast.tableDisplay}</span></p>
-            </div>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed wrap-break-word">
+              <span className="font-bold text-white">{toast.guestName}</span> · Assigned Table: <span className="font-bold text-white">{toast.tableDisplay}</span>
+            </p>
           ) : (
-            <p className="text-xs text-white/70 mt-1 leading-relaxed">{toast.message}</p>
+            <p className="text-xs text-slate-300 mt-1 leading-relaxed wrap-break-word">{toast.message}</p>
           )}
         </div>
 
         <button
           onClick={() => setToast(null)}
-          className="text-white/40 hover:text-white p-1 rounded-lg transition-colors shrink-0"
+          className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors shrink-0"
         >
           <X size={16} weight="bold" />
         </button>
