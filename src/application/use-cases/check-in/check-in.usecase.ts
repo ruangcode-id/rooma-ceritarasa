@@ -71,7 +71,7 @@ export const CheckInUseCase = {
         await broadcastStaffNotification({
           type: "check_in",
           title: "👑 VIP Arrival Alert",
-          body: `Kedatangan Tamu VIP · ${guestName} (Silakan arahkan ke Meja VIP)`,
+          body: `VIP Guest Arrival · ${guestName} (Please direct to VIP Table)`,
           relatedId: vipCard.guestId,
         });
 
@@ -111,8 +111,8 @@ export const CheckInUseCase = {
       await markReservationNoShow(reservationId);
       await broadcastStaffNotification({
         type: "check_in",
-        title: isVip ? "👑 VIP Reservasi no-show" : "Reservasi no-show",
-        body: `Status no-show dicatat · ${guestName} (${tableDisplay})`,
+        title: isVip ? "👑 VIP Reservation No-Show" : "Reservation No-Show",
+        body: `No-show status recorded · ${guestName} (${tableDisplay})`,
         relatedId: reservationId,
       });
       return { reservationId, action: "no_show" as const, guestName, tableDisplay, sessionName, isVip, guestNotes };
@@ -122,7 +122,7 @@ export const CheckInUseCase = {
 
     await broadcastStaffNotification({
       type: "check_in",
-      title: isVip ? "👑 VIP Check-In Alert" : "Check-in tamu",
+      title: isVip ? "👑 VIP Check-In Alert" : "Guest Check-In",
       body: `Check-in OK · ${guestName} (${tableDisplay})`,
       relatedId: reservationId,
     });
