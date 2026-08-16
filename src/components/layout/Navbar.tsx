@@ -135,6 +135,7 @@ function NavbarContent({ isHome }: { isHome: boolean }) {
                 {/* NAVIGASI DI TENGAH/KANAN UNTUK DESKTOP */}
                 <div className="hidden lg:flex space-x-8 font-sans text-xs tracking-widest font-semibold uppercase text-slate-700">
                   <Link href="/" className="hover:text-primary transition-colors py-2">Home</Link>
+                  <Link href="/menu" className="hover:text-primary transition-colors py-2">Menu</Link>
                   <Link href="/reservasi" className="hover:text-primary transition-colors py-2">Reservation</Link>
                   <Link href="/gallery" className="hover:text-primary transition-colors py-2">Gallery</Link>
                   <Link href="/event" className="hover:text-primary transition-colors py-2">Events</Link>
@@ -165,6 +166,9 @@ function NavbarContent({ isHome }: { isHome: boolean }) {
               <div className="flex flex-col space-y-1 font-sans text-sm tracking-widest font-semibold text-slate-700">
               <Link href="/" onClick={() => setIsOpen(false)} className="rounded-xl px-4 py-3 hover:bg-slate-50 hover:text-primary transition-colors">
                 home
+              </Link>
+              <Link href="/menu" onClick={() => setIsOpen(false)} className="rounded-xl px-4 py-3 hover:bg-slate-50 hover:text-primary transition-colors">
+                menu
               </Link>
               <Link href="/reservasi" onClick={() => setIsOpen(false)} className="rounded-xl px-4 py-3 hover:bg-slate-50 hover:text-primary transition-colors">
                 reservation
@@ -203,6 +207,9 @@ function NavbarContent({ isHome }: { isHome: boolean }) {
         <div className="flex h-[calc(100vh-80px)] flex-col items-center justify-center space-y-8 font-sans text-xl font-light tracking-widest">
           <Link href="/" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
             Home
+          </Link>
+          <Link href="/menu" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
+            Menu
           </Link>
           <Link href="/reservasi" onClick={() => setIsOpen(false)} className="hover:text-primary transition-colors hover:scale-105 transform duration-300">
             Reservation
