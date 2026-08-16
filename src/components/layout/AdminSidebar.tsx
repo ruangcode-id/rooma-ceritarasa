@@ -159,24 +159,26 @@ export default function AdminSidebar({
         {/* Footer */}
         <div className="border-t border-[#3a0d13] p-4">
           {/* User Profile & Sign Out Unified */}
-          <div className="flex items-center justify-between rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
-            <div className="flex min-w-0 items-center">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
-                {userInitials}
-              </div>
-
-              <div className="ml-3 min-w-0">
-                <p className="truncate text-sm font-semibold text-white">
-                  {userName}
-                </p>
-                <p className="truncate text-xs text-rose-300/60">
-                  {userEmail}
-                </p>
-              </div>
+          <div className="flex items-center gap-2 rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
+            {/* Avatar */}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
+              {userInitials}
             </div>
 
+            {/* Name + Email — flex-1 + overflow-hidden prevents pushing logout button */}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">
+                {userName}
+              </p>
+              <p className="truncate text-xs text-rose-300/60">
+                {userEmail}
+              </p>
+            </div>
+
+            {/* Logout — shrink-0 ensures it's always visible */}
             <button
               title="Sign Out"
+              aria-label="Sign out from admin panel"
               onClick={() => setShowLogoutConfirm(true)}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-200/70 transition-all duration-200 hover:bg-[#4a1019] hover:text-white"
             >

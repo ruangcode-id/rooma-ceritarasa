@@ -4,7 +4,9 @@ import { useState } from "react";
 import AdminSidebar from "./AdminSidebar";
 import GlobalNotificationToast from "../admin/GlobalNotificationToast";
 import { AdminScannerListener } from "../admin/AdminScannerListener";
-import { List } from "@phosphor-icons/react";
+import { List, SignOut } from "@phosphor-icons/react";
+import { signOut } from "next-auth/react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -13,6 +15,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children, user }: AdminLayoutProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-[#fcfbf9]">
@@ -23,16 +26,38 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
         <span className="font-sans text-sm font-semibold uppercase tracking-widest">
           Admin Panel
         </span>
-        <button
-          onClick={() => setIsOpen(true)}
-          className="rounded-lg p-1.5 hover:bg-[#3a0d13] transition-colors"
-          aria-label="Open sidebar"
-        >
-          <List size={24} />
-        </button>
+
+        {/* Right side actions: logout + hamburger */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="rounded-lg p-1.5 text-rose-200/70 transition-colors hover:bg-[#3a0d13] hover:text-white"
+            aria-label="Sign out"
+            title="Sign Out"
+          >
+            <SignOut size={22} />
+          </button>
+          <button
+            onClick={() => setIsOpen(true)}
+            className="rounded-lg p-1.5 hover:bg-[#3a0d13] transition-colors"
+            aria-label="Open sidebar"
+          >
+            <List size={24} />
+          </button>
+        </div>
       </div>
 
       <AdminSidebar user={user} isOpen={isOpen} onClose={() => setIsOpen(false)} />
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="Sign Out Confirmation"
+        message="Are you sure you want to sign out of this session? You will need to log in again to access the admin dashboard."
+        confirmText="Yes, Sign Out"
+        cancelText="Cancel"
+        onConfirm={() => signOut({ callbackUrl: "/login" })}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
       
       {/* Add mt-16 on mobile to account for fixed top bar */}
       <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-10 overflow-y-auto mt-16 lg:mt-0">
