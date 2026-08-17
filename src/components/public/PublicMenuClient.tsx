@@ -128,7 +128,7 @@ function Lightbox({
       <button
         onClick={onClose}
         className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 text-white/70 hover:text-white transition-colors bg-white/10 hover:bg-white/25 rounded-full p-2.5"
-        aria-label="Tutup lightbox"
+        aria-label="Close lightbox"
       >
         <X size={18} weight="bold" />
       </button>
@@ -137,7 +137,7 @@ function Lightbox({
       {hasPrev && (
         <button
           onClick={(e) => { e.stopPropagation(); handlePrev(); }}
-          aria-label="Foto sebelumnya"
+          aria-label="Previous photo"
           className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-20 hidden sm:flex items-center justify-center text-white/70 hover:text-white transition-colors bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full p-3"
         >
           <CaretLeft size={20} weight="bold" />
@@ -148,7 +148,7 @@ function Lightbox({
       {hasNext && (
         <button
           onClick={(e) => { e.stopPropagation(); handleNext(); }}
-          aria-label="Foto berikutnya"
+          aria-label="Next photo"
           className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-20 hidden sm:flex items-center justify-center text-white/70 hover:text-white transition-colors bg-black/40 hover:bg-black/60 backdrop-blur-sm rounded-full p-3"
         >
           <CaretRight size={20} weight="bold" />
@@ -226,14 +226,14 @@ function Lightbox({
                 onClick={handlePrev}
                 className="flex items-center gap-1 text-xs font-semibold text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                <CaretLeft size={14} weight="bold" /> Sebelumnya
+                <CaretLeft size={14} weight="bold" /> Previous
               </button>
               <button
                 disabled={!hasNext}
                 onClick={handleNext}
                 className="flex items-center gap-1 text-xs font-semibold text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed"
               >
-                Berikutnya <CaretRight size={14} weight="bold" />
+                Next <CaretRight size={14} weight="bold" />
               </button>
             </div>
           )}
@@ -357,7 +357,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                     className="relative w-full max-w-sm mx-auto lg:mx-0 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 shadow-md cursor-zoom-in group"
                     style={{ aspectRatio: "3/4", maxHeight: "500px" }}
                     onClick={() => setLightboxPhoto(activeFeaturedPhoto)}
-                    title="Klik untuk melihat foto penuh"
+                    title="Click to view full photo"
                   >
                     <Image
                       src={activeFeaturedPhoto.imageUrl}
@@ -371,7 +371,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-5">
                       <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-medium shadow-lg">
                         <MagnifyingGlassPlus size={14} weight="bold" />
-                        Lihat foto penuh
+                        View full photo
                       </div>
                     </div>
                   </div>
@@ -380,7 +380,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                     className="relative w-full max-w-sm mx-auto lg:mx-0 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center"
                     style={{ aspectRatio: "3/4", maxHeight: "500px" }}
                   >
-                    <p className="text-xs text-slate-300 text-center px-6">Belum ada foto untuk kategori ini.</p>
+                    <p className="text-xs text-slate-300 text-center px-6">No photos available for this category yet.</p>
                   </div>
                 )}
               </Reveal>
@@ -390,7 +390,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                 {filteredPhotos.length === 0 ? (
                   <Reveal delay={120}>
                     <div className="py-16 text-center border-y border-slate-100">
-                      <p className="text-sm text-slate-400">Belum ada item di kategori ini.</p>
+                      <p className="text-sm text-slate-400">No items in this category yet.</p>
                     </div>
                   </Reveal>
                 ) : (
@@ -494,7 +494,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                     Food &amp; Beverage Menu Catalogue
                   </p>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                    Menu kami segera hadir. Silakan hubungi kami langsung untuk informasi menu lengkap.
+                    Our menu catalogue is coming soon. Please contact our team directly for complete menu offerings.
                   </p>
                 </div>
               </div>
