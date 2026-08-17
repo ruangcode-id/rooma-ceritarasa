@@ -11,7 +11,6 @@ import {
   EyeSlash,
   Trash,
   Tag,
-  ArrowCounterClockwise,
   MagnifyingGlass,
   ArrowsDownUp,
 } from "@phosphor-icons/react";
@@ -239,18 +238,6 @@ export default function AdminMenuClient() {
 
     if (category === catName) {
       setCategory(updated[0] || "Signature");
-    }
-  };
-
-  // Reset categories to default
-  const handleResetCategories = () => {
-    setManagedCategories(DEFAULT_MENU_CATEGORIES);
-    setDeletedCategories([]);
-    try {
-      localStorage.removeItem(STORAGE_KEY_CATEGORIES);
-      localStorage.removeItem(STORAGE_KEY_DELETED);
-    } catch {
-      // ignore
     }
   };
 
@@ -534,13 +521,11 @@ export default function AdminMenuClient() {
                           <button
                             type="button"
                             onClick={() => {
+                              setCategoryToDelete(cat);
                               if (itemCount > 0) {
-                                setCategoryToDelete(cat);
                                 setTargetReassignCategory(
                                   availableCategories.find((c) => c !== cat) || "Signature"
                                 );
-                              } else {
-                                void handleDeleteCategory(cat);
                               }
                             }}
                             title={`Delete "${cat}" category`}
@@ -557,16 +542,7 @@ export default function AdminMenuClient() {
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-slate-100 p-4 bg-slate-50 flex items-center justify-between rounded-b-2xl">
-              <button
-                type="button"
-                onClick={handleResetCategories}
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-                title="Reset back to standard preset categories"
-              >
-                <ArrowCounterClockwise size={14} weight="bold" />
-                Reset Defaults
-              </button>
+            <div className="border-t border-slate-100 p-4 bg-slate-50 flex items-center justify-end rounded-b-2xl">
               <button
                 type="button"
                 onClick={() => { setIsCategoryModalOpen(false); setCategoryError(""); }}
@@ -579,36 +555,61 @@ export default function AdminMenuClient() {
         </div>
       )}
 
-      {/* Delete Category with photos reassignment modal */}
+      {/* Delete Category Confirmation Modal (with photos reassignment or empty category confirmation) */}
       {categoryToDelete && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
-              <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Trash size={24} weight="fill" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 text-center mb-1">Delete &quot;{categoryToDelete}&quot;?</h3>
-              <p className="text-xs text-slate-500 text-center leading-relaxed mb-4">
-                There are <strong>{photos.filter((p) => p.category === categoryToDelete).length} photos</strong> currently using this category.
-                Choose where to move them:
-              </p>
+              {photos.filter((p) => p.category === categoryToDelete).length > 0 ? (
+                /* Has photos -> Reassign & Delete */
+                <>
+                  <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Trash size={24} weight="fill" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 text-center mb-1">
+                    Delete &quot;{categoryToDelete}&quot;?
+                  </h3>
+                  <p className="text-xs text-slate-500 text-center leading-relaxed mb-4">
+                    There are{" "}
+                    <strong>
+                      {photos.filter((p) => p.category === categoryToDelete).length} photos
+                    </strong>{" "}
+                    currently using this category. Choose where to move them:
+                  </p>
 
-              <div>
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-                  Move photos to category:
-                </label>
-                <select
-                  value={targetReassignCategory}
-                  onChange={(e) => setTargetReassignCategory(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:border-primary outline-none bg-white"
-                >
-                  {availableCategories
-                    .filter((c) => c !== categoryToDelete)
-                    .map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                </select>
-              </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
+                      Move photos to category:
+                    </label>
+                    <select
+                      value={targetReassignCategory}
+                      onChange={(e) => setTargetReassignCategory(e.target.value)}
+                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:border-primary outline-none bg-white"
+                    >
+                      {availableCategories
+                        .filter((c) => c !== categoryToDelete)
+                        .map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                /* Empty category -> Simple confirmation popup */
+                <>
+                  <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Trash size={24} weight="fill" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 text-center mb-1">
+                    Delete &quot;{categoryToDelete}&quot;?
+                  </h3>
+                  <p className="text-xs text-slate-500 text-center leading-relaxed">
+                    Are you sure you want to remove <strong>&quot;{categoryToDelete}&quot;</strong> from active categories?
+                  </p>
+                </>
+              )}
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-2.5">
               <button
@@ -618,11 +619,21 @@ export default function AdminMenuClient() {
                 Cancel
               </button>
               <button
-                onClick={() => void handleDeleteCategory(categoryToDelete, targetReassignCategory)}
+                onClick={() => {
+                  const hasPhotos = photos.filter((p) => p.category === categoryToDelete).length > 0;
+                  void handleDeleteCategory(
+                    categoryToDelete,
+                    hasPhotos ? targetReassignCategory : undefined
+                  );
+                }}
                 disabled={isSaving}
                 className="flex-1 py-2 rounded-lg text-xs font-semibold text-white bg-red-600 hover:bg-red-700 shadow-xs disabled:opacity-50 transition-colors"
               >
-                {isSaving ? "Moving..." : "Move & Delete"}
+                {isSaving
+                  ? "Deleting..."
+                  : photos.filter((p) => p.category === categoryToDelete).length > 0
+                  ? "Move & Delete"
+                  : "Yes, Delete"}
               </button>
             </div>
           </div>
