@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   SquaresFour,
@@ -69,18 +69,7 @@ export default function AdminSidebar({
   onClose,
 }: AdminSidebarProps) {
   const pathname = usePathname();
-  const { data: session } = useSession();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  const userName = session?.user?.name || "Admin Staff";
-  const userEmail = session?.user?.email || "admin@rooma.com";
-  const userInitials =
-    userName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase() || "SA";
 
   return (
     <>
@@ -162,20 +151,20 @@ export default function AdminSidebar({
           <div className="flex items-center gap-2 rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
             {/* Avatar */}
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
-              {userInitials}
+              SA
             </div>
 
-            {/* Name + Email — flex-1 + overflow-hidden prevents pushing logout button */}
+            {/* Name + Email */}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">
-                {userName}
+                Admin Staff
               </p>
               <p className="truncate text-xs text-rose-300/60">
-                {userEmail}
+                admin@rooma.com
               </p>
             </div>
 
-            {/* Logout — shrink-0 ensures it's always visible */}
+            {/* Logout */}
             <button
               title="Sign Out"
               aria-label="Sign out from admin panel"

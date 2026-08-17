@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   ChartLineUp,
@@ -30,18 +30,7 @@ interface OwnerSidebarProps {
 
 export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarProps) {
   const pathname = usePathname();
-  const { data: session } = useSession();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  const userName = session?.user?.name || "Owner";
-  const userEmail = session?.user?.email || "owner@rooma.com";
-  const userInitials =
-    userName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase() || "OW";
 
   return (
     <>
@@ -113,11 +102,11 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
           {/* User Profile & Sign Out Unified */}
           <div className="flex items-center gap-2 rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
-              {userInitials}
+              OW
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-white">{userName}</p>
-              <p className="truncate text-xs text-rose-300/60">{userEmail}</p>
+              <p className="truncate text-sm font-semibold text-white">Owner</p>
+              <p className="truncate text-xs text-rose-300/60">owner@rooma.com</p>
             </div>
             <button 
               title="Sign Out"
