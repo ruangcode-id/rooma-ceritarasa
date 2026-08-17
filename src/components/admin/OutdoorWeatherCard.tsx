@@ -165,12 +165,16 @@ export function OutdoorWeatherCard() {
         )}
       </section>
 
-      {/* Confirmation Modal */}
+      {/* Confirmation Modal — matches ConfirmDialog standard */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
-          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="p-6 text-center">
-              <span className="mx-auto mb-4 grid size-12 place-items-center rounded-xl bg-slate-100 text-slate-700">
+        <div
+          className="fixed inset-0 z-[9999] grid place-items-center bg-slate-950/40 px-4 py-6 backdrop-blur-sm animate-in fade-in duration-200"
+          role="dialog"
+          aria-modal="true"
+        >
+          <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700">
                 {targetAction ? (
                   <Sun size={24} weight="fill" />
                 ) : (
@@ -178,23 +182,24 @@ export function OutdoorWeatherCard() {
                 )}
               </span>
 
-              <h3 className="text-base font-semibold text-slate-950">
-                {targetAction ? "Open Outdoor Area?" : "Enable Rainy Mode?"}
-              </h3>
-
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {targetAction
-                  ? "All 4 outdoor tables (OUT-1–OUT-4 · 16 Pax) will be activated and immediately available for guest reservations."
-                  : "All 4 outdoor tables (OUT-1–OUT-4) will be deactivated and hidden from the guest reservation form to prevent overbooking during bad weather."}
-              </p>
+              <div>
+                <h2 className="text-xl font-semibold text-slate-950">
+                  {targetAction ? "Open Outdoor Area?" : "Enable Rainy Mode?"}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                  {targetAction
+                    ? "All 4 outdoor tables (OUT-1–OUT-4 · 16 Pax) will be activated and immediately available for guest reservations."
+                    : "All 4 outdoor tables (OUT-1–OUT-4) will be deactivated and hidden from the guest reservation form to prevent overbooking during bad weather."}
+                </p>
+              </div>
             </div>
 
-            <div className="flex gap-2 border-t border-slate-100 bg-slate-50 p-4">
+            <div className="mt-8 flex justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
                 disabled={isUpdating}
-                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
+                className="rounded-xl px-5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -202,7 +207,7 @@ export function OutdoorWeatherCard() {
                 type="button"
                 onClick={executeToggle}
                 disabled={isUpdating}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#1f0609] px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#3a0d13] disabled:opacity-60"
               >
                 {isUpdating && <CircleNotch size={15} className="animate-spin" />}
                 {isUpdating
@@ -212,7 +217,7 @@ export function OutdoorWeatherCard() {
                   : "Yes, Close"}
               </button>
             </div>
-          </div>
+          </section>
         </div>
       )}
     </>
