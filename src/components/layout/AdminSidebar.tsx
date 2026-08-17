@@ -82,7 +82,7 @@ export default function AdminSidebar({
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col bg-[#1f0609] text-rose-100 shadow-xl transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col bg-[#1f0609] text-rose-100 shadow-xl transition-transform duration-300 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -103,10 +103,10 @@ export default function AdminSidebar({
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-4 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {MENU_GROUPS.map((group) => (
-            <div key={group.title} className="mb-8">
-              <h3 className="mb-3 px-3 text-xs font-bold uppercase tracking-[0.2em] text-rose-300/60">
+            <div key={group.title} className="mb-6">
+              <h3 className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.2em] text-rose-300/60">
                 {group.title}
               </h3>
 
@@ -146,7 +146,7 @@ export default function AdminSidebar({
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-[#3a0d13] p-4">
+        <div className="shrink-0 border-t border-[#3a0d13] p-4 pb-6">
           {/* User Profile & Sign Out Unified */}
           <div className="flex items-center gap-2 rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
             {/* Avatar */}

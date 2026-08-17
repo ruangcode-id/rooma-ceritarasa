@@ -43,7 +43,7 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col bg-[#1f0609] text-rose-100 shadow-xl transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col bg-[#1f0609] text-rose-100 shadow-xl transition-transform duration-300 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -63,7 +63,7 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 px-4 py-8 overflow-y-auto scrollbar-hide">
+        <div className="flex-1 px-4 py-6 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <h3 className="mb-4 px-3 text-xs font-bold uppercase tracking-[0.2em] text-rose-300/60">
             Executive
           </h3>
@@ -98,7 +98,7 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
         </div>
 
         {/* Footer */}
-        <div className="shrink-0 border-t border-[#3a0d13] p-4">
+        <div className="shrink-0 border-t border-[#3a0d13] p-4 pb-6">
           {/* User Profile & Sign Out Unified */}
           <div className="flex items-center gap-2 rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
