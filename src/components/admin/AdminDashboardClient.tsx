@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/StatusBadge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SectionTitle } from "@/components/ui/SectionTitle";
+import { OutdoorWeatherCard } from "@/components/admin/OutdoorWeatherCard";
 import type {
   AdminDashboardData,
   AdminDashboardReservationRow,
@@ -288,6 +289,9 @@ export function AdminDashboardClient({
           }
         />
       </section>
+
+      {/* Outdoor Seating & Rainy Mode Weather Control */}
+      <OutdoorWeatherCard />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

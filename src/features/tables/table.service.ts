@@ -387,3 +387,102 @@ export const checkMultipleTablesAvailability = async (
     );
   }
 };
+
+/**
+ * ----------------------------------------------------
+ * OUTDOOR SEATING & WEATHER TOGGLE (Rainy Mode)
+ * ----------------------------------------------------
+ */
+export type OutdoorAreaStatus = {
+  isOpen: boolean;
+  totalTables: number;
+  activeTables: number;
+  totalCapacity: number;
+  activeCapacity: number;
+  tables: Array<{
+    id: string;
+    tableNumber: string;
+    capacity: number;
+    isActive: boolean;
+  }>;
+};
+
+const DEFAULT_OUTDOOR_TABLE_DATA = [
+  { tableNumber: "OUT-1", capacity: 4, posX: 10, posY: 10 },
+  { tableNumber: "OUT-2", capacity: 4, posX: 20, posY: 10 },
+  { tableNumber: "OUT-3", capacity: 4, posX: 30, posY: 10 },
+  { tableNumber: "OUT-4", capacity: 4, posX: 40, posY: 10 },
+];
+
+export async function ensureOutdoorTables(): Promise<void> {
+  const existing = await prisma.table.findMany({
+    where: { tableNumber: { startsWith: "OUT-" } },
+    select: { tableNumber: true },
+  });
+
+  const existingNumbers = new Set(existing.map((t) => t.tableNumber));
+  const missing = DEFAULT_OUTDOOR_TABLE_DATA.filter(
+    (t) => !existingNumbers.has(t.tableNumber),
+  );
+
+  if (missing.length > 0) {
+    for (const t of missing) {
+      await prisma.table.upsert({
+        where: { tableNumber: t.tableNumber },
+        update: { capacity: t.capacity },
+        create: {
+          tableNumber: t.tableNumber,
+          capacity: t.capacity,
+          posX: t.posX,
+          posY: t.posY,
+          isActive: true,
+          status: TableStatus.AVAILABLE,
+        },
+      });
+    }
+  }
+}
+
+export async function getOutdoorAreaStatus(): Promise<OutdoorAreaStatus> {
+  await ensureOutdoorTables();
+
+  const outdoorTables = await prisma.table.findMany({
+    where: { tableNumber: { startsWith: "OUT-" } },
+    orderBy: { tableNumber: "asc" },
+    select: {
+      id: true,
+      tableNumber: true,
+      capacity: true,
+      isActive: true,
+    },
+  });
+
+  const totalTables = outdoorTables.length;
+  const activeTables = outdoorTables.filter((t) => t.isActive).length;
+  const totalCapacity = outdoorTables.reduce((acc, t) => acc + t.capacity, 0);
+  const activeCapacity = outdoorTables
+    .filter((t) => t.isActive)
+    .reduce((acc, t) => acc + t.capacity, 0);
+
+  const isOpen = activeTables > 0;
+
+  return {
+    isOpen,
+    totalTables,
+    activeTables,
+    totalCapacity,
+    activeCapacity,
+    tables: outdoorTables,
+  };
+}
+
+export async function toggleOutdoorArea(isOpen: boolean): Promise<OutdoorAreaStatus> {
+  await ensureOutdoorTables();
+
+  await prisma.table.updateMany({
+    where: { tableNumber: { startsWith: "OUT-" } },
+    data: { isActive: isOpen },
+  });
+
+  return getOutdoorAreaStatus();
+}
