@@ -4,7 +4,6 @@ import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { z } from "zod";
 import QRCode from "qrcode";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import { VipTier } from "@/generated/prisma/client";
 import { generateUniqueVipToken } from "@/features/vip/vip.service";
 
 const assignVipSchema = z.object({
@@ -68,7 +67,6 @@ export async function POST(req: NextRequest) {
       const vipCard = await tx.vipCard.create({
         data: {
           guestId,
-          tier: VipTier.SILVER, // Default fallback backend
           token,
           qrCodeUrl,
           benefits: benefits || null,
