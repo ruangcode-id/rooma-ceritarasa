@@ -383,6 +383,24 @@ model GalleryImage {
   @@map("gallery_images")
 }
 
+model MenuPhoto {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String   @db.VarChar(200)
+  description String?  @db.Text
+  category    String   @default("Signature") @db.VarChar(100)
+  imageUrl    String   @map("image_url") @db.Text
+  publicId    String   @map("public_id") @db.VarChar(255)
+  price       Int?
+  width       Int?
+  height      Int?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("menu_photos")
+}
+
 model Event {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title       String    @db.VarChar(200)

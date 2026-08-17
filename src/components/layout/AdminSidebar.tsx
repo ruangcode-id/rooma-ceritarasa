@@ -21,6 +21,7 @@ import {
   Gear,
   SignOut,
   X,
+  ForkKnife,
 } from "@phosphor-icons/react";
 
 const MENU_GROUPS = [
@@ -49,6 +50,7 @@ const MENU_GROUPS = [
     items: [
       { name: "Guests", href: "/admin/guests", icon: UsersThree },
       { name: "Gallery", href: "/admin/gallery", icon: Image },
+      { name: "Menu", href: "/admin/menu", icon: ForkKnife },
       { name: "Careers", href: "/admin/careers", icon: Briefcase },
       { name: "Notifications", href: "/admin/notifications", icon: BellRinging },
       { name: "VIP Assign", href: "/admin/vip", icon: Star },

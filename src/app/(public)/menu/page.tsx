@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PublicMenuClient } from "@/components/public/PublicMenuClient";
+import { listPublicMenuPhotos, getPublicMenuCategories } from "@/features/menu/menu.service";
 
 export const metadata: Metadata = {
   title: "Menu | Rooma Ceritarasa",
@@ -12,6 +13,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function MenuPage() {
-  return <PublicMenuClient />;
+export default async function MenuPage() {
+  const [photos, categories] = await Promise.all([
+    listPublicMenuPhotos(),
+    getPublicMenuCategories(),
+  ]);
+
+  return <PublicMenuClient photos={photos} categories={categories} />;
 }

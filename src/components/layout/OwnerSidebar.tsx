@@ -11,13 +11,15 @@ import {
   UsersThree,
   GearSix,
   SignOut,
-  X
+  X,
+  ForkKnife,
 } from "@phosphor-icons/react";
 
 const OWNER_MENU = [
   { name: "Analytics Dashboard", href: "/owner/dashboard", icon: ChartLineUp },
   { name: "Financial Reports", href: "/owner/reports", icon: CurrencyCircleDollar },
   { name: "Manage Admins", href: "/owner/users", icon: UsersThree },
+  { name: "Menu", href: "/owner/menu", icon: ForkKnife },
   { name: "Master Settings", href: "/owner/settings", icon: GearSix },
 ];
 
