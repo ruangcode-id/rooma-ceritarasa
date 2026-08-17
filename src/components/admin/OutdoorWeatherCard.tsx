@@ -5,7 +5,6 @@ import {
   Sun,
   CloudRain,
   CircleNotch,
-  CheckCircle,
   WarningCircle,
 } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
@@ -89,163 +88,128 @@ export function OutdoorWeatherCard() {
 
   return (
     <>
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-xs transition-all hover:shadow-md">
-        {/* Subtle decorative background glow */}
-        <div
-          className={`absolute -right-8 -top-8 h-28 w-28 rounded-full blur-2xl transition-all duration-700 ${
-            isOpen ? "bg-amber-100/60" : "bg-sky-100/70"
-          }`}
-          aria-hidden="true"
-        />
+      {/* Card — sama persis dengan MetricCard & DashboardChart */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-        <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Left info */}
-          <div className="flex items-start gap-3.5">
-            <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors duration-300 ${
-                isOpen
-                  ? "bg-amber-500/10 text-amber-600"
-                  : "bg-sky-600/10 text-sky-700"
-              }`}
-            >
-              {isOpen ? (
-                <Sun size={24} weight="fill" />
+          {/* Left: icon + label + description */}
+          <div className="flex items-center gap-4">
+            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
+              {isLoading ? (
+                <CircleNotch size={18} className="animate-spin" />
+              ) : isOpen ? (
+                <Sun size={18} weight="fill" />
               ) : (
-                <CloudRain size={24} weight="fill" />
+                <CloudRain size={18} weight="fill" />
               )}
-            </div>
+            </span>
 
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-slate-500">
                   Outdoor Seating Area
-                </h3>
-                {isLoading ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
-                    <CircleNotch size={12} className="animate-spin" /> Checking...
-                  </span>
-                ) : (
+                </p>
+                {!isLoading && (
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
                       isOpen
-                        ? "bg-green-100 text-green-800"
-                        : "bg-sky-100 text-sky-800"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-slate-100 text-slate-500"
                     }`}
                   >
-                    {isOpen ? (
-                      <>
-                        <CheckCircle size={12} weight="fill" /> ☀️ Outdoor Open
-                      </>
-                    ) : (
-                      <>
-                        <CloudRain size={12} weight="fill" /> 🌧️ Rainy Mode Active
-                      </>
-                    )}
+                    {isOpen ? "☀️ Open" : "🌧️ Rainy Mode"}
                   </span>
                 )}
               </div>
-
-              <p className="mt-1 text-xs text-slate-500 leading-relaxed max-w-xl">
-                {isOpen
-                  ? "Cuaca cerah. 4 Meja Outdoor (OUT-1 s/d OUT-4 • 16 Pax) aktif & dapat dipesan oleh tamu."
-                  : "Hujan / Cuaca buruk. 4 Meja Outdoor dinonaktifkan & disembunyikan otomatis dari form reservasi tamu."}
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                {isLoading
+                  ? "Checking outdoor area status..."
+                  : isOpen
+                  ? "4 outdoor tables (OUT-1–OUT-4 · 16 Pax) are active and available for guest reservations."
+                  : "Rainy mode active. All 4 outdoor tables are hidden from the reservation form."}
               </p>
             </div>
           </div>
 
-          {/* Right action button */}
-          <div className="flex items-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+          {/* Right: action button — matches Refresh button style in SectionTitle */}
+          <div className="flex shrink-0 items-center gap-2 border-t border-slate-100 pt-4 sm:border-0 sm:pt-0">
             {isOpen ? (
               <button
                 type="button"
                 onClick={() => handleToggleClick(false)}
                 disabled={isLoading || isUpdating}
-                className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-2 text-xs font-semibold text-sky-800 hover:bg-sky-100 transition-colors shadow-2xs disabled:opacity-50"
-                title="Aktifkan mode hujan untuk menutup sementara meja outdoor"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
               >
-                <CloudRain size={16} weight="bold" />
-                Aktifkan Rainy Mode
+                <CloudRain size={17} />
+                Enable Rainy Mode
               </button>
             ) : (
               <button
                 type="button"
                 onClick={() => handleToggleClick(true)}
                 disabled={isLoading || isUpdating}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white hover:bg-slate-800 transition-colors shadow-md disabled:opacity-50"
-                title="Buka kembali meja outdoor saat cuaca membaik"
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
               >
-                <Sun size={16} weight="bold" />
-                Buka Area Outdoor
+                <Sun size={17} />
+                Open Outdoor Area
               </button>
             )}
           </div>
         </div>
 
         {error && (
-          <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 p-2.5 text-xs text-red-600 border border-red-200">
+          <div className="mt-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-600">
             <WarningCircle size={15} weight="bold" className="shrink-0" />
             {error}
           </div>
         )}
-      </div>
+      </section>
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
             <div className="p-6 text-center">
-              <div
-                className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3.5 ${
-                  targetAction
-                    ? "bg-amber-100 text-amber-600"
-                    : "bg-sky-100 text-sky-700"
-                }`}
-              >
+              <span className="mx-auto mb-4 grid size-12 place-items-center rounded-lg bg-slate-100 text-slate-700">
                 {targetAction ? (
-                  <Sun size={28} weight="fill" />
+                  <Sun size={24} weight="fill" />
                 ) : (
-                  <CloudRain size={28} weight="fill" />
+                  <CloudRain size={24} weight="fill" />
                 )}
-              </div>
+              </span>
 
-              <h3 className="text-base font-bold text-slate-900 mb-1.5">
-                {targetAction ? "Buka Area Meja Outdoor?" : "Aktifkan Rainy Mode?"}
+              <h3 className="text-base font-semibold text-slate-950">
+                {targetAction ? "Open Outdoor Area?" : "Enable Rainy Mode?"}
               </h3>
 
-              <p className="text-xs text-slate-500 leading-relaxed">
+              <p className="mt-2 text-sm leading-6 text-slate-600">
                 {targetAction
-                  ? "Semua 4 meja outdoor (OUT-1 s/d OUT-4 • 16 Pax) akan kembali aktif dan langsung dapat dipilih oleh tamu pada form reservasi."
-                  : "Semua 4 meja outdoor (OUT-1 s/d OUT-4) akan dinonaktifkan dan disembunyikan dari form reservasi tamu untuk mencegah overbooking saat hujan."}
+                  ? "All 4 outdoor tables (OUT-1–OUT-4 · 16 Pax) will be activated and immediately available for guest reservations."
+                  : "All 4 outdoor tables (OUT-1–OUT-4) will be deactivated and hidden from the guest reservation form to prevent overbooking during bad weather."}
               </p>
             </div>
 
-            <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-2.5">
+            <div className="flex gap-2 border-t border-slate-100 bg-slate-50 p-4">
               <button
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
                 disabled={isUpdating}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
+                className="flex-1 rounded-lg border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
                 onClick={executeToggle}
                 disabled={isUpdating}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold text-white shadow-xs transition-colors flex items-center justify-center gap-1.5 ${
-                  targetAction
-                    ? "bg-slate-900 hover:bg-slate-800"
-                    : "bg-sky-700 hover:bg-sky-800"
-                }`}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
               >
-                {isUpdating && (
-                  <CircleNotch size={14} className="animate-spin" />
-                )}
+                {isUpdating && <CircleNotch size={15} className="animate-spin" />}
                 {isUpdating
-                  ? "Memproses..."
+                  ? "Processing..."
                   : targetAction
-                  ? "Ya, Buka Outdoor"
-                  : "Ya, Tutup Outdoor"}
+                  ? "Yes, Open"
+                  : "Yes, Close"}
               </button>
             </div>
           </div>
