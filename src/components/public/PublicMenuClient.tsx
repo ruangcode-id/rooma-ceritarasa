@@ -380,7 +380,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                     className="relative w-full max-w-sm mx-auto lg:mx-0 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center"
                     style={{ aspectRatio: "3/4", maxHeight: "500px" }}
                   >
-                    <p className="text-xs text-slate-300 text-center px-6">No photos available for this category yet.</p>
+                    <p className="text-xs text-slate-300 text-center px-6">No photos available in this category yet.</p>
                   </div>
                 )}
               </Reveal>
@@ -390,7 +390,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                 {filteredPhotos.length === 0 ? (
                   <Reveal delay={120}>
                     <div className="py-16 text-center border-y border-slate-100">
-                      <p className="text-sm text-slate-400">No items in this category yet.</p>
+                      <p className="text-sm text-slate-400">No items available in this category yet.</p>
                     </div>
                   </Reveal>
                 ) : (
@@ -494,7 +494,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                     Food &amp; Beverage Menu Catalogue
                   </p>
                   <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
-                    Our menu catalogue is coming soon. Please contact our team directly for complete menu offerings.
+                    Our seasonal menu catalogue is coming soon. Please contact us directly for reservations and special dining inquiries.
                   </p>
                 </div>
               </div>
