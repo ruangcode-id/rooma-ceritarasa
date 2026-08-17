@@ -6,9 +6,11 @@ import {
   CalendarCheck,
   ChartLineUp,
   CreditCard,
+  DownloadSimple,
   MagnifyingGlass,
   Receipt,
 } from "@phosphor-icons/react";
+import { exportToCsv } from "@/shared/utils/csv-exporter";
 import { MetricCard } from "@/components/cards/MetricCard";
 import { chartPalette, DashboardChart } from "@/components/charts";
 import { DataTable, type DataTableColumn } from "@/components/tables";
@@ -155,6 +157,14 @@ function getJakartaMonthStartInputValue(value = new Date()) {
   const month = parts.find((part) => part.type === "month")?.value ?? "00";
 
   return `${year}-${month}-01`;
+}
+
+function getJakartaYearStartInputValue(value = new Date()) {
+  const parts = dateInputFormatter.formatToParts(value);
+
+  const year = parts.find((part) => part.type === "year")?.value ?? "0000";
+
+  return `${year}-01-01`;
 }
 
 function getDaysAgoInputValue(days: number) {
@@ -408,6 +418,64 @@ export function OwnerReportsClient({
     setEndDate(getJakartaDateInputValue());
   }
 
+  function applyCurrentYearFilter() {
+    setStartDate(getJakartaYearStartInputValue());
+    setEndDate(getJakartaDateInputValue());
+  }
+
+  function handleExportSummaryCsv() {
+    const todayFormatted = new Intl.DateTimeFormat("id-ID", {
+      dateStyle: "full",
+      timeStyle: "short",
+      timeZone: "Asia/Jakarta",
+    }).format(new Date());
+
+    let dateRangeText = "Semua Waktu";
+    if (startDate && endDate) {
+      dateRangeText = `${formatDate(startDate)} s/d ${formatDate(endDate)}`;
+    } else if (startDate) {
+      dateRangeText = `Mulai ${formatDate(startDate)}`;
+    } else if (endDate) {
+      dateRangeText = `Sampai ${formatDate(endDate)}`;
+    }
+
+    const paidRows = filteredRows.filter((p) => p.status === "paid");
+    const depositAmount = paidRows
+      .filter((p) => p.paymentType === "dp" || p.paymentType === "deposit")
+      .reduce((sum, p) => sum + p.amount, 0);
+    const fullAmount = paidRows
+      .filter((p) => p.paymentType === "full")
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const totalPax = filteredRows.reduce((sum, p) => sum + p.partySize, 0);
+    const paidPax = paidRows.reduce((sum, p) => sum + p.partySize, 0);
+    const pendingAmount = sumByStatus(filteredRows, "pending");
+    const refundedAmount = sumByStatus(filteredRows, "refunded");
+
+    const rows: Array<Array<string | number>> = [
+      ["LAPORAN RINGKASAN PENJUALAN ROOMA CERITARASA"],
+      ["Periode Laporan", dateRangeText],
+      ["Tanggal Unduh", todayFormatted],
+      [""],
+      ["METRIK PENJUALAN / KEUANGAN", "NILAI"],
+      ["Total Pendapatan Lunas (Omset)", formatCurrency(filteredPaidAmount)],
+      ["Total Pembayaran DP Diterima", formatCurrency(depositAmount)],
+      ["Total Pelunasan Full Diterima", formatCurrency(fullAmount)],
+      ["Total Nominal Pending", formatCurrency(pendingAmount)],
+      ["Total Nominal Refunded", formatCurrency(refundedAmount)],
+      ["Jumlah Transaksi Lunas (Paid)", paidRows.length],
+      ["Jumlah Transaksi Pending", filteredRows.filter((p) => p.status === "pending").length],
+      ["Jumlah Transaksi Refunded", filteredRows.filter((p) => p.status === "refunded").length],
+      ["Jumlah Transaksi Failed", filteredRows.filter((p) => p.status === "failed").length],
+      ["Total Tamu (Pax)", totalPax],
+      ["Total Tamu Lunas (Paid Pax)", paidPax],
+      ["Total Reservasi Terdaftar", filteredRows.length],
+    ];
+
+    const fileNameDate = startDate ? startDate : getJakartaDateInputValue();
+    exportToCsv(`laporan-penjualan-rooma-${fileNameDate}`, rows);
+  }
+
   return (
     <div className="relative space-y-8">
       <section>
@@ -416,6 +484,16 @@ export function OwnerReportsClient({
           title="Financial Reports"
           level={1}
           description={`Financial summary for ${analytics.currentMonthLabel}. Use filters to audit transactions by status, guest, order, session, and date.`}
+          actions={
+            <button
+              type="button"
+              onClick={handleExportSummaryCsv}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900/30"
+            >
+              <DownloadSimple size={18} weight="bold" />
+              Export Summary CSV
+            </button>
+          }
         />
       </section>
 
@@ -613,7 +691,7 @@ export function OwnerReportsClient({
               onClick={applyTodayFilter}
               className={presetButtonClassName}
             >
-              Today
+              Hari Ini
             </button>
 
             <button
@@ -621,7 +699,7 @@ export function OwnerReportsClient({
               onClick={applyLastSevenDaysFilter}
               className={presetButtonClassName}
             >
-              Last 7 days
+              Minggu Ini
             </button>
 
             <button
@@ -629,7 +707,15 @@ export function OwnerReportsClient({
               onClick={applyCurrentMonthFilter}
               className={presetButtonClassName}
             >
-              This month
+              Bulan Ini
+            </button>
+
+            <button
+              type="button"
+              onClick={applyCurrentYearFilter}
+              className={presetButtonClassName}
+            >
+              Tahun Ini
             </button>
 
             <button
@@ -639,6 +725,15 @@ export function OwnerReportsClient({
               className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Clear
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportSummaryCsv}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+            >
+              <DownloadSimple size={14} weight="bold" />
+              Export Summary CSV
             </button>
           </div>
         </div>

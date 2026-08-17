@@ -195,6 +195,20 @@ export async function listPayments(query: PaymentListQuery) {
   const limit = Math.max(query.limit ?? 20, 1);
   const skip = (page - 1) * limit;
 
+  const now = new Date();
+  const targetYear = query.year ?? now.getFullYear();
+  const targetMonth = query.month ?? (now.getMonth() + 1);
+
+  const monthStart = new Date(targetYear, targetMonth - 1, 1, 0, 0, 0);
+  const monthEnd = new Date(targetYear, targetMonth, 0, 23, 59, 59, 999);
+
+  const monthWhere: Prisma.PaymentWhereInput = {
+    createdAt: {
+      gte: monthStart,
+      lte: monthEnd,
+    },
+  };
+
   const where: Prisma.PaymentWhereInput = {};
 
   if (query.status) {
@@ -244,19 +258,31 @@ export async function listPayments(query: PaymentListQuery) {
         where,
       }),
       prisma.payment.aggregate({
-        where: { status: DbPaymentStatus.paid },
+        where: {
+          status: DbPaymentStatus.paid,
+          ...monthWhere,
+        },
         _sum: { amount: true },
       }),
-      prisma.payment.count({ where: { status: DbPaymentStatus.paid } }),
-      prisma.payment.count({ where: { status: DbPaymentStatus.pending } }),
-      prisma.payment.count({ where: { status: DbPaymentStatus.refunded } }),
+      prisma.payment.count({ where: { status: DbPaymentStatus.paid, ...monthWhere } }),
+      prisma.payment.count({ where: { status: DbPaymentStatus.pending, ...monthWhere } }),
+      prisma.payment.count({ where: { status: DbPaymentStatus.refunded, ...monthWhere } }),
     ]);
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const monthLabel = `${monthNames[targetMonth - 1] ?? "Month"} ${targetYear}`;
 
   const summary: PaymentSummary = {
     paidRevenue: Number(paidAggregate._sum.amount ?? 0),
     paidCount,
     pendingCount,
     refundedCount,
+    month: targetMonth,
+    year: targetYear,
+    monthLabel,
   };
 
   return {

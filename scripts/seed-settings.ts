@@ -14,6 +14,27 @@ async function main() {
   // 1. Seed Restaurant Settings
   const existingSetting = await prisma.restaurantSetting.findFirst();
 
+  const defaultWaTemplate = [
+    "Halo Kak *{{nama}}* 😊,",
+    "",
+    "Terima kasih. Reservasi Kakak di Rooma Ceritarasa telah berhasil dikonfirmasi.",
+    "",
+    "Berikut detail reservasinya:",
+    "",
+    "• Tanggal: {{tanggal}}",
+    "• Waktu: {{waktu}}",
+    "• Kode Check-in: {{check_in_code}}",
+    "",
+    "QR Code untuk proses check-in telah kami kirim ke email yang digunakan saat melakukan reservasi. Mohon tunjukkan QR Code tersebut atau kode check-in di atas kepada petugas saat kedatangan.",
+    "",
+    "Mohon hadir tepat waktu. Reservasi akan dibatalkan secara otomatis apabila keterlambatan melebihi 15 menit🙏🏻",
+    "",
+    "Sampai jumpa di Rooma Ceritarasa. Terima kasih telah melakukan reservasi.",
+    "",
+    "Salam hangat,",
+    " *Rooma Ceritarasa*",
+  ].join("\n");
+
   const defaultSettings = {
     name: "Rooma Ceritarasa",
     tagline: "Refined Comfort Dish, Intimate Casual Dining",
@@ -23,6 +44,10 @@ async function main() {
     email: "info@roomaceritarasa.com",
     socialLinks: {
       instagram: "https://www.instagram.com/rooma.ceritarasa/",
+    },
+    waTemplates: {
+      reservasi_konfirmasi: defaultWaTemplate,
+      payment_success: defaultWaTemplate,
     },
   };
 

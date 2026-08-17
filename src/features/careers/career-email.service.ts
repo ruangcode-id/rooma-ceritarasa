@@ -34,7 +34,7 @@ function escapeHtml(value: string) {
 }
 
 function formatAppliedAt(value: string) {
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("en-US", {
     dateStyle: "long",
     timeStyle: "short",
     timeZone: "Asia/Jakarta",
@@ -57,7 +57,7 @@ export async function sendApplicationConfirmation(
   const fromTemplate = await sendEmailFromTemplate(
     application.applicantEmail,
     "career_apply_konfirmasi",
-    `Lamaran diterima - ${application.jobTitle}`,
+    `Application Received - ${application.jobTitle}`,
     vars,
   );
 
@@ -70,12 +70,12 @@ export async function sendApplicationConfirmation(
 
   return sendTransactionalEmail({
     to: application.applicantEmail,
-    subject: `Lamaran diterima - ${application.jobTitle}`,
+    subject: `Application Received - ${application.jobTitle}`,
     html: `
-      <p>Halo ${applicantName},</p>
-      <p>Terima kasih sudah mengirim lamaran untuk posisi <strong>${jobTitle}</strong>.</p>
-      <p>Tim kami akan meninjau lamaran Anda dan menghubungi Anda jika ada tahapan berikutnya.</p>
-      <p>Salam,<br/>Rooma Cerita Rasa</p>
+      <p>Hello ${applicantName},</p>
+      <p>Thank you for submitting your application for the position of <strong>${jobTitle}</strong>.</p>
+      <p>Our team will review your application and contact you if there are next steps.</p>
+      <p>Best regards,<br/>Rooma Ceritarasa</p>
     `,
   });
 }
@@ -99,7 +99,7 @@ export async function notifyAdminNewApplication(
   const fromTemplate = await sendEmailFromTemplate(
     adminEmail,
     "career_admin_notif",
-    `Lamaran baru - ${application.jobTitle}`,
+    `New Application - ${application.jobTitle}`,
     vars,
   );
 
@@ -109,19 +109,19 @@ export async function notifyAdminNewApplication(
 
   return sendTransactionalEmail({
     to: adminEmail,
-    subject: `Lamaran baru - ${application.jobTitle}`,
+    subject: `New Application - ${application.jobTitle}`,
     html: `
-      <p>Ada lamaran baru untuk posisi <strong>${escapeHtml(application.jobTitle)}</strong>.</p>
+      <p>There is a new application for the position of <strong>${escapeHtml(application.jobTitle)}</strong>.</p>
       <ul>
-        <li>Nama: ${escapeHtml(application.applicantName)}</li>
+        <li>Name: ${escapeHtml(application.applicantName)}</li>
         <li>Email: ${escapeHtml(application.applicantEmail)}</li>
-        <li>Telepon: ${escapeHtml(application.applicantPhone)}</li>
+        <li>Phone: ${escapeHtml(application.applicantPhone)}</li>
         <li>Status: ${escapeHtml(application.status)}</li>
-        <li>Waktu apply: ${escapeHtml(formatAppliedAt(application.appliedAt))}</li>
+        <li>Applied At: ${escapeHtml(formatAppliedAt(application.appliedAt))}</li>
       </ul>
-      <p>Cover letter:</p>
+      <p>Cover Letter:</p>
       <p>${escapeHtml(textOrDash(application.coverLetter))}</p>
-      <p>CV: <a href="${escapeHtml(application.cvUrl)}">Lihat CV</a></p>
+      <p>CV: <a href="${escapeHtml(application.cvUrl)}">View CV</a></p>
     `,
   });
 }

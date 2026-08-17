@@ -10,6 +10,10 @@ import {
   WarningCircle,
   X,
   XCircle,
+  FileText,
+  Crown,
+  UserFocus,
+  NotePencil,
 } from "@phosphor-icons/react";
 import { MetricCard } from "@/components/cards/MetricCard";
 import {
@@ -46,12 +50,15 @@ type ReservationRow = {
   status: ReservationStatus;
   partySize: number;
   date: string;
+  specialRequest?: string | null;
   createdAt: string;
   checkInToken: string | null;
   guest: {
     id: string;
     name: string;
     phone: string;
+    notes?: string | null;
+    isVip?: boolean;
   };
   session: {
     id: string;
@@ -149,6 +156,7 @@ export default function AdminReservationClient() {
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialog | null>(null);
+  const [notesModalRow, setNotesModalRow] = useState<ReservationRow | null>(null);
 
   const searchParams = useSearchParams();
   const detailId = searchParams?.get("detail");
@@ -282,7 +290,7 @@ export default function AdminReservationClient() {
       className: "w-[19%] align-middle text-left",
       cell: (reservation) => (
         <div className="min-w-0">
-          <p className="break-words font-semibold text-slate-900">
+          <p className="wrap-break-word font-semibold text-slate-900">
             {reservation.session.name}
           </p>
           <p className="text-xs text-slate-500">
@@ -298,7 +306,7 @@ export default function AdminReservationClient() {
       className: "w-[23%] align-middle text-left",
       cell: (reservation) => (
         <div className="min-w-0">
-          <p className="break-words font-semibold text-slate-900">
+          <p className="wrap-break-word font-semibold text-slate-900">
             {reservation.guest.name}
           </p>
           <p className="break-all text-xs text-slate-500">
@@ -335,8 +343,8 @@ export default function AdminReservationClient() {
     {
       id: "tables",
       header: "Tables",
-      headerClassName: "w-[13%] text-center",
-      className: "w-[13%] align-middle text-center",
+      headerClassName: "w-[11%] text-center",
+      className: "w-[11%] align-middle text-center",
       cell: (reservation) =>
         reservation.reservationTables.length > 0 ? (
           <div className="flex flex-wrap justify-center gap-1">
@@ -352,6 +360,30 @@ export default function AdminReservationClient() {
         ) : (
           <span className="text-xs text-slate-400">None</span>
         ),
+    },
+    {
+      id: "notes",
+      header: "Notes",
+      headerClassName: "w-[12%] text-center",
+      className: "w-[12%] align-middle text-center",
+      cell: (reservation) => {
+        const hasNotes = Boolean(
+          reservation.specialRequest || reservation.guest.notes
+        );
+        if (!hasNotes) return <span className="text-xs text-slate-300">-</span>;
+
+        return (
+          <button
+            type="button"
+            onClick={() => setNotesModalRow(reservation)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800 transition-all hover:bg-amber-100 active:scale-95 cursor-pointer shadow-2xs"
+            title="Click to view customer notes"
+          >
+            <NotePencil size={14} weight="bold" className="text-amber-600" />
+            View Notes
+          </button>
+        );
+      },
     },
     {
       id: "status",
@@ -606,6 +638,95 @@ export default function AdminReservationClient() {
               </button>
             </div>
           </section>
+        </div>
+      ) : null}
+
+      {/* Customer Notes Sticky-Note Modal */}
+      {notesModalRow ? (
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setNotesModalRow(null)}
+          />
+          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border-2 border-amber-300/80 bg-[#fffdfa] p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            {/* Top decorative notepad tape / bar */}
+            <div className="absolute top-0 left-0 right-0 h-3 bg-linear-to-r from-amber-300 via-amber-400 to-amber-300" />
+
+            <div className="flex items-start justify-between border-b border-amber-100 pb-4 pt-1">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-amber-100 p-2.5 text-amber-700 shadow-2xs">
+                  <NotePencil size={24} weight="bold" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Customer Notes</h3>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-slate-600 font-medium">
+                      Guest: <span className="font-semibold text-slate-900">{notesModalRow.guest.name}</span> ({notesModalRow.guest.phone})
+                    </p>
+                    {notesModalRow.guest.isVip && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-300">
+                        <Crown size={10} weight="fill" />
+                        VIP
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNotesModalRow(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-amber-100/50 hover:text-slate-700 transition-colors"
+              >
+                <X size={20} weight="bold" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              {/* Special Request */}
+              {notesModalRow.specialRequest ? (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4">
+                  <div className="flex gap-2.5">
+                    <FileText size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                        Special Request (This Reservation)
+                      </h4>
+                      <p className="mt-1 text-sm font-medium text-amber-950 whitespace-pre-wrap leading-relaxed">
+                        {notesModalRow.specialRequest}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Guest Profile Notes */}
+              {notesModalRow.guest.notes ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex gap-2.5">
+                    <UserFocus size={20} className="text-slate-600 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Guest History Notes
+                      </h4>
+                      <p className="mt-1 text-sm font-medium text-slate-800 whitespace-pre-wrap leading-relaxed">
+                        {notesModalRow.guest.notes}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setNotesModalRow(null)}
+                className="rounded-xl bg-slate-900 px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-all cursor-pointer active:scale-95"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>

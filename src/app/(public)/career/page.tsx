@@ -36,7 +36,7 @@ export default async function CareerPage() {
         ) : (
           <div className="flex flex-col gap-16">
             <div>
-              <h2 className="text-xs font-bold tracking-[0.1em] text-gray-500 uppercase mb-8 border-b border-gray-200 pb-3">
+              <h2 className="text-xs font-bold tracking-widest text-gray-500 uppercase mb-8 border-b border-gray-200 pb-3">
                 Current Openings
               </h2>
               <ul className="space-y-16">
@@ -47,7 +47,7 @@ export default async function CareerPage() {
                         {job.title}
                       </span>
                       <div className="hidden sm:block dotted-leader transition-opacity group-hover:opacity-100"></div>
-                      <span className="text-xs font-bold tracking-[0.1em] text-gray-500 uppercase whitespace-nowrap">
+                      <span className="text-xs font-bold tracking-widest text-gray-500 uppercase whitespace-nowrap">
                         {job.deadline ? `Closing: ${format(new Date(job.deadline), "MM/dd/yyyy")}` : "Open"}
                       </span>
                     </div>

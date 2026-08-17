@@ -93,10 +93,10 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
       if (data.success) {
         await onSuccess(data.data as CreateReservationResult);
       } else {
-        setError(data.error || "Gagal membuat reservasi.");
+        setError(data.error || "Failed to create reservation.");
       }
     } catch {
-      setError("Terjadi kesalahan jaringan.");
+      setError("A network error occurred. Please check your connection.");
     } finally {
       setLoading(false);
     }

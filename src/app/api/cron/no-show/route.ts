@@ -32,8 +32,8 @@ export async function GET(request: Request) {
     if (results.marked > 0) {
       await broadcastStaffNotification({
         type: "check_in",
-        title: "Auto no-show",
-        body: `${results.marked} reservasi ditandai no-show (lewat batas check-in).`,
+        title: "Auto No-Show",
+        body: `${results.marked} reservation(s) marked as no-show (past check-in grace period).`,
         relatedId: results.reservationIds[0] ?? null,
       }).catch((err) => console.error("[cron/no-show] staff notify failed:", err));
     }

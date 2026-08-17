@@ -96,6 +96,29 @@ export default function AdminCareersClient() {
     setIsAdding(true);
   };
 
+  const handleToggleStatus = async (job: CareerJob) => {
+    setIsSaving(true);
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/careers/${job.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isOpen: !job.isOpen }),
+      });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || data.message || "Failed to update status");
+
+      setJobs(jobs.map((j) => (j.id === job.id ? data.data : j)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setTimeout(() => setError(""), 5000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDeleteClick = (job: CareerJob) => {
     setDeleteJobPrompt(job);
   };
@@ -109,7 +132,7 @@ export default function AdminCareersClient() {
       if (!res.ok) throw new Error(await handleApiError(res));
 
       const data = await res.json();
-      if (!data.success) throw new Error(data.error || data.message || "Failed to close job posting");
+      if (!data.success) throw new Error(data.error || data.message || "Failed to delete job posting");
       
       void loadJobs();
       setDeleteJobPrompt(null);
@@ -323,11 +346,18 @@ export default function AdminCareersClient() {
                   </div>
                 )}
                 
-                <div className="pt-3 mt-3 border-t border-slate-50 flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEditClick(job)} className="text-[11px] font-bold text-primary hover:bg-primary/10 px-3 py-1.5 rounded transition-colors uppercase tracking-wider">Edit</button>
-                  {job.isOpen && (
-                    <button onClick={() => handleDeleteClick(job)} className="text-[11px] font-bold text-red-600 hover:bg-red-50 px-3 py-1.5 rounded transition-colors uppercase tracking-wider">Close Job</button>
-                  )}
+                <div className="pt-3 mt-3 border-t border-slate-50 flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button 
+                    onClick={() => handleToggleStatus(job)} 
+                    disabled={isSaving}
+                    className={`text-[11px] font-bold px-2.5 py-1.5 rounded transition-colors uppercase tracking-wider ${
+                      job.isOpen ? "text-amber-600 hover:bg-amber-50" : "text-green-600 hover:bg-green-50"
+                    }`}
+                  >
+                    {job.isOpen ? "Close Job" : "Reopen Job"}
+                  </button>
+                  <button onClick={() => handleEditClick(job)} className="text-[11px] font-bold text-primary hover:bg-primary/10 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wider">Edit</button>
+                  <button onClick={() => handleDeleteClick(job)} className="text-[11px] font-bold text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wider">Delete</button>
                 </div>
               </div>
             </div>
@@ -343,9 +373,9 @@ export default function AdminCareersClient() {
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Briefcase size={32} weight="fill" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Close Job Opening?</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Job Opening?</h3>
               <p className="text-sm text-slate-500">
-                The job <strong>&quot;{deleteJobPrompt.title}&quot;</strong> will be closed and will no longer appear on the public careers page.
+                The job <strong>&quot;{deleteJobPrompt.title}&quot;</strong> will be permanently deleted along with all its applications. This action cannot be undone.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">
@@ -361,7 +391,7 @@ export default function AdminCareersClient() {
                 disabled={isSaving} 
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-md disabled:opacity-50 transition-colors"
               >
-                {isSaving ? "Closing..." : "Yes, Close Job"}
+                {isSaving ? "Deleting..." : "Yes, Delete Job"}
               </button>
             </div>
           </div>

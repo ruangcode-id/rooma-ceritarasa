@@ -16,7 +16,7 @@ export default async function GalleryPage() {
     <div className="min-h-screen bg-white font-sans pt-32 pb-24 text-gray-900">
       <div className="max-w-7xl mx-auto px-4 md:px-8 text-center mb-16">
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-8 leading-tight">
-          GALLERY
+          Gallery
         </h1>
       </div>
 
@@ -45,7 +45,7 @@ export default async function GalleryPage() {
                   </div>
 
                   {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 pb-16">
+                  <div className="absolute inset-0 bg-linear-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 pb-16">
                     <span className="text-primary text-xs font-bold uppercase tracking-widest mb-2 block">
                       {img.category}
                     </span>

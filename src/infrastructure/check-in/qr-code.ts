@@ -9,13 +9,22 @@ const CHECK_IN_QR_OPTIONS = {
 /** Content-ID untuk inline attachment email (Resend). */
 export const CHECK_IN_QR_CID = "check-in-qr";
 
-/** QR berisi token khusus check-in — cocok untuk scanner fisik di front desk. */
+function getQrPayload(token: string): string {
+  const cleanToken = token.trim();
+  const appUrl = normalizeAppUrl(process.env.NEXT_PUBLIC_APP_URL);
+  if (appUrl) {
+    return `${appUrl}/check-in/${encodeURIComponent(cleanToken)}`;
+  }
+  return cleanToken;
+}
+
+/** QR berisi URL / token khusus check-in. */
 export async function generateCheckInQrDataUrl(token: string): Promise<string> {
-  return QRCode.toDataURL(token.trim(), CHECK_IN_QR_OPTIONS);
+  return QRCode.toDataURL(getQrPayload(token), CHECK_IN_QR_OPTIONS);
 }
 
 export async function generateCheckInQrBuffer(token: string): Promise<Buffer> {
-  return QRCode.toBuffer(token.trim(), {
+  return QRCode.toBuffer(getQrPayload(token), {
     ...CHECK_IN_QR_OPTIONS,
     type: "png",
   });
@@ -101,7 +110,7 @@ export function buildCheckInQrEmailBlock(checkInCode: string, imageSrc: string):
   return `<div style="margin-top:24px;padding:16px;border:1px solid #e2e8f0;border-radius:12px;text-align:center;">
 <p style="margin:0 0 12px;font-weight:600;">QR Check-in</p>
 <img src="${imageSrc}" alt="QR Check-in" width="200" height="200" style="display:block;margin:0 auto;" />
-<p style="margin:12px 0 0;font-size:14px;color:#475569;">Tunjukkan QR ini saat datang ke restoran.</p>
+<p style="margin:12px 0 0;font-size:14px;color:#475569;">Present this QR code upon arrival at the restaurant.</p>
 <p style="margin:8px 0 0;font-family:monospace;font-size:16px;letter-spacing:0.05em;"><strong>${checkInCode}</strong></p>
 </div>`;
 }

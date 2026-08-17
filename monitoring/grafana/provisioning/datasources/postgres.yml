@@ -1,0 +1,21 @@
+apiVersion: 1
+
+datasources:
+  - name: Rooma Postgres
+    uid: rooma-postgres
+    type: postgres
+    access: proxy
+    url: db:5432
+    user: ${GRAFANA_DB_USER}
+    isDefault: true
+    editable: false
+    jsonData:
+      database: ${POSTGRES_DB}
+      sslmode: disable
+      maxOpenConns: 5
+      maxIdleConns: 2
+      connMaxLifetime: 14400
+      postgresVersion: 1600
+      timescaledb: false
+    secureJsonData:
+      password: ${GRAFANA_DB_PASSWORD}

@@ -10,7 +10,7 @@ export async function notifyStaffPaymentConfirmed(params: {
 }): Promise<void> {
   await broadcastStaffNotification({
     type: "payment_confirmed",
-    title: "Pembayaran dikonfirmasi",
+    title: "Payment Confirmed",
     body: params.detail,
     relatedId: params.reservationId,
   });

@@ -186,7 +186,7 @@ function NavbarContent({ isHome }: { isHome: boolean }) {
 
       {/* FULLSCREEN OVERLAY MENU (HANYA MUNCUL DI MOBILE < lg) */}
       <div
-        className={`fixed inset-0 z-[60] bg-white/95 backdrop-blur-md text-slate-900 transition-opacity duration-500 lg:hidden ${
+        className={`fixed inset-0 z-60 bg-white/95 backdrop-blur-md text-slate-900 transition-opacity duration-500 lg:hidden ${
           isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
       >

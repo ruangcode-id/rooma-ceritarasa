@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { X, CalendarCheck, Clock, Users, Note, CheckCircle, Prohibit, XCircle } from "@phosphor-icons/react";
+import { X, CalendarCheck, Clock, Users, Note, CheckCircle, Prohibit, XCircle, Crown, UserFocus } from "@phosphor-icons/react";
 import { StatusBadge, type StatusBadgeOption } from "@/components/ui/StatusBadge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { format } from "date-fns";
@@ -21,6 +21,8 @@ type DetailReservation = {
     name: string;
     phone: string;
     email?: string | null;
+    notes?: string | null;
+    isVip?: boolean;
   };
   session: {
     id: string;
@@ -84,7 +86,7 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" 
@@ -119,7 +121,15 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
               {/* Header Info */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">{data.guest.name}</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-slate-900">{data.guest.name}</h3>
+                    {data.guest.isVip && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800 border border-amber-300">
+                        <Crown size={12} weight="fill" />
+                        VIP
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm font-medium text-slate-500 mt-1">{data.guest.phone}</p>
                   {data.guest.email && <p className="text-sm text-slate-400">{data.guest.email}</p>}
                 </div>
@@ -179,18 +189,32 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
                 </div>
               </div>
 
-              {/* Special Request */}
-              {data.specialRequest && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                  <div className="flex gap-3">
-                    <Note size={20} className="text-amber-600 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-sm font-bold text-amber-900">Catatan Khusus Tamu</h4>
-                      <p className="text-sm text-amber-800 mt-1">{data.specialRequest}</p>
+              {/* Notes & Special Requests */}
+              <div className="space-y-3">
+                {data.specialRequest && (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <div className="flex gap-3">
+                      <Note size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-bold text-amber-900">Catatan Reservasi Ini (Special Request)</h4>
+                        <p className="text-sm text-amber-800 mt-1">{data.specialRequest}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {data.guest.notes && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex gap-3">
+                      <UserFocus size={20} className="text-slate-500 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-800">Catatan Profil Tamu (Guest History Notes)</h4>
+                        <p className="text-sm text-slate-600 mt-1">{data.guest.notes}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           ) : null}
         </div>

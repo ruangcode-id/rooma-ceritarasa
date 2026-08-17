@@ -12,6 +12,7 @@ import {
   CreditCard,
   Clock,
   CalendarX,
+  Crown,
   UsersThree,
   Image,
   Briefcase,
@@ -30,6 +31,8 @@ const MENU_GROUPS = [
       { name: "Reservations", href: "/admin/reservations", icon: CalendarCheck },
       { name: "Payments", href: "/admin/payments", icon: CreditCard },
       { name: "Check-in", href: "/admin/check-in", icon: MapPinLine },
+      { name: "VIP Check-in", href: "/admin/vip-check-in", icon: Crown },
+      { name: "VIP History", href: "/admin/vip-logs", icon: Clock },
     ],
   },
   {
