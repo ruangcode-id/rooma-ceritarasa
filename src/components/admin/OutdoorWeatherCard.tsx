@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  Sun,
-  CloudRain,
+  Armchair,
   CircleNotch,
   WarningCircle,
+  CheckCircle,
+  XCircle,
 } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
 
@@ -93,7 +94,7 @@ export function OutdoorWeatherCard() {
 
   return (
     <>
-      {/* Card — sama persis dengan MetricCard & DashboardChart */}
+      {/* Outdoor Seating Control Card */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
@@ -102,10 +103,8 @@ export function OutdoorWeatherCard() {
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
               {isLoading ? (
                 <CircleNotch size={18} className="animate-spin" />
-              ) : isOpen ? (
-                <Sun size={18} weight="fill" />
               ) : (
-                <CloudRain size={18} weight="fill" />
+                <Armchair size={18} weight="fill" />
               )}
             </span>
 
@@ -116,27 +115,32 @@ export function OutdoorWeatherCard() {
                 </p>
                 {!isLoading && (
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide ${
                       isOpen
                         ? "bg-green-100 text-green-700"
                         : "bg-slate-100 text-slate-500"
                     }`}
                   >
-                    {isOpen ? "☀️ Open" : "🌧️ Rainy Mode"}
+                    <span
+                      className={`size-1.5 rounded-full ${
+                        isOpen ? "bg-green-600" : "bg-slate-400"
+                      }`}
+                    />
+                    {isOpen ? "Active (4 Tables · 16 Pax)" : "Inactive (Hidden)"}
                   </span>
                 )}
               </div>
               <p className="mt-1 text-sm leading-6 text-slate-600">
                 {isLoading
-                  ? "Checking outdoor area status..."
+                  ? "Checking outdoor seating status..."
                   : isOpen
-                  ? "4 outdoor tables (OUT-1–OUT-4 · 16 Pax) are active and available for guest reservations."
-                  : "Rainy mode active. All 4 outdoor tables are hidden from the reservation form."}
+                  ? "4 outdoor tables (OUT-1–OUT-4 · 16 Pax) are currently active and available for guest reservations."
+                  : "Outdoor tables are currently disabled and hidden from the guest reservation form."}
               </p>
             </div>
           </div>
 
-          {/* Right: action button — matches Refresh button style in SectionTitle */}
+          {/* Right: action button */}
           <div className="flex shrink-0 items-center gap-2 border-t border-slate-100 pt-4 sm:border-0 sm:pt-0">
             {isOpen ? (
               <button
@@ -145,8 +149,8 @@ export function OutdoorWeatherCard() {
                 disabled={isLoading || isUpdating}
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
               >
-                <CloudRain size={17} />
-                Enable Rainy Mode
+                <XCircle size={17} />
+                Disable Outdoor Tables
               </button>
             ) : (
               <button
@@ -155,8 +159,8 @@ export function OutdoorWeatherCard() {
                 disabled={isLoading || isUpdating}
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60"
               >
-                <Sun size={17} />
-                Open Outdoor Area
+                <CheckCircle size={17} />
+                Enable Outdoor Tables
               </button>
             )}
           </div>
@@ -180,21 +184,17 @@ export function OutdoorWeatherCard() {
           <section className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6 animate-in zoom-in-95 duration-200">
             <div className="flex flex-col items-center gap-4 text-center">
               <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-700">
-                {targetAction ? (
-                  <Sun size={24} weight="fill" />
-                ) : (
-                  <CloudRain size={24} weight="fill" />
-                )}
+                <Armchair size={24} weight="fill" />
               </span>
 
               <div>
                 <h2 className="text-xl font-semibold text-slate-950">
-                  {targetAction ? "Open Outdoor Area?" : "Enable Rainy Mode?"}
+                  {targetAction ? "Enable Outdoor Tables?" : "Disable Outdoor Tables?"}
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">
                   {targetAction
-                    ? "All 4 outdoor tables (OUT-1–OUT-4 · 16 Pax) will be activated and immediately available for guest reservations."
-                    : "All 4 outdoor tables (OUT-1–OUT-4) will be deactivated and hidden from the guest reservation form to prevent overbooking during bad weather."}
+                    ? "All 4 outdoor tables (OUT-1–OUT-4 · 16 Pax) will be activated and immediately available for guests to select on the reservation form."
+                    : "All 4 outdoor tables (OUT-1–OUT-4) will be deactivated and hidden from the reservation form."}
                 </p>
               </div>
             </div>
@@ -218,8 +218,8 @@ export function OutdoorWeatherCard() {
                 {isUpdating
                   ? "Processing..."
                   : targetAction
-                  ? "Yes, Open"
-                  : "Yes, Close"}
+                  ? "Yes, Enable"
+                  : "Yes, Disable"}
               </button>
             </div>
           </section>
