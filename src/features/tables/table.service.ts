@@ -1,6 +1,5 @@
 import { prisma } from "@/infrastructure/database/prisma";
 import { Prisma, ReservationStatus, TableStatus } from "@/generated/prisma/client";
-import { compareTableNumbers, sortByTableNumber } from "@/lib/table-sort";
 
 const startOfUTCDate = (date: Date) => {
   return new Date(
@@ -233,22 +232,20 @@ export const getPublicTableAvailability = async (
     },
   });
 
-  return sortByTableNumber(
-    allTables.map((t) => ({
-      id: t.id,
-      tableNumber: t.tableNumber,
-      capacity: t.capacity,
-      posX: t.posX,
-      posY: t.posY,
-      status: t.status,
-      isActive: t.isActive,
-      isAvailable:
-        t.status !== TableStatus.MAINTENANCE &&
-        t.status !== TableStatus.OCCUPIED &&
-        t.status !== TableStatus.RESERVED &&
-        t.reservationTables.length === 0,
-    })),
-  );
+  return allTables.map((t) => ({
+    id: t.id,
+    tableNumber: t.tableNumber,
+    capacity: t.capacity,
+    posX: t.posX,
+    posY: t.posY,
+    status: t.status,
+    isActive: t.isActive,
+    isAvailable:
+      t.status !== TableStatus.MAINTENANCE &&
+      t.status !== TableStatus.OCCUPIED &&
+      t.status !== TableStatus.RESERVED &&
+      t.reservationTables.length === 0,
+  }));
 };
 
 export const getAvailableTables = async (
@@ -284,12 +281,7 @@ export const getAvailableTables = async (
     },
   });
 
-  return [...tables].sort((left, right) => {
-    if (left.capacity !== right.capacity) {
-      return left.capacity - right.capacity;
-    }
-    return compareTableNumbers(left.tableNumber, right.tableNumber);
-  });
+  return tables;
 };
 
 export const autoAssignTables = async (

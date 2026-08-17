@@ -6,12 +6,7 @@ import GlobalNotificationToast from "../admin/GlobalNotificationToast";
 import { AdminScannerListener } from "../admin/AdminScannerListener";
 import { List } from "@phosphor-icons/react";
 
-interface AdminLayoutProps {
-  children: React.ReactNode;
-  user?: { name?: string | null; email?: string | null };
-}
-
-export default function AdminLayout({ children, user }: AdminLayoutProps) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -32,7 +27,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
         </button>
       </div>
 
-      <AdminSidebar user={user} isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <AdminSidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
       
       {/* Add mt-16 on mobile to account for fixed top bar */}
       <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-10 overflow-y-auto mt-16 lg:mt-0">

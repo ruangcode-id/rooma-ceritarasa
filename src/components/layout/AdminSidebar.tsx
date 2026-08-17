@@ -58,29 +58,16 @@ const MENU_GROUPS = [
 ];
 
 interface AdminSidebarProps {
-  user?: { name?: string | null; email?: string | null };
   isOpen?: boolean;
   onClose?: () => void;
 }
 
 export default function AdminSidebar({
-  user,
   isOpen = false,
   onClose,
 }: AdminSidebarProps) {
   const pathname = usePathname();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  const userName = user?.name || "Admin Staff";
-  const userEmail = user?.email || "admin@rooma.com";
-  const userInitials =
-    userName
-      .split(" ")
-      .filter(Boolean)
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) || "AD";
 
   return (
     <>
@@ -161,16 +148,16 @@ export default function AdminSidebar({
           {/* User Profile & Sign Out Unified */}
           <div className="flex items-center justify-between rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
             <div className="flex min-w-0 items-center">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
-                {userInitials}
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
+                SA
               </div>
 
               <div className="ml-3 min-w-0">
                 <p className="truncate text-sm font-semibold text-white">
-                  {userName}
+                  Admin Staff
                 </p>
                 <p className="truncate text-xs text-rose-300/60">
-                  {userEmail}
+                  admin@rooma.com
                 </p>
               </div>
             </div>
@@ -178,7 +165,7 @@ export default function AdminSidebar({
             <button
               title="Sign Out"
               onClick={() => setShowLogoutConfirm(true)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-200/70 transition-all duration-200 hover:bg-[#4a1019] hover:text-white"
+              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-rose-200/70 transition-all duration-200 hover:bg-[#4a1019] hover:text-white"
             >
               <SignOut size={20} />
             </button>

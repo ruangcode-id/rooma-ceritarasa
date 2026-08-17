@@ -1,5 +1,6 @@
 import { UserRepository } from "@/infrastructure/repositories/user.repository";
 import { createUserSchema, updateUserSchema } from "@/validations/user.validation";
+import { requireRole } from "@/lib/auth";
 import { Prisma } from "@/generated/prisma/client";
 import bcrypt from "bcryptjs";
 
@@ -12,29 +13,36 @@ function isUniqueConstraintError(error: unknown) {
 
 export const UserUseCase = {
   /**
-   * Retrieves a paginated list of users.
-   * Auth is enforced at the route handler via requireOwnerApiSession().
+   * Retrieves a paginated list of users
+   * Protected: ONLY OWNER
    */
   getUsersAction: async (page: number = 1, limit: number = 20) => {
+    await requireRole(["owner"]);
+    
     const skip = (page - 1) * limit;
     return UserRepository.getUsers(skip, limit);
   },
 
   /**
-   * Retrieves a single user by ID.
-   * Auth is enforced at the route handler via requireOwnerApiSession().
+   * Retrieves a single user by ID
+   * Protected: ONLY OWNER
    */
   getUserByIdAction: async (id: string) => {
+    await requireRole(["owner"]);
+    
     const user = await UserRepository.getUserById(id);
     if (!user) throw new Error("User not found");
+    
     return user;
   },
 
   /**
-   * Creates a new user.
-   * Auth is enforced at the route handler via requireOwnerApiSession().
+   * Creates a new user
+   * Protected: ONLY OWNER
    */
   createUserAction: async (data: unknown) => {
+    await requireRole(["owner"]);
+
     const parsedData = createUserSchema.parse(data);
 
     // Hash password
@@ -57,10 +65,12 @@ export const UserUseCase = {
   },
 
   /**
-   * Updates an existing user.
-   * Auth is enforced at the route handler via requireOwnerApiSession().
+   * Updates an existing user
+   * Protected: ONLY OWNER
    */
   updateUserAction: async (id: string, data: unknown) => {
+    await requireRole(["owner"]);
+
     const parsedData = updateUserSchema.parse(data);
 
     const { password, ...otherFields } = parsedData;
@@ -81,14 +91,16 @@ export const UserUseCase = {
   },
 
   /**
-   * Soft-deletes (deactivates) a user.
-   * Auth is enforced at the route handler via requireOwnerApiSession().
-   * The caller (route handler) passes its own userId to prevent self-deletion.
+   * Deletes a user
+   * Protected: ONLY OWNER
    */
-  deleteUserAction: async (id: string, requestingUserId: string) => {
-    if (requestingUserId === id) {
+  deleteUserAction: async (id: string) => {
+    const currentUser = await requireRole(["owner"]);
+
+    if (currentUser.id === id) {
       throw new Error("Cannot delete your own account");
     }
+
     return UserRepository.deleteUser(id);
   },
 };

@@ -4,27 +4,6 @@ import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { jsonValidationError } from "@/lib/api-envelope";
 import { ZodError } from "zod";
 
-const toDateOnly = (value: Date | string) => {
-  if (typeof value === "string") {
-    return value.slice(0, 10);
-  }
-  return value.toISOString().slice(0, 10);
-};
-
-const serializeBlockedDate = (row: {
-  id: string;
-  date: Date;
-  reason: string | null;
-  createdBy: string | null;
-  createdAt: Date;
-}) => ({
-  id: row.id,
-  date: toDateOnly(row.date),
-  reason: row.reason,
-  createdBy: row.createdBy,
-  createdAt: row.createdAt.toISOString(),
-});
-
 const readBody = async (req: NextRequest) => {
   const contentType = req.headers.get("content-type") ?? "";
 
@@ -51,6 +30,7 @@ const readBody = async (req: NextRequest) => {
     return obj;
   }
 
+  // If no content-type but has body, Next may still parse text
   const text = await req.text();
   if (!text.trim()) return {};
 
@@ -62,16 +42,9 @@ export async function GET() {
     const authResult = await requireAdminApiSession();
     if (!authResult.ok) return authResult.response;
     const blockedDates = await BlockedDateUseCase.getBlockedDatesAction();
-    return NextResponse.json({
-      success: true,
-      data: blockedDates.map(serializeBlockedDate),
-    });
-  } catch (error: unknown) {
-    console.error("/api/admin/blocked-dates GET error:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ success: true, data: blockedDates });
+  } catch {
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
 
@@ -80,57 +53,29 @@ export async function POST(req: NextRequest) {
     const authResult = await requireAdminApiSession();
     if (!authResult.ok) return authResult.response;
     const body = await readBody(req);
-    const created = await BlockedDateUseCase.createBlockedDatesAction(
-      body,
-      authResult.userId,
-    );
-    return NextResponse.json(
-      { success: true, data: created.map(serializeBlockedDate) },
-      { status: 201 },
-    );
+    const created = await BlockedDateUseCase.createBlockedDatesAction(body);
+    return NextResponse.json({ success: true, data: created }, { status: 201 });
   } catch (error: unknown) {
     if (error instanceof ZodError) {
       return jsonValidationError(error);
     }
     if (error instanceof Error) {
       if (error.message === "Invalid JSON") {
-        return NextResponse.json(
-          { success: false, error: "Invalid JSON" },
-          { status: 400 },
-        );
+        return NextResponse.json({ success: false, error: "Invalid JSON" }, { status: 400 });
       }
       if (error.message === "Unsupported Content-Type") {
-        return NextResponse.json(
-          { success: false, error: "Unsupported Content-Type" },
-          { status: 415 },
-        );
+        return NextResponse.json({ success: false, error: "Unsupported Content-Type" }, { status: 415 });
       }
       if (error.message === "Invalid date") {
-        return NextResponse.json(
-          { success: false, error: "Invalid date" },
-          { status: 400 },
-        );
+        return NextResponse.json({ success: false, error: "Invalid date" }, { status: 400 });
       }
-      if (
-        error.message.includes("Provide either") ||
-        error.message.includes("dateStart must be")
-      ) {
-        return NextResponse.json(
-          { success: false, error: "Invalid date range parameters" },
-          { status: 400 },
-        );
+      if (error.message.includes("Provide either") || error.message.includes("dateStart must be")) {
+        return NextResponse.json({ success: false, error: "Invalid date range parameters" }, { status: 400 });
       }
       if (error.message.includes("confirmed reservations")) {
-        return NextResponse.json(
-          { success: false, error: "Cannot block dates with confirmed reservations" },
-          { status: 400 },
-        );
+        return NextResponse.json({ success: false, error: "Cannot block dates with confirmed reservations" }, { status: 400 });
       }
     }
-    console.error("/api/admin/blocked-dates POST error:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
   }
 }
