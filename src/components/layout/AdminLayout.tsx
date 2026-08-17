@@ -55,8 +55,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       />
       
       {/* Add mt-16 on mobile to account for fixed top bar */}
-      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-10 overflow-y-auto mt-16 lg:mt-0">
-        <div className="mx-auto max-w-6xl">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-10 pb-20 overflow-y-auto mt-16 lg:mt-0 min-h-screen">
+        <div className="mx-auto max-w-6xl space-y-8">
           {children}
         </div>
       </main>

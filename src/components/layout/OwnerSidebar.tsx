@@ -48,7 +48,7 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
         }`}
       >
         {/* Brand Header */}
-        <div className="flex h-20 items-center justify-between border-b border-[#3a0d13] px-6">
+        <div className="flex h-20 shrink-0 items-center justify-between border-b border-[#3a0d13] px-6">
           <span className="font-sans text-xl font-semibold uppercase tracking-widest text-white">
             Owner Panel
           </span>
@@ -98,7 +98,7 @@ export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarPr
         </div>
 
         {/* Footer */}
-        <div className="border-t border-[#3a0d13] p-4">
+        <div className="shrink-0 border-t border-[#3a0d13] p-4">
           {/* User Profile & Sign Out Unified */}
           <div className="flex items-center gap-2 rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">

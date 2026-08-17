@@ -93,7 +93,7 @@ export function OutdoorWeatherCard() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
           {/* Left: icon + label + description */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-start sm:items-center gap-4 min-w-0 flex-1">
             <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-slate-700">
               {isLoading ? (
                 <CircleNotch size={18} className="animate-spin" />
@@ -104,7 +104,7 @@ export function OutdoorWeatherCard() {
               )}
             </span>
 
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-semibold text-slate-500">
                   Outdoor Seating Area
@@ -167,10 +167,10 @@ export function OutdoorWeatherCard() {
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
             <div className="p-6 text-center">
-              <span className="mx-auto mb-4 grid size-12 place-items-center rounded-lg bg-slate-100 text-slate-700">
+              <span className="mx-auto mb-4 grid size-12 place-items-center rounded-xl bg-slate-100 text-slate-700">
                 {targetAction ? (
                   <Sun size={24} weight="fill" />
                 ) : (
@@ -194,7 +194,7 @@ export function OutdoorWeatherCard() {
                 type="button"
                 onClick={() => setShowConfirmModal(false)}
                 disabled={isUpdating}
-                className="flex-1 rounded-lg border border-slate-200 bg-white py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
+                className="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -202,7 +202,7 @@ export function OutdoorWeatherCard() {
                 type="button"
                 onClick={executeToggle}
                 disabled={isUpdating}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-slate-900 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-900 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:opacity-60"
               >
                 {isUpdating && <CircleNotch size={15} className="animate-spin" />}
                 {isUpdating
