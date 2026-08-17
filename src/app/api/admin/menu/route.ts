@@ -95,6 +95,8 @@ export async function POST(request: NextRequest) {
     price: formString(formData, "price"),
     sortOrder: formString(formData, "sortOrder"),
     isActive: formString(formData, "isActive"),
+    isAvailable: formString(formData, "isAvailable"),
+    tags: formString(formData, "tags"),
   });
 
   if (!parsed.success) {

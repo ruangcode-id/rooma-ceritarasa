@@ -31,6 +31,14 @@ const DEFAULT_MENU_CATEGORIES = [
 const STORAGE_KEY_CATEGORIES = "rooma_admin_menu_categories";
 const STORAGE_KEY_DELETED = "rooma_admin_deleted_categories";
 
+const AVAILABLE_TAGS = [
+  { id: "Chef's Special", label: "Chef's Special ⭐" },
+  { id: "Spicy", label: "Spicy 🌶️" },
+  { id: "Vegetarian", label: "Vegetarian 🥦" },
+  { id: "Gluten-Free", label: "Gluten-Free 🌾" },
+  { id: "Signature", label: "Signature 👑" },
+];
+
 type MenuPhotoData = {
   id: string;
   title: string;
@@ -40,6 +48,8 @@ type MenuPhotoData = {
   price: number | null;
   sortOrder: number;
   isActive: boolean;
+  isAvailable?: boolean;
+  tags?: string[];
   createdAt: string;
 };
 
@@ -80,6 +90,8 @@ export default function AdminMenuClient() {
   const [customCategory, setCustomCategory] = useState("");
   const [price, setPrice] = useState("");
   const [sortOrder, setSortOrder] = useState("0");
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // Category Management State (initialized from localStorage lazily)
   const [managedCategories, setManagedCategories] = useState<string[]>(() => {
@@ -136,6 +148,8 @@ export default function AdminMenuClient() {
     setCustomCategory("");
     setPrice("");
     setSortOrder("0");
+    setIsAvailable(true);
+    setSelectedTags([]);
     setError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -148,6 +162,8 @@ export default function AdminMenuClient() {
     setCustomCategory(availableCategories.includes(photo.category) ? "" : photo.category);
     setPrice(photo.price != null ? String(photo.price) : "");
     setSortOrder(String(photo.sortOrder));
+    setIsAvailable(photo.isAvailable ?? true);
+    setSelectedTags(photo.tags ?? []);
     setPreviewUrl(photo.imageUrl);
     setIsFormOpen(true);
   };
@@ -166,6 +182,12 @@ export default function AdminMenuClient() {
 
   const getEffectiveCategory = () =>
     category === "custom" ? customCategory.trim() : category;
+
+  const toggleTag = (tagId: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
+    );
+  };
 
   // Add new category
   const handleAddCategory = (e: React.FormEvent) => {
@@ -264,6 +286,8 @@ export default function AdminMenuClient() {
           if (description) formData.append("description", description);
           if (price) formData.append("price", price);
           formData.append("sortOrder", sortOrder);
+          formData.append("isAvailable", String(isAvailable));
+          formData.append("tags", JSON.stringify(selectedTags));
           res = await fetch(`/api/admin/menu/${editingPhoto.id}`, { method: "PUT", body: formData });
         } else {
           res = await fetch(`/api/admin/menu/${editingPhoto.id}`, {
@@ -275,6 +299,8 @@ export default function AdminMenuClient() {
               description: description || null,
               price: price ? parseInt(price) : null,
               sortOrder: parseInt(sortOrder),
+              isAvailable,
+              tags: selectedTags,
             }),
           });
         }
@@ -287,6 +313,8 @@ export default function AdminMenuClient() {
         if (price) formData.append("price", price);
         formData.append("sortOrder", sortOrder);
         formData.append("isActive", "true");
+        formData.append("isAvailable", String(isAvailable));
+        formData.append("tags", JSON.stringify(selectedTags));
         res = await fetch("/api/admin/menu", { method: "POST", body: formData });
       }
 
@@ -323,7 +351,25 @@ export default function AdminMenuClient() {
       const res = await fetch(`/api/admin/menu/${photo.id}`, { method: "PATCH" });
       if (!res.ok) throw new Error(await handleApiError(res));
       const data = await res.json();
-      if (!data.success) throw new Error(data.message || "Failed to toggle");
+      if (!data.success) throw new Error(data.message || "Failed to toggle status");
+      setPhotos((prev) => prev.map((p) => (p.id === photo.id ? data.data : p)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setTimeout(() => setError(""), 4000);
+    }
+  };
+
+  const handleToggleAvailability = async (photo: MenuPhotoData) => {
+    try {
+      const nextAvailable = photo.isAvailable === false ? true : false;
+      const res = await fetch(`/api/admin/menu/${photo.id}/availability`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isAvailable: nextAvailable }),
+      });
+      if (!res.ok) throw new Error(await handleApiError(res));
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Failed to toggle availability");
       setPhotos((prev) => prev.map((p) => (p.id === photo.id ? data.data : p)));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -751,13 +797,60 @@ export default function AdminMenuClient() {
                 />
               </div>
 
+              {/* Dietary / Highlight Tags */}
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">
+                  Dietary &amp; Special Tags (Optional)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {AVAILABLE_TAGS.map((tag) => {
+                    const isSelected = selectedTags.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
+                          isSelected
+                            ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
+                        }`}
+                      >
+                        {tag.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Availability Status */}
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div>
+                  <p className="text-xs font-semibold text-slate-900">Stock Availability</p>
+                  <p className="text-[11px] text-slate-500">
+                    {isAvailable ? "Available for ordering" : "Sold Out / Unavailable today"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAvailable(!isAvailable)}
+                  className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
+                    isAvailable
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-rose-100 text-rose-800"
+                  }`}
+                >
+                  {isAvailable ? "● In Stock" : "○ Sold Out"}
+                </button>
+              </div>
+
               {/* Description */}
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
                   Description (Optional)
                 </label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   placeholder="A brief description of this menu item or photo..."
                   value={description} onChange={(e) => setDescription(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
@@ -825,86 +918,121 @@ export default function AdminMenuClient() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredPhotos.map((photo) => (
-            <div
-              key={photo.id}
-              className={`relative group rounded-2xl overflow-hidden bg-slate-100 shadow-sm border transition-all ${
-                photo.isActive ? "border-transparent hover:shadow-md" : "border-slate-200 opacity-60"
-              }`}
-            >
-              {/* Image */}
-              <div className="relative aspect-[4/3] w-full overflow-hidden">
-                <Image
-                  src={photo.imageUrl}
-                  alt={photo.title}
-                  fill
-                  sizes="(max-width:640px) 100vw,(max-width:768px) 50vw,25vw"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+          {filteredPhotos.map((photo) => {
+            const isSoldOut = photo.isAvailable === false;
+            return (
+              <div
+                key={photo.id}
+                className={`relative group rounded-2xl overflow-hidden bg-white shadow-xs border transition-all ${
+                  photo.isActive ? "border-slate-200 hover:shadow-md hover:border-slate-300" : "border-slate-200 opacity-60"
+                }`}
+              >
+                {/* Image */}
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+                  <Image
+                    src={photo.imageUrl}
+                    alt={photo.title}
+                    fill
+                    sizes="(max-width:640px) 100vw,(max-width:768px) 50vw,25vw"
+                    className={`object-cover transition-transform duration-500 group-hover:scale-105 ${isSoldOut ? "grayscale-30 brightness-95" : ""}`}
+                  />
 
-                {/* Priority Badge */}
-                <div className="absolute top-2.5 left-2.5 z-10">
-                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-black/60 text-white/90 backdrop-blur-md">
-                    Order #{photo.sortOrder}
-                  </span>
-                </div>
-
-                {/* Hover overlay with actions — matches AdminGalleryClient pattern */}
-                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
-                  <div className="flex justify-between items-end w-full">
-                    {/* Eye toggle */}
+                  {/* Badges: Priority + Availability */}
+                  <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none">
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-black/60 text-white/90 backdrop-blur-md">
+                      #{photo.sortOrder}
+                    </span>
                     <button
-                      onClick={() => handleToggleStatus(photo)}
-                      title={photo.isActive ? "Deactivate" : "Activate"}
-                      className="text-white/80 hover:text-white px-1.5 py-0.5 rounded bg-white/10 backdrop-blur-md transition-colors text-xs font-bold -translate-y-1 group-hover:translate-y-0"
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleToggleAvailability(photo); }}
+                      className={`pointer-events-auto px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs transition-colors ${
+                        isSoldOut
+                          ? "bg-rose-600 text-white hover:bg-rose-700"
+                          : "bg-emerald-600 text-white hover:bg-emerald-700"
+                      }`}
+                      title="Click to toggle In Stock / Sold Out"
                     >
-                      {photo.isActive ? (
-                        <span className="flex items-center gap-1"><EyeSlash size={13} weight="bold" /> Hide</span>
-                      ) : (
-                        <span className="flex items-center gap-1"><Eye size={13} weight="bold" /> Show</span>
-                      )}
+                      {isSoldOut ? "Sold Out" : "In Stock"}
                     </button>
-                    {/* Edit + Delete */}
-                    <div className="flex gap-1 bg-white/20 backdrop-blur-md rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity -translate-y-2.5 group-hover:translate-y-0">
+                  </div>
+
+                  {/* Hover overlay with actions */}
+                  <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
+                    <div className="flex justify-between items-end w-full">
+                      {/* Eye toggle */}
                       <button
-                        onClick={() => openEditForm(photo)}
-                        className="text-white hover:text-primary px-1.5 py-0.5 rounded transition-colors text-xs font-bold"
+                        onClick={() => handleToggleStatus(photo)}
+                        title={photo.isActive ? "Deactivate" : "Activate"}
+                        className="text-white/80 hover:text-white px-1.5 py-0.5 rounded bg-white/10 backdrop-blur-md transition-colors text-xs font-bold -translate-y-1 group-hover:translate-y-0"
                       >
-                        Edit
+                        {photo.isActive ? (
+                          <span className="flex items-center gap-1"><EyeSlash size={13} weight="bold" /> Hide</span>
+                        ) : (
+                          <span className="flex items-center gap-1"><Eye size={13} weight="bold" /> Show</span>
+                        )}
                       </button>
-                      <button
-                        onClick={() => setDeletePrompt(photo)}
-                        className="text-red-300 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors text-xs font-bold"
-                      >
-                        Delete
-                      </button>
+                      {/* Edit + Delete */}
+                      <div className="flex gap-1 bg-white/20 backdrop-blur-md rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity -translate-y-2.5 group-hover:translate-y-0">
+                        <button
+                          onClick={() => openEditForm(photo)}
+                          className="text-white hover:text-primary px-1.5 py-0.5 rounded transition-colors text-xs font-bold"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => setDeletePrompt(photo)}
+                          className="text-red-300 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors text-xs font-bold"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Info */}
-              <div className="p-3">
-                <div className="flex items-start justify-between gap-2 mb-1">
-                  <h4 className="text-sm font-semibold text-slate-900 leading-tight line-clamp-1">{photo.title}</h4>
-                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                    {photo.category}
-                  </span>
+                {/* Info */}
+                <div className="p-3.5">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <h4 className="text-sm font-semibold text-slate-900 leading-tight line-clamp-1">{photo.title}</h4>
+                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      {photo.category}
+                    </span>
+                  </div>
+
+                  {/* Dietary / Special Tags */}
+                  {photo.tags && photo.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-1.5">
+                      {photo.tags.map((t) => (
+                        <span key={t} className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {photo.description && (
+                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-1.5">{photo.description}</p>
+                  )}
+
+                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                    {photo.price != null ? (
+                      <p className={`text-xs font-semibold ${isSoldOut ? "text-slate-400 line-through" : "text-slate-800"}`}>
+                        {currencyFormatter.format(photo.price)}
+                      </p>
+                    ) : (
+                      <span className="text-[11px] text-slate-400 italic">No price</span>
+                    )}
+
+                    {!photo.isActive && (
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                        Hidden
+                      </span>
+                    )}
+                  </div>
                 </div>
-                {photo.description && (
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-1">{photo.description}</p>
-                )}
-                {photo.price != null && (
-                  <p className="text-xs font-semibold text-slate-700">{currencyFormatter.format(photo.price)}</p>
-                )}
-                {!photo.isActive && (
-                  <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                    Inactive
-                  </span>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

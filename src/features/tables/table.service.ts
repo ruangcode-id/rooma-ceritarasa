@@ -399,6 +399,8 @@ export type OutdoorAreaStatus = {
   activeTables: number;
   totalCapacity: number;
   activeCapacity: number;
+  activeTodayBookingsCount: number;
+  affectedTableNumbers: string[];
   tables: Array<{
     id: string;
     tableNumber: string;
@@ -446,16 +448,33 @@ export async function ensureOutdoorTables(): Promise<void> {
 export async function getOutdoorAreaStatus(): Promise<OutdoorAreaStatus> {
   await ensureOutdoorTables();
 
-  const outdoorTables = await prisma.table.findMany({
-    where: { tableNumber: { startsWith: "OUT-" } },
-    orderBy: { tableNumber: "asc" },
-    select: {
-      id: true,
-      tableNumber: true,
-      capacity: true,
-      isActive: true,
-    },
-  });
+  const now = new Date();
+  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+  const [outdoorTables, outdoorReservationsToday] = await Promise.all([
+    prisma.table.findMany({
+      where: { tableNumber: { startsWith: "OUT-" } },
+      orderBy: { tableNumber: "asc" },
+      select: {
+        id: true,
+        tableNumber: true,
+        capacity: true,
+        isActive: true,
+      },
+    }),
+    prisma.reservationTable.findMany({
+      where: {
+        table: { tableNumber: { startsWith: "OUT-" } },
+        reservation: {
+          date: todayStart,
+          status: { in: [ReservationStatus.confirmed, ReservationStatus.checked_in, ReservationStatus.pending] },
+        },
+      },
+      select: {
+        table: { select: { tableNumber: true } },
+      },
+    }),
+  ]);
 
   const totalTables = outdoorTables.length;
   const activeTables = outdoorTables.filter((t) => t.isActive).length;
@@ -465,6 +484,10 @@ export async function getOutdoorAreaStatus(): Promise<OutdoorAreaStatus> {
     .reduce((acc, t) => acc + t.capacity, 0);
 
   const isOpen = activeTables > 0;
+  const affectedTableNumbers = Array.from(
+    new Set(outdoorReservationsToday.map((r) => r.table.tableNumber)),
+  );
+  const activeTodayBookingsCount = outdoorReservationsToday.length;
 
   return {
     isOpen,
@@ -472,6 +495,8 @@ export async function getOutdoorAreaStatus(): Promise<OutdoorAreaStatus> {
     activeTables,
     totalCapacity,
     activeCapacity,
+    activeTodayBookingsCount,
+    affectedTableNumbers,
     tables: outdoorTables,
   };
 }

@@ -15,6 +15,8 @@ type OutdoorStatusData = {
   activeTables: number;
   totalCapacity: number;
   activeCapacity: number;
+  activeTodayBookingsCount?: number;
+  affectedTableNumbers?: string[];
   tables: Array<{
     id: string;
     tableNumber: string;
@@ -208,6 +210,21 @@ export function OutdoorWeatherCard() {
                     ? "All 4 outdoor tables (OUT-1–OUT-4 · 16 Pax) will be activated and immediately available for guests to select on the reservation form."
                     : "All 4 outdoor tables (OUT-1–OUT-4) will be deactivated and hidden from the reservation form."}
                 </p>
+
+                {/* Smart Warning: Active Bookings Today on Outdoor Tables */}
+                {!targetAction && status?.activeTodayBookingsCount && status.activeTodayBookingsCount > 0 ? (
+                  <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 text-left">
+                    <WarningCircle size={17} weight="fill" className="text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-amber-900">
+                        Attention: {status.activeTodayBookingsCount} Active {status.activeTodayBookingsCount === 1 ? "Booking" : "Bookings"} Today
+                      </p>
+                      <p className="mt-0.5 leading-relaxed text-amber-800">
+                        Outdoor table(s) ({status.affectedTableNumbers?.join(", ") || "OUT"}) have active reservations today. Please remember to reassign these guests to indoor seating.
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 

@@ -2,10 +2,20 @@
 
 import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import Image from "next/image";
-import { X, MagnifyingGlassPlus, CaretLeft, CaretRight } from "@phosphor-icons/react";
+import {
+  X,
+  MagnifyingGlassPlus,
+  CaretLeft,
+  CaretRight,
+  MagnifyingGlass,
+  Sparkle,
+  Pepper,
+  Plant,
+  WarningCircle,
+} from "@phosphor-icons/react";
 
 /* ------------------------------------------------------------------ */
-/* Types                                                                 */
+/* Types                                                              */
 /* ------------------------------------------------------------------ */
 export type MenuPhotoItem = {
   id: string;
@@ -17,6 +27,8 @@ export type MenuPhotoItem = {
   width: number | null;
   height: number | null;
   sortOrder: number;
+  isAvailable?: boolean;
+  tags?: string[];
   createdAt: string;
 };
 
@@ -26,7 +38,7 @@ type Props = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Scroll-reveal wrapper                                                 */
+/* Scroll-reveal wrapper                                              */
 /* ------------------------------------------------------------------ */
 function Reveal({
   children,
@@ -72,7 +84,47 @@ function Reveal({
 }
 
 /* ------------------------------------------------------------------ */
-/* Lightbox — with fixed keyboard handler and Prev/Next nav             */
+/* Tag Badge Component                                                */
+/* ------------------------------------------------------------------ */
+function TagBadge({ tag }: { tag: string }) {
+  const cleanTag = tag.trim().toLowerCase();
+
+  if (cleanTag.includes("chef") || cleanTag.includes("special") || cleanTag.includes("signature")) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">
+        <Sparkle size={11} weight="fill" className="text-amber-500" />
+        {tag}
+      </span>
+    );
+  }
+
+  if (cleanTag.includes("spicy") || cleanTag.includes("pedas")) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">
+        <Pepper size={11} weight="fill" className="text-rose-500" />
+        {tag}
+      </span>
+    );
+  }
+
+  if (cleanTag.includes("veg") || cleanTag.includes("plant") || cleanTag.includes("vegan")) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+        <Plant size={11} weight="fill" className="text-emerald-500" />
+        {tag}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+      {tag}
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Lightbox — with keyboard handler and Prev/Next nav                 */
 /* ------------------------------------------------------------------ */
 const currencyFmt = new Intl.NumberFormat("id-ID", {
   style: "currency",
@@ -103,8 +155,6 @@ function Lightbox({
     if (currentIndex < allPhotos.length - 1) onSelectPhoto(allPhotos[currentIndex + 1]);
   }, [allPhotos, currentIndex, onSelectPhoto]);
 
-  // ✅ Bug fix: useEffect with proper dep array so keyboard listeners
-  //    are correctly re-bound when the photo changes
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -118,6 +168,8 @@ function Lightbox({
       document.body.style.overflow = "";
     };
   }, [onClose, handlePrev, handleNext]);
+
+  const isSoldOut = photo.isAvailable === false;
 
   return (
     <div
@@ -160,9 +212,8 @@ function Lightbox({
         className="relative bg-white rounded-2xl overflow-hidden max-w-3xl w-full max-h-[90vh] flex flex-col md:flex-row shadow-2xl animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Image panel — blurred bg fills space, sharp image centered on top */}
-        <div className="relative flex-1 min-h-[240px] md:min-h-[420px] overflow-hidden">
-          {/* Blurred backdrop — same image, scaled up, desaturated slightly */}
+        {/* Image panel */}
+        <div className="relative flex-1 min-h-[240px] md:min-h-[420px] overflow-hidden bg-slate-950">
           <Image
             src={photo.imageUrl}
             alt=""
@@ -172,9 +223,7 @@ function Lightbox({
             aria-hidden="true"
             priority
           />
-          {/* Soft dark vignette over blur */}
           <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
-          {/* Sharp main image centered */}
           <div className="relative z-10 flex items-center justify-center w-full h-full p-4">
             <div className="relative w-full h-full max-h-[70vh]">
               <Image
@@ -182,15 +231,22 @@ function Lightbox({
                 alt={photo.title}
                 fill
                 sizes="(max-width: 768px) 90vw, 55vw"
-                className="object-contain drop-shadow-2xl"
+                className={`object-contain drop-shadow-2xl ${isSoldOut ? "grayscale-30 brightness-90" : ""}`}
                 priority
               />
+              {isSoldOut && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="bg-slate-900/85 backdrop-blur-md text-rose-200 border border-rose-500/30 px-4 py-2 rounded-xl text-sm font-semibold tracking-wider uppercase shadow-xl">
+                    Sold Out for Today
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Info Panel */}
-        <div className="p-6 md:w-68 shrink-0 flex flex-col justify-center bg-white border-t md:border-t-0 md:border-l border-slate-100">
+        <div className="p-6 md:w-72 shrink-0 flex flex-col justify-center bg-white border-t md:border-t-0 md:border-l border-slate-100">
           <div className="flex items-center justify-between gap-2 mb-2.5">
             <span className="text-[10px] uppercase tracking-[0.25em] text-primary font-semibold">
               {photo.category}
@@ -206,14 +262,30 @@ function Lightbox({
             {photo.title}
           </h3>
 
+          {/* Tags */}
+          {photo.tags && photo.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-3">
+              {photo.tags.map((tag) => (
+                <TagBadge key={tag} tag={tag} />
+              ))}
+            </div>
+          )}
+
           {photo.price != null && (
-            <p className="text-sm font-semibold text-slate-800 mb-3">
-              {currencyFmt.format(photo.price)}
-            </p>
+            <div className="flex items-center gap-2 mb-3">
+              <p className="text-base font-semibold text-slate-900">
+                {currencyFmt.format(photo.price)}
+              </p>
+              {isSoldOut && (
+                <span className="text-xs text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded-md">
+                  Sold Out
+                </span>
+              )}
+            </div>
           )}
 
           {photo.description && (
-            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
               {photo.description}
             </p>
           )}
@@ -244,18 +316,34 @@ function Lightbox({
 }
 
 /* ------------------------------------------------------------------ */
-/* Main Public Menu Component                                            */
+/* Main Public Menu Component                                         */
 /* ------------------------------------------------------------------ */
 export function PublicMenuClient({ photos, categories }: Props) {
   const [activeCategory, setActiveCategory] = useState<string>(
     categories.length > 0 ? categories[0] : ""
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [hoveredPhotoId, setHoveredPhotoId] = useState<string | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<MenuPhotoItem | null>(null);
 
-  const filteredPhotos = photos.filter((p) => p.category === activeCategory);
+  // Filter logic: search query matches title, description, or tags; category matches activeCategory (or all if search is active)
+  const isSearching = searchQuery.trim().length > 0;
+  const searchLower = searchQuery.trim().toLowerCase();
 
-  // Featured = hovered item OR first item in category
+  const filteredPhotos = photos.filter((p) => {
+    const matchesSearch = isSearching
+      ? p.title.toLowerCase().includes(searchLower) ||
+        (p.description && p.description.toLowerCase().includes(searchLower)) ||
+        (p.tags && p.tags.some((t) => t.toLowerCase().includes(searchLower))) ||
+        p.category.toLowerCase().includes(searchLower)
+      : true;
+
+    const matchesCategory = isSearching ? true : p.category === activeCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  // Featured = hovered item OR first item in filtered list
   const activeFeaturedPhoto =
     (hoveredPhotoId ? filteredPhotos.find((p) => p.id === hoveredPhotoId) : null) ??
     filteredPhotos[0] ??
@@ -263,9 +351,9 @@ export function PublicMenuClient({ photos, categories }: Props) {
 
   const hasData = photos.length > 0;
 
-  // Reset hover when category changes
   const handleCategoryChange = (cat: string) => {
     setActiveCategory(cat);
+    setSearchQuery("");
     setHoveredPhotoId(null);
   };
 
@@ -293,58 +381,106 @@ export function PublicMenuClient({ photos, categories }: Props) {
       <section className="py-12 md:py-20 border-t border-slate-100">
         <div className="mx-auto max-w-6xl px-6 lg:px-8">
 
-          {/* Section heading */}
+          {/* Section heading + Search Bar */}
           <Reveal delay={0}>
-            <div className="mb-8">
-              <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-semibold block mb-3">
-                Our Menu
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-serif text-slate-900">
-                The Menu
-              </h2>
-            </div>
-          </Reveal>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+              <div>
+                <span className="text-[10px] uppercase tracking-[0.3em] text-primary font-semibold block mb-2">
+                  Our Menu
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-serif text-slate-900">
+                  The Menu
+                </h2>
+              </div>
 
-          {/* Category Tabs */}
-          <Reveal delay={80}>
-            <div className="overflow-x-auto scrollbar-hide -mx-2 px-2 pb-0.5">
-              <div className="flex items-center gap-1.5 md:gap-2 min-w-max md:min-w-0 mb-8 border-b border-slate-100 pb-0">
-                {hasData ? (
-                  categories.map((cat) => {
-                    const isActive = activeCategory === cat;
-                    return (
-                      <button
-                        key={cat}
-                        type="button"
-                        onClick={() => handleCategoryChange(cat)}
-                        className={`whitespace-nowrap shrink-0 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-b-2 -mb-px ${
-                          isActive
-                            ? "border-slate-900 text-slate-900 font-semibold"
-                            : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
-                        }`}
-                      >
-                        {cat}
-                      </button>
-                    );
-                  })
-                ) : (
-                  /* Skeleton tabs */
-                  ["Signature", "A La Carte", "Beverage", "Dessert", "Wine"].map((label, i) => (
-                    <span
-                      key={label}
-                      className={`whitespace-nowrap shrink-0 px-4 py-2.5 text-sm border-b-2 -mb-px select-none ${
-                        i === 0
-                          ? "border-slate-300 text-slate-400 font-semibold"
-                          : "border-transparent text-slate-300"
-                      }`}
-                    >
-                      {label}
-                    </span>
-                  ))
+              {/* Instant Search Bar */}
+              <div className="w-full md:w-72 relative">
+                <MagnifyingGlass
+                  size={18}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                />
+                <input
+                  type="text"
+                  placeholder="Search dishes or ingredients..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-9 py-2.5 rounded-full border border-slate-200 bg-slate-50/70 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:bg-white transition-all shadow-2xs"
+                />
+                {isSearching && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                    aria-label="Clear search"
+                  >
+                    <X size={15} />
+                  </button>
                 )}
               </div>
             </div>
           </Reveal>
+
+          {/* Category Tabs (hidden during active search) */}
+          {!isSearching && (
+            <Reveal delay={80}>
+              <div className="overflow-x-auto scrollbar-hide -mx-2 px-2 pb-0.5 mb-8 border-b border-slate-100">
+                <div className="flex items-center gap-1.5 md:gap-2 min-w-max md:min-w-0">
+                  {hasData ? (
+                    categories.map((cat) => {
+                      const isActive = activeCategory === cat;
+                      const count = photos.filter((p) => p.category === cat).length;
+                      return (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => handleCategoryChange(cat)}
+                          className={`whitespace-nowrap shrink-0 px-4 py-2.5 text-sm font-medium transition-all duration-200 border-b-2 -mb-px flex items-center gap-1.5 ${
+                            isActive
+                              ? "border-slate-900 text-slate-900 font-semibold"
+                              : "border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                          }`}
+                        >
+                          <span>{cat}</span>
+                          <span className={`text-[11px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"}`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    ["Signature", "A La Carte", "Beverage", "Dessert"].map((label, i) => (
+                      <span
+                        key={label}
+                        className={`whitespace-nowrap shrink-0 px-4 py-2.5 text-sm border-b-2 -mb-px select-none ${
+                          i === 0
+                            ? "border-slate-300 text-slate-400 font-semibold"
+                            : "border-transparent text-slate-300"
+                        }`}
+                      >
+                        {label}
+                      </span>
+                    ))
+                  )}
+                </div>
+              </div>
+            </Reveal>
+          )}
+
+          {/* Search indicator */}
+          {isSearching && (
+            <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
+              <p className="text-xs text-slate-500">
+                Showing results for <span className="font-semibold text-slate-900">&ldquo;{searchQuery}&rdquo;</span>
+              </p>
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="text-xs text-primary font-semibold hover:underline"
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
 
           {/* Content grid */}
           {hasData ? (
@@ -364,9 +500,17 @@ export function PublicMenuClient({ photos, categories }: Props) {
                       alt={activeFeaturedPhoto.title}
                       fill
                       sizes="(max-width: 1024px) 384px, 384px"
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      className={`object-cover transition-transform duration-700 group-hover:scale-105 ${activeFeaturedPhoto.isAvailable === false ? "grayscale-30" : ""}`}
                       priority
                     />
+                    
+                    {/* Sold out overlay on featured */}
+                    {activeFeaturedPhoto.isAvailable === false && (
+                      <div className="absolute top-4 left-4 z-10 bg-slate-900/85 backdrop-blur-sm text-rose-200 border border-rose-500/30 px-3 py-1 rounded-full text-xs font-semibold tracking-wide">
+                        Sold Out for Today
+                      </div>
+                    )}
+
                     {/* Hover hint */}
                     <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-5">
                       <div className="flex items-center gap-1.5 bg-black/60 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-xs font-medium shadow-lg">
@@ -380,7 +524,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                     className="relative w-full max-w-sm mx-auto lg:mx-0 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center"
                     style={{ aspectRatio: "3/4", maxHeight: "500px" }}
                   >
-                    <p className="text-xs text-slate-300 text-center px-6">No photos available in this category yet.</p>
+                    <p className="text-xs text-slate-300 text-center px-6">No dishes matching your search.</p>
                   </div>
                 )}
               </Reveal>
@@ -390,7 +534,9 @@ export function PublicMenuClient({ photos, categories }: Props) {
                 {filteredPhotos.length === 0 ? (
                   <Reveal delay={120}>
                     <div className="py-16 text-center border-y border-slate-100">
-                      <p className="text-sm text-slate-400">No items available in this category yet.</p>
+                      <WarningCircle size={32} className="mx-auto text-slate-300 mb-2" />
+                      <p className="text-sm font-medium text-slate-600">No dishes found.</p>
+                      <p className="text-xs text-slate-400 mt-1">Try searching with a different keyword or browse categories.</p>
                     </div>
                   </Reveal>
                 ) : (
@@ -398,7 +544,7 @@ export function PublicMenuClient({ photos, categories }: Props) {
                     <Reveal delay={100}>
                       <div className="flex items-center justify-between pb-3 mb-1 border-b border-slate-100">
                         <span className="text-[11px] uppercase tracking-[0.2em] text-slate-400 font-semibold">
-                          {activeCategory}
+                          {isSearching ? "Search Results" : activeCategory}
                         </span>
                         <span className="text-[11px] text-slate-400 tabular-nums">
                           {filteredPhotos.length} {filteredPhotos.length === 1 ? "item" : "items"}
@@ -412,8 +558,10 @@ export function PublicMenuClient({ photos, categories }: Props) {
                     >
                       {filteredPhotos.map((photo, i) => {
                         const isHighlighted = activeFeaturedPhoto?.id === photo.id;
+                        const isSoldOut = photo.isAvailable === false;
+
                         return (
-                          <Reveal key={photo.id} delay={i * 40}>
+                          <Reveal key={photo.id} delay={i * 30}>
                             <div
                               onMouseEnter={() => setHoveredPhotoId(photo.id)}
                               onClick={() => setLightboxPhoto(photo)}
@@ -429,32 +577,53 @@ export function PublicMenuClient({ photos, categories }: Props) {
                               }`}
                             >
                               {/* Thumbnail */}
-                              <div className="relative shrink-0 w-[60px] h-[60px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200/80 shadow-2xs">
+                              <div className="relative shrink-0 w-[64px] h-[64px] rounded-lg overflow-hidden bg-slate-100 border border-slate-200/80 shadow-2xs">
                                 <Image
                                   src={photo.imageUrl}
                                   alt={photo.title}
                                   fill
-                                  sizes="60px"
-                                  className="object-cover"
+                                  sizes="64px"
+                                  className={`object-cover ${isSoldOut ? "grayscale-30 brightness-90" : ""}`}
                                 />
+                                {isSoldOut && (
+                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                    <span className="text-[9px] font-bold text-white uppercase tracking-wider bg-black/60 px-1 py-0.5 rounded">
+                                      Sold Out
+                                    </span>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Info */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-baseline justify-between gap-3">
-                                  <h4
-                                    className={`text-sm sm:text-base font-serif leading-snug transition-colors duration-150 ${
-                                      isHighlighted ? "text-primary" : "text-slate-900"
-                                    }`}
-                                  >
-                                    {photo.title}
-                                  </h4>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h4
+                                      className={`text-sm sm:text-base font-serif leading-snug transition-colors duration-150 ${
+                                        isHighlighted ? "text-primary font-medium" : "text-slate-900"
+                                      }`}
+                                    >
+                                      {photo.title}
+                                    </h4>
+
+                                    {/* Dietary / Special Badges */}
+                                    {photo.tags && photo.tags.length > 0 && (
+                                      <div className="flex flex-wrap gap-1">
+                                        {photo.tags.slice(0, 2).map((tag) => (
+                                          <TagBadge key={tag} tag={tag} />
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Price */}
                                   {photo.price != null && (
-                                    <span className="text-sm font-semibold text-slate-800 shrink-0 tabular-nums">
+                                    <span className={`text-sm font-semibold shrink-0 tabular-nums ${isSoldOut ? "text-slate-400 line-through" : "text-slate-800"}`}>
                                       {currencyFmt.format(photo.price)}
                                     </span>
                                   )}
                                 </div>
+
                                 {photo.description && (
                                   <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">
                                     {photo.description}

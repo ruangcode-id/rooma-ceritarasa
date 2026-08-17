@@ -48,6 +48,8 @@ async function readUpdatePayload(request: Request): Promise<UpdatePayload> {
         price: formFieldIfPresent(formData, "price"),
         sortOrder: formFieldIfPresent(formData, "sortOrder"),
         isActive: formFieldIfPresent(formData, "isActive"),
+        isAvailable: formFieldIfPresent(formData, "isAvailable"),
+        tags: formFieldIfPresent(formData, "tags"),
       },
       image: isUploadFile(image) && image.size > 0 ? image : undefined,
     };

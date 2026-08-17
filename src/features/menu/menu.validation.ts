@@ -49,6 +49,20 @@ export const publicMenuListQuerySchema = z.object({
 
 export type PublicMenuListQuery = z.infer<typeof publicMenuListQuerySchema>;
 
+function normalizeOptionalArray(value: unknown) {
+  if (value === undefined || value === null) return undefined;
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return value.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+  }
+  return undefined;
+}
+
 export const createMenuPhotoSchema = z.object({
   title: z.string().trim().min(1, "Title is required.").max(200),
   description: z.preprocess(
@@ -65,6 +79,8 @@ export const createMenuPhotoSchema = z.object({
     z.coerce.number().int().optional().default(0),
   ),
   isActive: z.preprocess(normalizeOptionalBoolean, z.boolean().optional().default(true)),
+  isAvailable: z.preprocess(normalizeOptionalBoolean, z.boolean().optional().default(true)),
+  tags: z.preprocess(normalizeOptionalArray, z.array(z.string()).optional().default([])),
 });
 
 export type CreateMenuPhotoInput = z.infer<typeof createMenuPhotoSchema>;
@@ -82,6 +98,8 @@ export const updateMenuPhotoSchema = z.object({
   ),
   sortOrder: z.preprocess(normalizeOptionalNumber, z.coerce.number().int().optional()),
   isActive: z.preprocess(normalizeOptionalBoolean, z.boolean().optional()),
+  isAvailable: z.preprocess(normalizeOptionalBoolean, z.boolean().optional()),
+  tags: z.preprocess(normalizeOptionalArray, z.array(z.string()).optional()),
 });
 
 export type UpdateMenuPhotoInput = z.infer<typeof updateMenuPhotoSchema>;

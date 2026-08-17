@@ -395,6 +395,8 @@ model MenuPhoto {
   height      Int?
   sortOrder   Int      @default(0) @map("sort_order")
   isActive    Boolean  @default(true) @map("is_active")
+  isAvailable Boolean  @default(true) @map("is_available")
+  tags        String[] @default([])
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

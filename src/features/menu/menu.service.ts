@@ -23,6 +23,8 @@ type MenuPhotoRecord = {
   height: number | null;
   sortOrder: number;
   isActive: boolean;
+  isAvailable: boolean;
+  tags: string[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -51,6 +53,8 @@ function serializeAdminMenuPhoto(photo: MenuPhotoRecord) {
     height: photo.height,
     sortOrder: photo.sortOrder,
     isActive: photo.isActive,
+    isAvailable: photo.isAvailable,
+    tags: photo.tags ?? [],
     createdAt: photo.createdAt.toISOString(),
     updatedAt: photo.updatedAt.toISOString(),
   };
@@ -67,6 +71,8 @@ function serializePublicMenuPhoto(photo: MenuPhotoRecord) {
     width: photo.width,
     height: photo.height,
     sortOrder: photo.sortOrder,
+    isAvailable: photo.isAvailable,
+    tags: photo.tags ?? [],
     createdAt: photo.createdAt.toISOString(),
   };
 }
@@ -104,6 +110,8 @@ export async function createMenuPhoto(
         height: uploaded.height,
         sortOrder: input.sortOrder,
         isActive: input.isActive,
+        isAvailable: input.isAvailable ?? true,
+        tags: input.tags ?? [],
       },
     });
 
@@ -189,6 +197,8 @@ export async function updateMenuPhoto(
         ...(input.price !== undefined ? { price: input.price } : {}),
         ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        ...(input.isAvailable !== undefined ? { isAvailable: input.isAvailable } : {}),
+        ...(input.tags !== undefined ? { tags: input.tags } : {}),
         ...(uploaded
           ? {
               imageUrl: uploaded.imageUrl,
@@ -249,6 +259,26 @@ export async function toggleMenuPhotoStatus(id: string) {
   const photo = await prisma.menuPhoto.update({
     where: { id },
     data: { isActive: !existing.isActive },
+  });
+
+  return serializeAdminMenuPhoto(photo);
+}
+
+export async function toggleMenuPhotoAvailability(id: string, isAvailable?: boolean) {
+  const existing = await prisma.menuPhoto.findUnique({
+    where: { id },
+    select: { id: true, isAvailable: true },
+  });
+
+  if (!existing) {
+    throw new Error("MENU_PHOTO_NOT_FOUND");
+  }
+
+  const nextState = isAvailable !== undefined ? isAvailable : !existing.isAvailable;
+
+  const photo = await prisma.menuPhoto.update({
+    where: { id },
+    data: { isAvailable: nextState },
   });
 
   return serializeAdminMenuPhoto(photo);
