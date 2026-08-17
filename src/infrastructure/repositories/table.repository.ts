@@ -6,7 +6,6 @@ import {
 } from "../validations/table.validation";
 import { TableEntity } from "@/domain/table/types";
 import { Prisma } from "@/generated/prisma/client";
-import { sortByTableNumber } from "@/lib/table-sort";
 
 type TableWithReservations = Prisma.TableGetPayload<{
   include: {
@@ -51,7 +50,7 @@ function formatTableResponse(table: TableWithReservations): TableEntity {
 export const tableRepository = {
   getAll: async () => {
     const tables = await prisma.table.findMany({
-      orderBy: { tableNumber: "asc" },
+      orderBy: { tableNumber: 'asc' },
       include: {
         reservationTables: {
           include: {
@@ -60,7 +59,7 @@ export const tableRepository = {
         },
       },
     });
-    return sortByTableNumber(tables.map(formatTableResponse));
+    return tables.map(formatTableResponse);
   },
 
   getById: async (id: string) => {

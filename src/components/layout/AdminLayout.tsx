@@ -8,12 +8,7 @@ import { List, SignOut } from "@phosphor-icons/react";
 import { signOut } from "next-auth/react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-interface AdminLayoutProps {
-  children: React.ReactNode;
-  user?: { name?: string | null; email?: string | null };
-}
-
-export default function AdminLayout({ children, user }: AdminLayoutProps) {
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -47,7 +42,7 @@ export default function AdminLayout({ children, user }: AdminLayoutProps) {
         </div>
       </div>
 
-      <AdminSidebar user={user} isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <AdminSidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
       <ConfirmDialog
         open={showLogoutConfirm}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   ChartLineUp,
@@ -24,25 +24,24 @@ const OWNER_MENU = [
 ];
 
 interface OwnerSidebarProps {
-  user?: { name?: string | null; email?: string | null };
   isOpen?: boolean;
   onClose?: () => void;
 }
 
-export default function OwnerSidebar({ user, isOpen = false, onClose }: OwnerSidebarProps) {
+export default function OwnerSidebar({ isOpen = false, onClose }: OwnerSidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const userName = user?.name || "Owner";
-  const userEmail = user?.email || "owner@rooma.com";
+  const userName = session?.user?.name || "Owner";
+  const userEmail = session?.user?.email || "owner@rooma.com";
   const userInitials =
     userName
       .split(" ")
-      .filter(Boolean)
       .map((n) => n[0])
       .join("")
-      .toUpperCase()
-      .slice(0, 2) || "OW";
+      .substring(0, 2)
+      .toUpperCase() || "OW";
 
   return (
     <>
@@ -74,63 +73,63 @@ export default function OwnerSidebar({ user, isOpen = false, onClose }: OwnerSid
           </button>
         </div>
 
-      {/* Navigation Links */}
-      <div className="flex-1 px-4 py-8">
-        <h3 className="mb-4 px-3 text-xs font-bold uppercase tracking-[0.2em] text-rose-300/60">
-          Executive
-        </h3>
-        <ul className="space-y-2">
-          {OWNER_MENU.map((item) => {
-            const isActive = pathname === item.href;
-            const Icon = item.icon;
+        {/* Navigation Links */}
+        <div className="flex-1 px-4 py-8 overflow-y-auto scrollbar-hide">
+          <h3 className="mb-4 px-3 text-xs font-bold uppercase tracking-[0.2em] text-rose-300/60">
+            Executive
+          </h3>
+          <ul className="space-y-2">
+            {OWNER_MENU.map((item) => {
+              const isActive = pathname === item.href;
+              const Icon = item.icon;
 
-            return (
-              <li key={item.name}>
-                <Link
-                  href={item.href}
-                  className={`group flex items-center rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 ${
-                    isActive
-                      ? "bg-primary/20 text-white border-r-2 border-primary"
-                      : "text-rose-200/70 hover:bg-[#3a0d13] hover:text-white"
-                  }`}
-                >
-                  <Icon
-                    size={22}
-                    weight={isActive ? "fill" : "regular"}
-                    className={`mr-3 ${
-                      isActive ? "text-white" : "text-rose-300/50 group-hover:text-white"
+              return (
+                <li key={item.name}>
+                  <Link
+                    href={item.href}
+                    className={`group flex items-center rounded-xl px-3 py-3 text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? "bg-primary/20 text-white border-r-2 border-primary"
+                        : "text-rose-200/70 hover:bg-[#3a0d13] hover:text-white"
                     }`}
-                  />
-                  {item.name}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      {/* Footer */}
-      <div className="border-t border-[#3a0d13] p-4">
-        {/* User Profile & Sign Out Unified */}
-        <div className="flex items-center gap-2 rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
-            {userInitials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-white">{userName}</p>
-            <p className="truncate text-xs text-rose-300/60">{userEmail}</p>
-          </div>
-          <button 
-            title="Sign Out"
-            aria-label="Sign out from owner panel"
-            onClick={() => setShowLogoutConfirm(true)}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-200/70 transition-all duration-200 hover:bg-[#4a1019] hover:text-white"
-          >
-            <SignOut size={20} />
-          </button>
+                  >
+                    <Icon
+                      size={22}
+                      weight={isActive ? "fill" : "regular"}
+                      className={`mr-3 ${
+                        isActive ? "text-white" : "text-rose-300/50 group-hover:text-white"
+                      }`}
+                    />
+                    {item.name}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </div>
-      </div>
-    </aside>
+
+        {/* Footer */}
+        <div className="border-t border-[#3a0d13] p-4">
+          {/* User Profile & Sign Out Unified */}
+          <div className="flex items-center gap-2 rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
+              {userInitials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">{userName}</p>
+              <p className="truncate text-xs text-rose-300/60">{userEmail}</p>
+            </div>
+            <button 
+              title="Sign Out"
+              aria-label="Sign out from owner panel"
+              onClick={() => setShowLogoutConfirm(true)}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-200/70 transition-all duration-200 hover:bg-[#4a1019] hover:text-white"
+            >
+              <SignOut size={20} />
+            </button>
+          </div>
+        </div>
+      </aside>
 
       <ConfirmDialog
         open={showLogoutConfirm}

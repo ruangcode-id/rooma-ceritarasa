@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { paymentRepository } from "@/infrastructure/repositories/payment.repository";
 import { prisma } from "@/infrastructure/database/prisma";
 import rateLimit from "@/lib/rate-limit";
-import { getRateLimitClientKey } from "@/lib/client-ip";
 
 const limiter = rateLimit({
   uniqueTokenPerInterval: 500,
@@ -14,7 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
-    const ip = getRateLimitClientKey(req.headers);
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
     try {
       await limiter.check(20, ip);
     } catch {

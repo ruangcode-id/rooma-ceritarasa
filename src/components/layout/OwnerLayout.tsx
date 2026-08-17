@@ -6,12 +6,7 @@ import { List, SignOut } from "@phosphor-icons/react";
 import { signOut } from "next-auth/react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-interface OwnerLayoutProps {
-  children: React.ReactNode;
-  user?: { name?: string | null; email?: string | null };
-}
-
-export default function OwnerLayout({ children, user }: OwnerLayoutProps) {
+export default function OwnerLayout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -43,7 +38,7 @@ export default function OwnerLayout({ children, user }: OwnerLayoutProps) {
         </div>
       </div>
 
-      <OwnerSidebar user={user} isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <OwnerSidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
 
       <ConfirmDialog
         open={showLogoutConfirm}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import {
   SquaresFour,
@@ -60,29 +60,27 @@ const MENU_GROUPS = [
 ];
 
 interface AdminSidebarProps {
-  user?: { name?: string | null; email?: string | null };
   isOpen?: boolean;
   onClose?: () => void;
 }
 
 export default function AdminSidebar({
-  user,
   isOpen = false,
   onClose,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const userName = user?.name || "Admin Staff";
-  const userEmail = user?.email || "admin@rooma.com";
+  const userName = session?.user?.name || "Admin Staff";
+  const userEmail = session?.user?.email || "admin@rooma.com";
   const userInitials =
     userName
       .split(" ")
-      .filter(Boolean)
       .map((n) => n[0])
       .join("")
-      .toUpperCase()
-      .slice(0, 2) || "AD";
+      .substring(0, 2)
+      .toUpperCase() || "SA";
 
   return (
     <>

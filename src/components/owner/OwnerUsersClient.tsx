@@ -289,7 +289,7 @@ export default function OwnerUsersClient() {
             <div key={user.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-inner ${user.role === 'owner' ? 'bg-linear-to-br from-amber-400 to-amber-600' : 'bg-linear-to-br from-slate-700 to-slate-900'}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-inner ${user.role === 'owner' ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-slate-700 to-slate-900'}`}>
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
