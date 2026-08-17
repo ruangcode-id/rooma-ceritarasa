@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Plus, X, UserCircle, Crown, Trash, PencilSimple } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { handleApiError } from "@/lib/handle-api-error";
+
+const emptySubscribe = () => () => {};
 
 type UserRole = "admin" | "owner";
 
@@ -38,6 +41,7 @@ async function fetchUsers(signal?: AbortSignal): Promise<User[]> {
 }
 
 export default function OwnerUsersClient() {
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -200,9 +204,9 @@ export default function OwnerUsersClient() {
       )}
 
       {/* Add / Edit Modal */}
-      {isAdding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+      {mounted && isAdding && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900">{editingUser ? "Edit Account" : "Create New Account"}</h3>
               <button onClick={resetForm} className="text-slate-400 hover:text-slate-600 transition-colors">
@@ -271,7 +275,8 @@ export default function OwnerUsersClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* User Grid */}
@@ -333,9 +338,9 @@ export default function OwnerUsersClient() {
       )}
 
       {/* Delete Confirmation Modal */}
-      {deleteUserPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
+      {mounted && deleteUserPrompt && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
                 <Trash size={32} weight="fill" />
@@ -362,7 +367,8 @@ export default function OwnerUsersClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

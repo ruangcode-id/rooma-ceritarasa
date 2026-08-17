@@ -8,9 +8,6 @@ import {
   CaretLeft,
   CaretRight,
   MagnifyingGlass,
-  Sparkle,
-  Pepper,
-  Plant,
   WarningCircle,
 } from "@phosphor-icons/react";
 
@@ -80,46 +77,6 @@ function Reveal({
     >
       {children}
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Tag Badge Component                                                */
-/* ------------------------------------------------------------------ */
-function TagBadge({ tag }: { tag: string }) {
-  const cleanTag = tag.trim().toLowerCase();
-
-  if (cleanTag.includes("chef") || cleanTag.includes("special") || cleanTag.includes("signature")) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">
-        <Sparkle size={11} weight="fill" className="text-amber-500" />
-        {tag}
-      </span>
-    );
-  }
-
-  if (cleanTag.includes("spicy") || cleanTag.includes("pedas")) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">
-        <Pepper size={11} weight="fill" className="text-rose-500" />
-        {tag}
-      </span>
-    );
-  }
-
-  if (cleanTag.includes("veg") || cleanTag.includes("plant") || cleanTag.includes("vegan")) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-        <Plant size={11} weight="fill" className="text-emerald-500" />
-        {tag}
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-      {tag}
-    </span>
   );
 }
 
@@ -261,15 +218,6 @@ function Lightbox({
           <h3 className="text-lg font-serif text-slate-900 leading-snug mb-2">
             {photo.title}
           </h3>
-
-          {/* Tags */}
-          {photo.tags && photo.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {photo.tags.map((tag) => (
-                <TagBadge key={tag} tag={tag} />
-              ))}
-            </div>
-          )}
 
           {photo.price != null && (
             <div className="flex items-center gap-2 mb-3">
@@ -597,24 +545,13 @@ export function PublicMenuClient({ photos, categories }: Props) {
                               {/* Info */}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-baseline justify-between gap-3">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <h4
-                                      className={`text-sm sm:text-base font-serif leading-snug transition-colors duration-150 ${
-                                        isHighlighted ? "text-primary font-medium" : "text-slate-900"
-                                      }`}
-                                    >
-                                      {photo.title}
-                                    </h4>
-
-                                    {/* Dietary / Special Badges */}
-                                    {photo.tags && photo.tags.length > 0 && (
-                                      <div className="flex flex-wrap gap-1">
-                                        {photo.tags.slice(0, 2).map((tag) => (
-                                          <TagBadge key={tag} tag={tag} />
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
+                                  <h4
+                                    className={`text-sm sm:text-base font-serif leading-snug transition-colors duration-150 ${
+                                      isHighlighted ? "text-primary font-medium" : "text-slate-900"
+                                    }`}
+                                  >
+                                    {photo.title}
+                                  </h4>
 
                                   {/* Price */}
                                   {photo.price != null && (

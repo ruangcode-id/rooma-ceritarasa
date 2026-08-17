@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
   Armchair,
@@ -8,6 +8,8 @@ import {
   WarningCircle,
 } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
+
+const emptySubscribe = () => () => {};
 
 type OutdoorStatusData = {
   isOpen: boolean;
@@ -26,16 +28,13 @@ type OutdoorStatusData = {
 };
 
 export function OutdoorWeatherCard() {
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [status, setStatus] = useState<OutdoorStatusData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [targetAction, setTargetAction] = useState<boolean>(false);
-  // Guard: ensures createPortal only runs client-side (avoids SSR document.body reference)
-  const [mounted, setMounted] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     let isMounted = true;

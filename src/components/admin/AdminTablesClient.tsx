@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Plus, ArrowsOutCardinal, FloppyDisk } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
+
+const emptySubscribe = () => () => {};
 
 type TableData = {
   id: string;
@@ -31,6 +34,7 @@ async function fetchTables(signal?: AbortSignal): Promise<TableData[]> {
 }
 
 export default function AdminTablesClient() {
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [tables, setTables] = useState<TableData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -360,9 +364,9 @@ export default function AdminTablesClient() {
       <p className="text-xs text-center text-slate-400 font-medium">Tip: You can drag the table boxes above using mouse or touch.</p>
 
       {/* Delete Confirmation Modal */}
-      {deleteTableId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+      {mounted && deleteTableId && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
               <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Table</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-5">
@@ -387,7 +391,8 @@ export default function AdminTablesClient() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

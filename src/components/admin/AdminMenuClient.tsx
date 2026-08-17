@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import {
   Plus,
@@ -16,6 +17,8 @@ import {
 } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
 
+const emptySubscribe = () => () => {};
+
 const DEFAULT_MENU_CATEGORIES = [
   "Signature",
   "A La Carte",
@@ -30,14 +33,6 @@ const DEFAULT_MENU_CATEGORIES = [
 
 const STORAGE_KEY_CATEGORIES = "rooma_admin_menu_categories";
 const STORAGE_KEY_DELETED = "rooma_admin_deleted_categories";
-
-const AVAILABLE_TAGS = [
-  { id: "Chef's Special", label: "Chef's Special ⭐" },
-  { id: "Spicy", label: "Spicy 🌶️" },
-  { id: "Vegetarian", label: "Vegetarian 🥦" },
-  { id: "Gluten-Free", label: "Gluten-Free 🌾" },
-  { id: "Signature", label: "Signature 👑" },
-];
 
 type MenuPhotoData = {
   id: string;
@@ -62,6 +57,7 @@ async function fetchMenuPhotos(signal?: AbortSignal): Promise<MenuPhotoData[]> {
 }
 
 export default function AdminMenuClient() {
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [photos, setPhotos] = useState<MenuPhotoData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -91,7 +87,6 @@ export default function AdminMenuClient() {
   const [price, setPrice] = useState("");
   const [sortOrder, setSortOrder] = useState("0");
   const [isAvailable, setIsAvailable] = useState(true);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   // Category Management State (initialized from localStorage lazily)
   const [managedCategories, setManagedCategories] = useState<string[]>(() => {
@@ -149,7 +144,6 @@ export default function AdminMenuClient() {
     setPrice("");
     setSortOrder("0");
     setIsAvailable(true);
-    setSelectedTags([]);
     setError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -163,7 +157,6 @@ export default function AdminMenuClient() {
     setPrice(photo.price != null ? String(photo.price) : "");
     setSortOrder(String(photo.sortOrder));
     setIsAvailable(photo.isAvailable ?? true);
-    setSelectedTags(photo.tags ?? []);
     setPreviewUrl(photo.imageUrl);
     setIsFormOpen(true);
   };
@@ -182,12 +175,6 @@ export default function AdminMenuClient() {
 
   const getEffectiveCategory = () =>
     category === "custom" ? customCategory.trim() : category;
-
-  const toggleTag = (tagId: string) => {
-    setSelectedTags((prev) =>
-      prev.includes(tagId) ? prev.filter((t) => t !== tagId) : [...prev, tagId]
-    );
-  };
 
   // Add new category
   const handleAddCategory = (e: React.FormEvent) => {
@@ -287,7 +274,6 @@ export default function AdminMenuClient() {
           if (price) formData.append("price", price);
           formData.append("sortOrder", sortOrder);
           formData.append("isAvailable", String(isAvailable));
-          formData.append("tags", JSON.stringify(selectedTags));
           res = await fetch(`/api/admin/menu/${editingPhoto.id}`, { method: "PUT", body: formData });
         } else {
           res = await fetch(`/api/admin/menu/${editingPhoto.id}`, {
@@ -300,7 +286,6 @@ export default function AdminMenuClient() {
               price: price ? parseInt(price) : null,
               sortOrder: parseInt(sortOrder),
               isAvailable,
-              tags: selectedTags,
             }),
           });
         }
@@ -314,7 +299,6 @@ export default function AdminMenuClient() {
         formData.append("sortOrder", sortOrder);
         formData.append("isActive", "true");
         formData.append("isAvailable", String(isAvailable));
-        formData.append("tags", JSON.stringify(selectedTags));
         res = await fetch("/api/admin/menu", { method: "POST", body: formData });
       }
 
@@ -496,9 +480,9 @@ export default function AdminMenuClient() {
       </div>
 
       {/* Category Manager Modal */}
-      {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+      {mounted && isCategoryModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div className="flex items-center gap-2">
                 <Tag size={20} className="text-primary" weight="bold" />
@@ -598,13 +582,14 @@ export default function AdminMenuClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Category Confirmation Modal (with photos reassignment or empty category confirmation) */}
-      {categoryToDelete && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+      {mounted && categoryToDelete && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
               {photos.filter((p) => p.category === categoryToDelete).length > 0 ? (
                 /* Has photos -> Reassign & Delete */
@@ -683,13 +668,14 @@ export default function AdminMenuClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Upload / Edit Modal */}
-      {isFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      {mounted && isFormOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900">
                 {editingPhoto ? "Edit Menu Photo" : "Upload New Menu Photo"}
@@ -797,32 +783,6 @@ export default function AdminMenuClient() {
                 />
               </div>
 
-              {/* Dietary / Highlight Tags */}
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">
-                  Dietary &amp; Special Tags (Optional)
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {AVAILABLE_TAGS.map((tag) => {
-                    const isSelected = selectedTags.includes(tag.id);
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => toggleTag(tag.id)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
-                          isSelected
-                            ? "bg-slate-900 text-white border-slate-900 shadow-xs"
-                            : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-                        }`}
-                      >
-                        {tag.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
               {/* Availability Status */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
                 <div>
@@ -890,7 +850,8 @@ export default function AdminMenuClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Photo Grid */}
@@ -999,17 +960,6 @@ export default function AdminMenuClient() {
                     </span>
                   </div>
 
-                  {/* Dietary / Special Tags */}
-                  {photo.tags && photo.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1.5">
-                      {photo.tags.map((t) => (
-                        <span key={t} className="text-[9px] font-semibold bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
                   {photo.description && (
                     <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-1.5">{photo.description}</p>
                   )}
@@ -1037,9 +987,9 @@ export default function AdminMenuClient() {
       )}
 
       {/* Delete Confirm Modal */}
-      {deletePrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+      {mounted && deletePrompt && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash size={32} weight="fill" />
@@ -1067,7 +1017,8 @@ export default function AdminMenuClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

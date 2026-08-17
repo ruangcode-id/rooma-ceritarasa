@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Clock, Users, CalendarBlank } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
+
+const emptySubscribe = () => () => {};
 
 type SessionData = {
   id: string;
@@ -41,6 +44,7 @@ async function fetchSessions(signal?: AbortSignal): Promise<SessionData[]> {
 }
 
 export default function AdminSessionsClient() {
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [sessions, setSessions] = useState<SessionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -363,9 +367,9 @@ export default function AdminSessionsClient() {
       )}
 
       {/* Delete Confirmation Modal */}
-      {deleteSessionId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+      {mounted && deleteSessionId && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
               <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Session</h3>
               <p className="text-slate-600 text-sm leading-relaxed mb-5">
@@ -391,7 +395,8 @@ export default function AdminSessionsClient() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

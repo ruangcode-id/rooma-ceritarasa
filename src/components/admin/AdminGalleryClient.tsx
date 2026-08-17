@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Plus, Image as ImageIcon, UploadSimple, X } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
+
+const emptySubscribe = () => () => {};
 
 type GalleryImage = {
   id: string;
@@ -29,6 +32,7 @@ async function fetchGalleryImages(signal?: AbortSignal): Promise<GalleryImage[]>
 }
 
 export default function AdminGalleryClient() {
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -228,9 +232,9 @@ export default function AdminGalleryClient() {
       )}
 
       {/* Upload Modal */}
-      {isAdding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+      {mounted && isAdding && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900">{editingImage ? "Edit Photo" : "Upload New Photo"}</h3>
               <button onClick={resetForm} className="text-slate-400 hover:text-slate-600 transition-colors">
@@ -319,7 +323,8 @@ export default function AdminGalleryClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Gallery Grid */}
@@ -366,9 +371,9 @@ export default function AdminGalleryClient() {
       )}
 
       {/* Delete Confirmation Modal */}
-      {deleteImagePrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
+      {mounted && deleteImagePrompt && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <ImageIcon size={32} weight="fill" />
@@ -395,7 +400,8 @@ export default function AdminGalleryClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
