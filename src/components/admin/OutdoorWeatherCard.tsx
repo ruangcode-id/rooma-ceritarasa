@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Sun,
   CloudRain,
@@ -30,6 +31,10 @@ export function OutdoorWeatherCard() {
   const [error, setError] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [targetAction, setTargetAction] = useState<boolean>(false);
+  // Guard: ensures createPortal only runs client-side (avoids SSR document.body reference)
+  const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -165,8 +170,8 @@ export function OutdoorWeatherCard() {
         )}
       </section>
 
-      {/* Confirmation Modal — matches ConfirmDialog standard */}
-      {showConfirmModal && (
+      {/* Confirmation Modal — rendered via Portal to escape overflow-y-auto scroll container */}
+      {mounted && showConfirmModal && createPortal(
         <div
           className="fixed inset-0 z-[9999] grid place-items-center bg-slate-950/40 px-4 py-6 backdrop-blur-sm animate-in fade-in duration-200"
           role="dialog"
@@ -218,7 +223,8 @@ export function OutdoorWeatherCard() {
               </button>
             </div>
           </section>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
