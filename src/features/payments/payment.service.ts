@@ -701,6 +701,13 @@ export async function refundPayment(
   }
 
   const midtransOrderId = payment.midtransOrderId ?? payment.id;
+  
+  // Bypass Midtrans for manual (WhatsApp) payments
+  if (payment.paymentMethod === "whatsapp" || midtransOrderId.startsWith("MANUAL-")) {
+    console.info("[refund] Bypassing Midtrans for manual WhatsApp payment", { orderId });
+    return paymentRepository.refundByOrderId(midtransOrderId);
+  }
+
   const core = getMidtransCore();
   const midtransStatus = await core.transaction.status(midtransOrderId);
   const transactionStatus = String(midtransStatus?.transaction_status ?? "");
