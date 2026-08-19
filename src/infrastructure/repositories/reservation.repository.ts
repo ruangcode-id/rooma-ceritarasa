@@ -16,7 +16,8 @@ export type ReservationInput = {
   status: ReservationStatus;
   cancelToken: string;
   checkInToken: string;
-  expiresAt: Date;
+  expiresAt: Date | null;
+  createdBy?: string;
 };
 
 export async function createReservationTransaction(
@@ -64,6 +65,7 @@ export async function createReservationTransaction(
           session.startTime,
         ),
         expiresAt: reservationInput.expiresAt,
+        createdBy: reservationInput.createdBy,
       },
     });
 
@@ -159,6 +161,7 @@ export type AdminReservationFilters = {
   search?: string;
   page?: number;
   limit?: number;
+  isManual?: boolean;
 };
 
 export async function getAdminReservations(filters: AdminReservationFilters) {
@@ -179,6 +182,12 @@ export async function getAdminReservations(filters: AdminReservationFilters) {
         { phone: { contains: filters.search } },
       ],
     };
+  }
+
+  if (filters.isManual === true) {
+    where.createdBy = { not: null };
+  } else if (filters.isManual === false) {
+    where.createdBy = null;
   }
 
   const [total, data] = await Promise.all([
