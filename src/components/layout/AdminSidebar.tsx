@@ -22,6 +22,7 @@ import {
   SignOut,
   X,
   ForkKnife,
+  FileText,
 } from "@phosphor-icons/react";
 
 const MENU_GROUPS = [
@@ -30,6 +31,7 @@ const MENU_GROUPS = [
     items: [
       { name: "Dashboard", href: "/admin/dashboard", icon: SquaresFour },
       { name: "Reservations", href: "/admin/reservations", icon: CalendarCheck },
+      { name: "Manual Reserv.", href: "/admin/manual-reservations", icon: FileText },
       { name: "Payments", href: "/admin/payments", icon: CreditCard },
       { name: "Check-in", href: "/admin/check-in", icon: MapPinLine },
       { name: "VIP Check-in", href: "/admin/vip-check-in", icon: Crown },

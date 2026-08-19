@@ -166,6 +166,7 @@ export const AdminReservationUseCase = {
     search?: string;
     page?: string;
     limit?: string;
+    isManual?: boolean;
   }) => {
     const filters: AdminReservationFilters = {};
 
@@ -186,6 +187,7 @@ export const AdminReservationUseCase = {
     if (query.search) filters.search = query.search;
     if (query.page) filters.page = parseInt(query.page, 10);
     if (query.limit) filters.limit = parseInt(query.limit, 10);
+    if (query.isManual !== undefined) filters.isManual = query.isManual;
 
     return getAdminReservations(filters);
   },
@@ -252,5 +254,120 @@ export const AdminReservationUseCase = {
     }
 
     return { reservationId, updatedStatus: null, tablesUpdated: !!tableIds };
+  },
+
+  createManualReservationAction: async (
+    input: PublicReservationInput,
+    adminId: string
+  ) => {
+    const dateObj = parseDateOnlyUTC(input.date);
+    const isBlocked = await BlockedDateRepository.isDateBlocked(dateObj);
+    if (isBlocked) {
+      throw new Error(`Tanggal ${input.date} tidak tersedia untuk reservasi.`);
+    }
+
+    // Reservations on Mondays are not allowed unless explicitly registered as Special Open
+    if (dateObj.getUTCDay() === 1) {
+      const isSpecialOpen = await SpecialOpenDateRepository.isDateSpecialOpen(dateObj);
+      if (!isSpecialOpen) {
+        throw new Error("Reservations cannot be made on Mondays. The restaurant is closed every Monday.");
+      }
+    }
+
+    await checkMultipleTablesAvailability(input.tableIds, input.sessionId, input.date);
+
+    const selectedTables = await prisma.table.findMany({
+      where: { id: { in: input.tableIds } },
+      select: { capacity: true, tableNumber: true },
+    });
+    const totalCapacity = selectedTables.reduce((sum, t) => sum + t.capacity, 0);
+    if (totalCapacity < input.partySize) {
+      throw new Error(
+        `Kapasitas total meja yang dipilih (${totalCapacity} orang) tidak mencukupi untuk jumlah tamu (${input.partySize} orang). Silakan pilih meja tambahan.`,
+      );
+    }
+
+    const cancelToken = crypto.randomBytes(16).toString("hex");
+    const checkInToken = crypto.randomBytes(24).toString("hex");
+
+    const reservation = await createReservationTransaction(
+      {
+        name: input.guestName,
+        phone: input.guestPhone,
+        email: input.guestEmail,
+      },
+      {
+        sessionId: input.sessionId,
+        date: dateObj,
+        partySize: input.partySize,
+        specialRequest: input.specialRequest,
+        status: ReservationStatus.pending,
+        cancelToken,
+        checkInToken,
+        expiresAt: null, // No payment expiry for manual reservations (handled by admin)
+        createdBy: adminId, // Identifies this as a manual reservation
+      },
+      input.tableIds,
+    );
+
+    appEvents.emit(EVENTS.RESERVATION_CREATED, {
+      reservationId: reservation.id,
+      status: reservation.status,
+      guestId: reservation.guestId,
+    });
+
+    return {
+      reservationId: reservation.id,
+      cancelToken,
+      checkInToken,
+    };
+  },
+
+  markManualReservationAsPaidAction: async (reservationId: string) => {
+    const reservation = await getReservationById(reservationId);
+    if (!reservation) {
+      throw new Error("Reservasi tidak ditemukan.");
+    }
+
+    // Wrap payment creation and reservation update in a transaction
+    await prisma.$transaction(async (tx) => {
+      const currentReservation = await tx.reservation.findUnique({
+        where: { id: reservationId },
+        select: { status: true }
+      });
+
+      if (!currentReservation) {
+        throw new Error("Reservasi tidak ditemukan.");
+      }
+      
+      if (currentReservation.status !== ReservationStatus.pending) {
+         throw new Error("Hanya reservasi berstatus pending yang bisa ditandai lunas.");
+      }
+
+      // Create a dummy payment to fulfill the payment tracking logic
+      await tx.payment.create({
+        data: {
+          reservationId,
+          type: "full",
+          amount: 0, // Using 0 as amount is not strictly tracked for manual WA payments
+          status: "paid",
+          midtransOrderId: `MANUAL-${crypto.randomBytes(6).toString("hex").toUpperCase()}`,
+          paymentMethod: "whatsapp",
+          paidAt: new Date(),
+        },
+      });
+
+      await tx.reservation.update({
+        where: { id: reservationId },
+        data: { status: ReservationStatus.confirmed },
+      });
+    });
+
+    // Notify guest
+    notifyGuestReservationConfirmed(reservationId).catch((err) =>
+      console.error("[admin-reservation] guest notify failed:", err),
+    );
+
+    return { success: true, reservationId };
   },
 };
