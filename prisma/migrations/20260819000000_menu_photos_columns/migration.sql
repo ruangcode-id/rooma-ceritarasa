@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "menu_photos" ADD COLUMN IF NOT EXISTS "is_available" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "menu_photos" ADD COLUMN IF NOT EXISTS "tags" TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[];
