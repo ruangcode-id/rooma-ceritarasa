@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 import AdminVipClient from "@/components/admin/AdminVipClient";
 
 export const metadata: Metadata = {
@@ -7,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function AdminVipPage() {
-  return <AdminVipClient />;
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-500">Memuat data VIP...</div>}>
+      <AdminVipClient />
+    </Suspense>
+  );
 }

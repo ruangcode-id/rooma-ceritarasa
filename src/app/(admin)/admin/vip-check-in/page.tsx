@@ -131,21 +131,21 @@ export default function AdminVipCheckInPage() {
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-2xl flex-col items-center justify-center space-y-8 px-4">
-      <div className="text-center">
-        <p className="text-xs uppercase tracking-[0.25em] text-amber-600 font-bold flex items-center justify-center gap-1.5">
-          <Crown size={16} weight="fill" className="text-amber-500" />
-          VIP Operations
-        </p>
-        <h1 className="mt-2 text-4xl font-semibold text-slate-950">
-          VIP Check-In
-        </h1>
-        <p className="mt-2 text-slate-600">
+    <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-2xl flex-col items-center justify-start space-y-6 px-4 py-8 lg:justify-center lg:py-0 lg:space-y-8">
+      <div className="w-full">
+        <div className="flex items-center gap-1.5">
+          <Crown size={12} weight="fill" className="text-amber-500" />
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-amber-600">
+            VIP Operations
+          </p>
+        </div>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-950">VIP Check-In</h1>
+        <div className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Scan the VIP digital card QR with the handheld scanner, or type the VIP code manually.
-        </p>
+        </div>
       </div>
 
-      <div className="flex w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-1">
+      <div className="flex w-full shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-1">
         <button
           type="button"
           onClick={() => {
@@ -182,7 +182,7 @@ export default function AdminVipCheckInPage() {
         </button>
       </div>
 
-      <div className="relative flex min-h-105 w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-amber-200/80 bg-white p-8 shadow-sm">
+      <div className="relative flex min-h-[420px] w-full shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-amber-200/80 bg-white p-6 shadow-sm lg:p-8">
         {/* Success Banner (Gold/Amber Theme) */}
         <div
           className={`absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 ${
@@ -263,17 +263,28 @@ export default function AdminVipCheckInPage() {
               }}
             />
 
-            <div className="relative flex size-24 items-center justify-center rounded-full bg-amber-100 text-amber-600 mb-6">
-              <QrCode size={48} className="animate-pulse" />
-              <div className="absolute inset-0 rounded-full border-2 border-amber-400/40 animate-ping" />
-            </div>
+            <button
+              type="button"
+              onClick={() => scanInputRef.current?.focus()}
+              className="relative mb-6 flex h-48 w-48 flex-col items-center justify-center rounded-3xl border-4 border-dashed border-amber-500/40 bg-amber-50/40 transition-colors hover:border-amber-500/70"
+            >
+              <Crown size={36} weight="fill" className="absolute top-4 text-amber-400/60" />
+              <QrCode size={64} className="text-amber-500/70" />
+              <div className="absolute inset-x-6 top-1/2 h-0.5 -translate-y-1/2 animate-[pulse_2s_ease-in-out_infinite] bg-amber-500/50" />
+            </button>
 
-            <h3 className="text-xl font-semibold text-slate-900">
-              Ready for VIP Scanner Input
+            <h3 className="text-lg font-semibold text-slate-900">
+              {isLoading ? "Processing…" : "Ready for VIP Scanner Input"}
             </h3>
-            <p className="mt-2 max-w-sm text-sm text-slate-500">
-              Point the handheld barcode scanner at the VIP Digital Card QR code. The system will automatically process attendance upon scan.
+            <p className="mt-1 max-w-xs text-sm leading-relaxed text-slate-500">
+              Point the handheld scanner at the VIP Digital Card QR code. The system
+              will automatically process attendance upon scan.
             </p>
+            {lookupCode ? (
+              <p className="mt-4 font-mono text-sm tracking-wider text-slate-700">
+                Reading: {lookupCode}
+              </p>
+            ) : null}
           </div>
         )}
       </div>

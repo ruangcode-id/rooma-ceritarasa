@@ -9,6 +9,7 @@ import {
   ArrowRight,
 } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
+import { SectionTitle } from "@/components/ui/SectionTitle";
 
 export default function AdminCheckInPage() {
   const [mode, setMode] = useState<"manual" | "scan">("scan");
@@ -134,20 +135,17 @@ export default function AdminCheckInPage() {
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-2xl flex-col items-center justify-center space-y-8 px-4">
-      <div className="text-center">
-        <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-          Front Desk
-        </p>
-        <h1 className="mt-2 text-4xl font-semibold text-slate-950">
-          Guest Check-In
-        </h1>
-        <p className="mt-2 text-slate-600">
-          Scan the guest QR with the handheld scanner, or type the code manually.
-        </p>
+    <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-2xl flex-col items-center justify-start space-y-6 px-4 py-8 lg:justify-center lg:py-0 lg:space-y-8">
+      <div className="w-full text-center">
+        <SectionTitle
+          eyebrow="Front Desk"
+          title="Guest Check-In"
+          description="Scan the guest QR with the handheld scanner, or type the code manually."
+          level={1}
+        />
       </div>
 
-      <div className="flex w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-1">
+      <div className="flex w-full shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-1">
         <button
           type="button"
           onClick={() => {
@@ -184,7 +182,7 @@ export default function AdminCheckInPage() {
         </button>
       </div>
 
-      <div className="relative flex min-h-[420px] w-full flex-col items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <div className="relative flex min-h-[420px] w-full shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:min-h-[420px] lg:p-8">
         <div
           className={`absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 ${
             status === "success"

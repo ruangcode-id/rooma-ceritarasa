@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/StatusBadge";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SectionTitle } from "@/components/ui/SectionTitle";
+import { OutdoorWeatherCard } from "@/components/admin/OutdoorWeatherCard";
 import type {
   AdminDashboardData,
   AdminDashboardReservationRow,
@@ -112,7 +113,19 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
     {
       id: "tables",
       header: "Tables",
-      accessor: "tables",
+      cell: (reservation) => {
+        const isOutdoor = reservation.tables.includes("OUT");
+        return (
+          <div>
+            <p className="font-medium text-slate-800">{reservation.tables || "-"}</p>
+            {isOutdoor && (
+              <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">
+                Outdoor
+              </span>
+            )}
+          </div>
+        );
+      },
     },
     {
       id: "payment",
@@ -288,6 +301,9 @@ export function AdminDashboardClient({
           }
         />
       </section>
+
+      {/* Outdoor Seating & Rainy Mode Weather Control */}
+      <OutdoorWeatherCard />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard

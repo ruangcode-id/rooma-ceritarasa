@@ -21,6 +21,8 @@ import {
   Gear,
   SignOut,
   X,
+  ForkKnife,
+  FileText,
 } from "@phosphor-icons/react";
 
 const MENU_GROUPS = [
@@ -29,6 +31,7 @@ const MENU_GROUPS = [
     items: [
       { name: "Dashboard", href: "/admin/dashboard", icon: SquaresFour },
       { name: "Reservations", href: "/admin/reservations", icon: CalendarCheck },
+      { name: "Manual Reservation", href: "/admin/manual-reservations", icon: FileText },
       { name: "Payments", href: "/admin/payments", icon: CreditCard },
       { name: "Check-in", href: "/admin/check-in", icon: MapPinLine },
       { name: "VIP Check-in", href: "/admin/vip-check-in", icon: Crown },
@@ -49,6 +52,7 @@ const MENU_GROUPS = [
     items: [
       { name: "Guests", href: "/admin/guests", icon: UsersThree },
       { name: "Gallery", href: "/admin/gallery", icon: Image },
+      { name: "Menu", href: "/admin/menu", icon: ForkKnife },
       { name: "Careers", href: "/admin/careers", icon: Briefcase },
       { name: "Notifications", href: "/admin/notifications", icon: BellRinging },
       { name: "VIP Assign", href: "/admin/vip", icon: Star },
@@ -80,12 +84,12 @@ export default function AdminSidebar({
       )}
 
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-64 flex-col bg-[#1f0609] text-rose-100 shadow-xl transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-40 flex h-dvh w-64 flex-col bg-[#1f0609] text-rose-100 shadow-xl transition-transform duration-300 lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Brand Header */}
-        <div className="flex h-20 items-center justify-between border-b border-[#3a0d13] px-6">
+        <div className="flex h-20 shrink-0 items-center justify-between border-b border-[#3a0d13] px-6">
           <span className="font-sans text-xl font-semibold uppercase tracking-widest text-white">
             Admin Panel
           </span>
@@ -101,10 +105,10 @@ export default function AdminSidebar({
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-4 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {MENU_GROUPS.map((group) => (
-            <div key={group.title} className="mb-8">
-              <h3 className="mb-3 px-3 text-xs font-bold uppercase tracking-[0.2em] text-rose-300/60">
+            <div key={group.title} className="mb-6">
+              <h3 className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.2em] text-rose-300/60">
                 {group.title}
               </h3>
 
@@ -144,28 +148,30 @@ export default function AdminSidebar({
         </div>
 
         {/* Footer */}
-        <div className="border-t border-[#3a0d13] p-4">
+        <div className="shrink-0 border-t border-[#3a0d13] p-4 pb-6">
           {/* User Profile & Sign Out Unified */}
-          <div className="flex items-center justify-between rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
-            <div className="flex min-w-0 items-center">
-              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
-                SA
-              </div>
-
-              <div className="ml-3 min-w-0">
-                <p className="truncate text-sm font-semibold text-white">
-                  Admin Staff
-                </p>
-                <p className="truncate text-xs text-rose-300/60">
-                  admin@rooma.com
-                </p>
-              </div>
+          <div className="flex items-center gap-2 rounded-xl bg-[#3a0d13] p-3 transition-all duration-200">
+            {/* Avatar */}
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-800 text-sm font-medium text-white">
+              SA
             </div>
 
+            {/* Name + Email */}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">
+                Admin Staff
+              </p>
+              <p className="truncate text-xs text-rose-300/60">
+                admin@rooma.com
+              </p>
+            </div>
+
+            {/* Logout */}
             <button
               title="Sign Out"
+              aria-label="Sign out from admin panel"
               onClick={() => setShowLogoutConfirm(true)}
-              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-rose-200/70 transition-all duration-200 hover:bg-[#4a1019] hover:text-white"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-rose-200/70 transition-all duration-200 hover:bg-[#4a1019] hover:text-white"
             >
               <SignOut size={20} />
             </button>

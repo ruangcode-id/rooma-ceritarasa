@@ -701,6 +701,18 @@ export async function refundPayment(
   }
 
   const midtransOrderId = payment.midtransOrderId ?? payment.id;
+  
+  // Bypass Midtrans for manual (WhatsApp) payments
+  if (payment.paymentMethod === "whatsapp" || midtransOrderId.startsWith("MANUAL-")) {
+    console.info("[refund] Bypassing Midtrans for manual WhatsApp payment", { orderId });
+    const updated = await paymentRepository.refundByOrderId(midtransOrderId);
+    if (!updated) throw new Error("Payment not found");
+    return {
+      ...toPaymentRecord(updated),
+      amount: amount ?? Number(updated.amount),
+    };
+  }
+
   const core = getMidtransCore();
   const midtransStatus = await core.transaction.status(midtransOrderId);
   const transactionStatus = String(midtransStatus?.transaction_status ?? "");

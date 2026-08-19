@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Briefcase, CalendarBlank, X, CheckCircle } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { handleApiError } from "@/lib/handle-api-error";
+
+const emptySubscribe = () => () => {};
 
 type CareerJob = {
   id: string;
@@ -30,6 +33,7 @@ async function fetchJobs(signal?: AbortSignal): Promise<CareerJob[]> {
 }
 
 export default function AdminCareersClient() {
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [jobs, setJobs] = useState<CareerJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -224,9 +228,9 @@ export default function AdminCareersClient() {
       )}
 
       {/* Add Job Modal */}
-      {isAdding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      {mounted && isAdding && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900">{editingJob ? "Edit Job Opening" : "Create New Job Opening"}</h3>
               <button onClick={resetForm} className="text-slate-400 hover:text-slate-600 transition-colors">
@@ -305,7 +309,8 @@ export default function AdminCareersClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Careers List */}
@@ -366,9 +371,9 @@ export default function AdminCareersClient() {
       )}
 
       {/* Delete Confirmation Modal */}
-      {deleteJobPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
+      {mounted && deleteJobPrompt && createPortal(
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Briefcase size={32} weight="fill" />
@@ -395,7 +400,8 @@ export default function AdminCareersClient() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

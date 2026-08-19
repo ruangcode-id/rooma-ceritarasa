@@ -422,7 +422,13 @@ export default function AdminPaymentsPage() {
     try {
       const response = await fetch(
         `/api/admin/payments/${confirmRefund.id}/refund`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ type: "full" }),
+        }
       );
 
       if (!response.ok) {
@@ -727,7 +733,7 @@ export default function AdminPaymentsPage() {
                   Confirm Refund
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                  Refund to guest?
+                  Full Refund to guest?
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-600">
                   A full refund request will be sent to Midtrans for order{" "}
