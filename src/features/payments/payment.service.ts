@@ -740,8 +740,15 @@ export async function refundPayment(
 
   try {
     await core.transaction.refund(midtransOrderId, refundPayload);
-  } catch {
-    throw new Error("Refund request rejected by Midtrans Sandbox");
+  } catch (refundErr: unknown) {
+    const midtransMessage =
+      refundErr instanceof Error
+        ? refundErr.message
+        : typeof (refundErr as Record<string, unknown>)?.message === "string"
+          ? String((refundErr as Record<string, unknown>).message)
+          : JSON.stringify(refundErr);
+    console.error("[refund] Midtrans refund rejected:", midtransMessage, { midtransOrderId });
+    throw new Error(`Midtrans refund failed: ${midtransMessage}`);
   }
 
   console.info("[refund] Midtrans refund requested", {
