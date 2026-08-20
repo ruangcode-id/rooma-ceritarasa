@@ -148,6 +148,7 @@ export async function POST(req: NextRequest) {
       const updateData = {
         status: paymentStatus,
         ...(paymentStatus === PaymentStatus.paid ? { paidAt } : {}),
+        ...(payload.payment_type ? { paymentMethod: payload.payment_type } : {}),
       };
 
       if (paymentStatus === PaymentStatus.refunded) {
