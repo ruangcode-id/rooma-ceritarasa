@@ -768,6 +768,49 @@ export async function refundPayment(
   };
 }
 
+/**
+ * Daftar payment_type dari Midtrans yang mendukung refund otomatis via API.
+ * Untuk metode lain (misal: bank_transfer / Virtual Account), admin harus
+ * melakukan transfer manual dan menandai refund secara manual di sistem.
+ * Referensi: https://docs.midtrans.com/docs/refund
+ */
+export const MIDTRANS_REFUNDABLE_METHODS = new Set([
+  "credit_card",
+  "gopay",
+  "shopeepay",
+  "qris",
+  "akulaku",
+]);
+
+/**
+ * Tandai pembayaran sebagai refunded secara manual (tanpa panggil Midtrans).
+ * Digunakan untuk metode pembayaran yang tidak didukung refund otomatis Midtrans
+ * (contoh: Virtual Account / bank_transfer).
+ */
+export async function markAsRefunded(orderId: string): Promise<PaymentRecord> {
+  const payment = await paymentRepository.findByOrderId(orderId);
+
+  if (!payment) {
+    throw new Error("Payment not found");
+  }
+
+  console.info("[refund] Marking as manually refunded (no Midtrans call)", {
+    orderId,
+    paymentMethod: payment.paymentMethod,
+  });
+
+  const updated = await paymentRepository.refundByOrderId(payment.midtransOrderId ?? payment.id);
+
+  if (!updated) {
+    throw new Error("Payment not found after update");
+  }
+
+  return {
+    ...toPaymentRecord(updated),
+    amount: Number(updated.amount),
+  };
+}
+
 export async function handleMidtransWebhook(
   payload: MidtransWebhookPayload
 ): Promise<PaymentRecord> {
