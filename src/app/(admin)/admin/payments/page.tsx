@@ -29,6 +29,21 @@ import {
   type StatusBadgeOption,
 } from "@/components/ui/StatusBadge";
 
+// Metode pembayaran Midtrans yang mendukung refund otomatis via API.
+// Referensi: https://docs.midtrans.com/docs/refund
+const MIDTRANS_REFUNDABLE_METHODS = new Set([
+  "credit_card",
+  "gopay",
+  "shopeepay",
+  "qris",
+  "akulaku",
+]);
+
+function isAutoRefundable(paymentMethod: string | null): boolean {
+  if (!paymentMethod) return false;
+  return MIDTRANS_REFUNDABLE_METHODS.has(paymentMethod.toLowerCase());
+}
+
 type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 
 type PaymentItem = {
@@ -419,6 +434,8 @@ export default function AdminPaymentsPage() {
     if (!confirmRefund) return;
     setActionKey(confirmRefund.id);
 
+    const isManual = !isAutoRefundable(confirmRefund.paymentMethod);
+
     try {
       const response = await fetch(
         `/api/admin/payments/${confirmRefund.id}/refund`,
@@ -427,7 +444,7 @@ export default function AdminPaymentsPage() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ type: "full" }),
+          body: JSON.stringify({ type: "full", manual: isManual }),
         }
       );
 
@@ -436,8 +453,10 @@ export default function AdminPaymentsPage() {
       }
 
       setFeedback({
-        title: "Refund Confirmation Complete",
-        message: `Refund status for Order ID ${confirmRefund.orderId} has been successfully recorded.`,
+        title: isManual ? "Refund Ditandai" : "Refund Berhasil",
+        message: isManual
+          ? `Order ${confirmRefund.orderId} telah ditandai sebagai refunded. Pastikan Anda telah melakukan transfer dana secara manual ke tamu.`
+          : `Refund untuk Order ID ${confirmRefund.orderId} berhasil diproses via Midtrans.`,
         variant: "success",
       });
       setConfirmRefund(null);
@@ -562,19 +581,41 @@ export default function AdminPaymentsPage() {
           );
         }
 
+        const autoRefund = isAutoRefundable(payment.paymentMethod);
+
+        if (autoRefund) {
+          return (
+            <button
+              type="button"
+              onClick={() => setConfirmRefund(payment)}
+              disabled={isRefunding || isLoading}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:opacity-50"
+              title="Refund otomatis via Midtrans"
+            >
+              {isRefunding ? (
+                <LoadingSpinner className="size-3.5" />
+              ) : (
+                <ArrowClockwise size={14} weight="bold" />
+              )}
+              Refund via Midtrans
+            </button>
+          );
+        }
+
         return (
           <button
             type="button"
             onClick={() => setConfirmRefund(payment)}
             disabled={isRefunding || isLoading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-600 transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500/30 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 disabled:opacity-50"
+            title="Transfer manual ke tamu, lalu tandai sebagai refunded"
           >
             {isRefunding ? (
               <LoadingSpinner className="size-3.5" />
             ) : (
               <ArrowClockwise size={14} weight="bold" />
             )}
-            Process Refund
+            Tandai Refunded
           </button>
         );
       },
@@ -721,63 +762,85 @@ export default function AdminPaymentsPage() {
         />
       </section>
 
-      {confirmRefund && (
-        <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 px-4 py-6">
-          <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
-            <div className="flex items-start gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-red-50 text-red-600">
-                <WarningCircle size={20} weight="fill" />
-              </span>
-              <div>
-                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
-                  Confirm Refund
+      {confirmRefund && (() => {
+        const autoRefund = isAutoRefundable(confirmRefund.paymentMethod);
+        return (
+          <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-slate-950/40 px-4 py-6">
+            <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+              <div className="flex items-start gap-3">
+                <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${autoRefund ? "bg-red-50 text-red-600" : "bg-amber-50 text-amber-600"}`}>
+                  <WarningCircle size={20} weight="fill" />
+                </span>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+                    {autoRefund ? "Confirm Refund via Midtrans" : "Tandai Refund Manual"}
+                  </p>
+                  <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                    {autoRefund ? "Full Refund to guest?" : "Tandai sebagai Refunded?"}
+                  </h2>
+                  {autoRefund ? (
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Permintaan full refund akan dikirim ke Midtrans untuk order{" "}
+                      <span className="break-all font-semibold text-slate-900">
+                        {confirmRefund.orderId}
+                      </span>{" "}
+                      sebesar {formatRupiah(confirmRefund.amount)}. Dana akan otomatis dikembalikan ke metode pembayaran tamu.
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      Metode pembayaran ini (<span className="font-semibold text-slate-900">{confirmRefund.paymentMethod ?? "tidak diketahui"}</span>) tidak mendukung refund otomatis via Midtrans.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {!autoRefund && (
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  <p className="font-semibold">⚠️ Tindakan wajib sebelum konfirmasi:</p>
+                  <p className="mt-1">Pastikan Anda sudah mentransfer <span className="font-semibold">{formatRupiah(confirmRefund.amount)}</span> secara manual ke rekening tamu. Tombol ini hanya mencatat status di sistem, uang tidak dikembalikan otomatis.</p>
+                </div>
+              )}
+
+              <div className="mt-6 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
+                <p className="font-semibold text-slate-900">
+                  {confirmRefund.reservation.guest.name}
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-950">
-                  Full Refund to guest?
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
-                  A full refund request will be sent to Midtrans for order{" "}
-                  <span className="break-all font-semibold text-slate-900">
-                    {confirmRefund.orderId}
-                  </span>{" "}
-                  amounting to {formatRupiah(confirmRefund.amount)}.
+                <p>
+                  {formatDate(confirmRefund.reservation.date)} -{" "}
+                  {confirmRefund.reservation.session.name}
                 </p>
               </div>
-            </div>
 
-            <div className="mt-6 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">
-              <p className="font-semibold text-slate-900">
-                {confirmRefund.reservation.guest.name}
-              </p>
-              <p>
-                {formatDate(confirmRefund.reservation.date)} -{" "}
-                {confirmRefund.reservation.session.name}
-              </p>
-            </div>
-
-            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setConfirmRefund(null)}
-                disabled={actionKey === confirmRefund.id}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleRefundSubmit()}
-                disabled={actionKey === confirmRefund.id}
-                className="rounded-xl bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {actionKey === confirmRefund.id
-                  ? "Processing refund"
-                  : "Confirm Refund"}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
+              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setConfirmRefund(null)}
+                  disabled={actionKey === confirmRefund.id}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleRefundSubmit()}
+                  disabled={actionKey === confirmRefund.id}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                    autoRefund
+                      ? "bg-red-50 text-red-600 hover:bg-red-100"
+                      : "bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  }`}
+                >
+                  {actionKey === confirmRefund.id
+                    ? "Memproses..."
+                    : autoRefund
+                    ? "Confirm Refund"
+                    : "Ya, Tandai Refunded"}
+                </button>
+              </div>
+            </section>
+          </div>
+        );
+      })()}
 
       <FeedbackDialog
         open={feedback !== null}
