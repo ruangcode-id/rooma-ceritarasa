@@ -265,7 +265,7 @@ const DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE = [
   "• Reserved Table: {{table}}",
   "• Check-in Code: {{check_in_code}}",
   "",
-  "A QR Code for check-in has been sent to your email. Please present the QR Code or Check-in Code upon arrival.",
+  "Please present the attached QR Code image or your Check-in Code to our staff upon arrival.",
   "",
   "Please arrive on time. Reservations will be automatically cancelled if arrival exceeds 15 minutes🙏🏻",
   "",
