@@ -740,8 +740,15 @@ export async function refundPayment(
 
   try {
     await core.transaction.refund(midtransOrderId, refundPayload);
-  } catch {
-    throw new Error("Refund request rejected by Midtrans Sandbox");
+  } catch (refundErr: unknown) {
+    const midtransMessage =
+      refundErr instanceof Error
+        ? refundErr.message
+        : typeof (refundErr as Record<string, unknown>)?.message === "string"
+          ? String((refundErr as Record<string, unknown>).message)
+          : JSON.stringify(refundErr);
+    console.error("[refund] Midtrans refund rejected:", midtransMessage, { midtransOrderId });
+    throw new Error(`Midtrans refund failed: ${midtransMessage}`);
   }
 
   console.info("[refund] Midtrans refund requested", {
@@ -758,6 +765,49 @@ export async function refundPayment(
   return {
     ...toPaymentRecord(updated),
     amount: amount ?? Number(updated.amount),
+  };
+}
+
+/**
+ * Daftar payment_type dari Midtrans yang mendukung refund otomatis via API.
+ * Untuk metode lain (misal: bank_transfer / Virtual Account), admin harus
+ * melakukan transfer manual dan menandai refund secara manual di sistem.
+ * Referensi: https://docs.midtrans.com/docs/refund
+ */
+export const MIDTRANS_REFUNDABLE_METHODS = new Set([
+  "credit_card",
+  "gopay",
+  "shopeepay",
+  "qris",
+  "akulaku",
+]);
+
+/**
+ * Tandai pembayaran sebagai refunded secara manual (tanpa panggil Midtrans).
+ * Digunakan untuk metode pembayaran yang tidak didukung refund otomatis Midtrans
+ * (contoh: Virtual Account / bank_transfer).
+ */
+export async function markAsRefunded(orderId: string): Promise<PaymentRecord> {
+  const payment = await paymentRepository.findByOrderId(orderId);
+
+  if (!payment) {
+    throw new Error("Payment not found");
+  }
+
+  console.info("[refund] Marking as manually refunded (no Midtrans call)", {
+    orderId,
+    paymentMethod: payment.paymentMethod,
+  });
+
+  const updated = await paymentRepository.refundByOrderId(payment.midtransOrderId ?? payment.id);
+
+  if (!updated) {
+    throw new Error("Payment not found after update");
+  }
+
+  return {
+    ...toPaymentRecord(updated),
+    amount: Number(updated.amount),
   };
 }
 

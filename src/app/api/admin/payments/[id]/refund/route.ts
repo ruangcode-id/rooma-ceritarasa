@@ -2,13 +2,14 @@ import { z } from "zod";
 import { jsonError, jsonSuccess } from "@/lib/api-envelope";
 import { requireAdminApiSession } from "@/lib/require-admin-api";
 import { prisma } from "@/infrastructure/database/prisma";
-import { refundPayment } from "@/features/payments/payment.service";
+import { refundPayment, markAsRefunded } from "@/features/payments/payment.service";
 import { PaymentStatus } from "@/generated/prisma/client";
 
 type RouteCtx = { params: Promise<{ id: string }> };
 
 type RefundBody = {
   type?: unknown;
+  manual?: unknown;
   reason?: unknown;
 };
 
@@ -43,6 +44,8 @@ export async function POST(request: Request, context: RouteCtx) {
     return jsonError("Partial refund belum didukung.", 400);
   }
 
+  const isManual = json.manual === true;
+
   const payment = await prisma.payment.findUnique({
     where: { id: idParsed.data },
   });
@@ -56,17 +59,33 @@ export async function POST(request: Request, context: RouteCtx) {
   }
 
   try {
-    const refundResult = await refundPayment(payment.midtransOrderId ?? payment.id);
+    if (isManual) {
+      // Jalur manual: langsung tandai refunded di DB tanpa panggil Midtrans
+      const refundResult = await markAsRefunded(payment.midtransOrderId ?? payment.id);
+      return jsonSuccess({
+        id: payment.id,
+        orderId: refundResult.orderId,
+        status: "refunded",
+        type: json.type,
+        amount: refundResult.amount,
+        manual: true,
+      });
+    }
 
+    // Jalur otomatis: proses refund via Midtrans API
+    const refundResult = await refundPayment(payment.midtransOrderId ?? payment.id);
     return jsonSuccess({
       id: payment.id,
       orderId: refundResult.orderId,
       status: "refunded",
       type: json.type,
       amount: refundResult.amount,
+      manual: false,
     });
   } catch (error: unknown) {
     console.error("API [Admin Payment Refund] Error:", error);
-    return jsonError("Terjadi kesalahan internal pada server.", 500);
+    const message = error instanceof Error ? error.message : "Terjadi kesalahan internal pada server.";
+    return jsonError(message, 500);
   }
 }
+
