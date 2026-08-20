@@ -3,9 +3,10 @@ import {
   buildCheckInQrEmailBlock,
   CHECK_IN_QR_CID,
   resolveCheckInQrEmailAssets,
+  generateCheckInQrBuffer,
 } from "@/infrastructure/check-in/qr-code";
 import { SettingsRepository } from "@/infrastructure/repositories/settings.repository";
-import { sendWhatsAppMessage } from "@/infrastructure/whatsapp/fonnte";
+import { sendWhatsAppMessage, sendWhatsAppMessageWithImage } from "@/infrastructure/whatsapp/fonnte";
 import { sendTransactionalEmail } from "@/infrastructure/email/resend";
 import { renderTemplate } from "@/lib/render-template";
 import { ReservationStatus } from "@/generated/prisma/client";
@@ -100,6 +101,24 @@ export async function sendWaFromTemplate(
   }
   const message = renderTemplate(raw, variables);
   return sendWhatsAppMessage(phone, message);
+}
+
+export async function sendWaImageFromTemplate(
+  phone: string,
+  templateKey: string,
+  variables: TemplateVars,
+  imageBuffer: Buffer,
+  filename: string,
+  fallbackMessage?: string,
+) {
+  const templates = await loadWaTemplates();
+  const raw = templates[templateKey] ?? fallbackMessage;
+  if (!raw) {
+    console.warn(`[guest-notify] WA template '${templateKey}' tidak ditemukan.`);
+    return { sent: false as const, warning: `Template WA '${templateKey}' kosong.` };
+  }
+  const message = renderTemplate(raw, variables);
+  return sendWhatsAppMessageWithImage(phone, message, imageBuffer, filename);
 }
 
 export async function sendEmailFromTemplate(
@@ -246,7 +265,7 @@ const DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE = [
   "• Reserved Table: {{table}}",
   "• Check-in Code: {{check_in_code}}",
   "",
-  "A QR Code for check-in has been sent to your email. Please present the QR Code or Check-in Code upon arrival.",
+  "Please present the attached QR Code image or your Check-in Code to our staff upon arrival.",
   "",
   "Please arrive on time. Reservations will be automatically cancelled if arrival exceeds 15 minutes🙏🏻",
   "",
@@ -305,13 +324,33 @@ export async function notifyGuestPaymentSuccess(reservationId: string) {
     email: guestEmail,
   };
 
-  // WA: teks saja (hemat Fonnte). QR dikirim lewat email.
-  await sendWaFromTemplate(
-    reservation.guest.phone,
-    "payment_success",
-    vars,
-    DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE,
-  );
+  let qrBuffer: Buffer | null = null;
+  if (checkInCode) {
+    try {
+      qrBuffer = await generateCheckInQrBuffer(checkInCode);
+    } catch (error) {
+      console.warn("[guest-notify] Failed to generate QR buffer for WA:", error);
+    }
+  }
+
+  if (qrBuffer) {
+    await sendWaImageFromTemplate(
+      reservation.guest.phone,
+      "payment_success",
+      vars,
+      qrBuffer,
+      "check-in-qr.png",
+      DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE,
+    );
+  } else {
+    // Fallback to text only if QR generation fails or checkInCode is missing
+    await sendWaFromTemplate(
+      reservation.guest.phone,
+      "payment_success",
+      vars,
+      DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE,
+    );
+  }
 
   if (guestEmail) {
     await sendReservationEmailWithCheckInQr({
