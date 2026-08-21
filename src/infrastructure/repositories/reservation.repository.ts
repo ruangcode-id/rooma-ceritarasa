@@ -281,6 +281,9 @@ export async function extendCheckInGracePeriod(id: string, minutes: number) {
 
   return prisma.reservation.update({
     where: { id },
-    data: { checkInTokenExpiresAt: newExpiresAt },
+    data: { 
+      checkInTokenExpiresAt: newExpiresAt,
+      graceExtensionMinutes: { increment: minutes }
+    },
   });
 }

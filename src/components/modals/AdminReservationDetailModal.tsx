@@ -17,6 +17,7 @@ type DetailReservation = {
   specialRequest?: string | null;
   createdAt: string;
   checkInTokenExpiresAt: string | null;
+  graceExtensionMinutes: number;
   guest: {
     id: string;
     name: string;
@@ -201,9 +202,16 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="text-sm font-bold text-blue-900">Batas Waktu Check-In</h4>
-                    <p className="text-sm text-blue-800 mt-0.5">
-                      {format(new Date(data.checkInTokenExpiresAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
-                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-sm text-blue-800">
+                        {format(new Date(data.checkInTokenExpiresAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
+                      </p>
+                      {data.graceExtensionMinutes > 0 && (
+                        <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                          Diperpanjang +{data.graceExtensionMinutes} Menit
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   {showConfirmExtend ? (

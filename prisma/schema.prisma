@@ -282,6 +282,7 @@ model Reservation {
   paymentToken          String?           @unique @map("payment_token") @db.VarChar(100)
   checkInToken          String?           @unique @map("check_in_token") @db.VarChar(100)
   checkInTokenExpiresAt DateTime?         @map("check_in_token_expires_at")
+  graceExtensionMinutes Int               @default(0) @map("grace_extension_minutes")
   expiresAt             DateTime?         @map("expires_at")
   reminderSentAt        DateTime?         @map("reminder_sent_at")
   createdBy             String?           @map("created_by") @db.Uuid
