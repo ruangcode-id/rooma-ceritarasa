@@ -41,7 +41,7 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
     return { error: "Terlalu banyak percobaan. Silakan coba lagi nanti." };
   }
 
-  let user: { role: "admin" | "owner"; isActive: boolean } | null;
+  let user: { role: "admin" | "owner" | "hr"; isActive: boolean } | null;
 
   try {
     user = await prisma.user.findUnique({
@@ -57,7 +57,9 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
     return { error: "Email atau password tidak valid." };
   }
 
-  const redirectTo = user.role === "admin" ? "/admin/dashboard" : "/owner/dashboard";
+  let redirectTo = "/owner/dashboard";
+  if (user.role === "admin") redirectTo = "/admin/dashboard";
+  if (user.role === "hr") redirectTo = "/hr";
 
   try {
     await signIn("credentials", {

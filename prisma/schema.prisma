@@ -19,6 +19,7 @@ datasource db {
 enum UserRole {
   admin
   owner
+  hr
 }
 
 enum ReservationStatus {
@@ -446,6 +447,8 @@ model CareerJob {
   title        String    @db.VarChar(150)
   description  String    @db.Text
   requirements String    @db.Text
+  imageUrl     String?   @map("image_url") @db.Text
+  imagePublicId String?  @map("image_public_id") @db.VarChar(255)
   deadline     DateTime?
   isOpen       Boolean   @default(true) @map("is_open")
   createdAt    DateTime  @default(now()) @map("created_at")
