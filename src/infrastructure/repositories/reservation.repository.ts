@@ -63,6 +63,8 @@ export async function createReservationTransaction(
         checkInTokenExpiresAt: buildCheckInDeadline(
           reservationInput.date,
           session.startTime,
+          15,
+          new Date()
         ),
         expiresAt: reservationInput.expiresAt,
         createdBy: reservationInput.createdBy,
@@ -258,5 +260,27 @@ export async function updateReservationTablesTransaction(
         },
       },
     });
+  });
+}
+
+export async function extendCheckInGracePeriod(id: string, minutes: number) {
+  const reservation = await prisma.reservation.findUnique({
+    where: { id },
+    select: { checkInTokenExpiresAt: true },
+  });
+
+  if (!reservation) {
+    throw new Error("Reservation not found");
+  }
+
+  if (!reservation.checkInTokenExpiresAt) {
+    throw new Error("Reservation does not have a check-in expiry set");
+  }
+
+  const newExpiresAt = new Date(reservation.checkInTokenExpiresAt.getTime() + minutes * 60_000);
+
+  return prisma.reservation.update({
+    where: { id },
+    data: { checkInTokenExpiresAt: newExpiresAt },
   });
 }

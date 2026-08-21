@@ -16,6 +16,7 @@ type DetailReservation = {
   date: string;
   specialRequest?: string | null;
   createdAt: string;
+  checkInTokenExpiresAt: string | null;
   guest: {
     id: string;
     name: string;
@@ -83,6 +84,26 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
     const currentUrl = new URL(window.location.href);
     currentUrl.searchParams.delete("detail");
     router.replace(currentUrl.pathname + currentUrl.search);
+  };
+
+  const handleExtendGrace = async () => {
+    if (!confirm("Apakah Anda yakin ingin menambah 15 menit waktu keterlambatan check-in?")) return;
+    try {
+      const res = await fetch(`/api/admin/reservations/${reservationId}/extend-grace`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minutes: 15 }),
+      });
+      if (!res.ok) throw new Error(await handleApiError(res));
+      const payload = await res.json();
+      if (!payload.success) throw new Error(payload.error || "Gagal memperpanjang waktu");
+      
+      alert("Waktu keterlambatan berhasil ditambah 15 menit.");
+      router.refresh(); // Refresh the page data
+      handleClose(); // Close the modal
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error unknown");
+    }
   };
 
   return (
@@ -170,6 +191,24 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
                   </div>
                 </div>
               </div>
+
+              {/* Check-In Deadline & Extension Action */}
+              {(data.status === "confirmed" || data.status === "pending") && data.checkInTokenExpiresAt && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-blue-900">Batas Waktu Check-In</h4>
+                    <p className="text-sm text-blue-800 mt-0.5">
+                      {format(new Date(data.checkInTokenExpiresAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleExtendGrace}
+                    className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors shadow-sm"
+                  >
+                    +15 Menit Toleransi
+                  </button>
+                </div>
+              )}
 
               {/* Tables */}
               <div>

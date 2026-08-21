@@ -28,9 +28,11 @@ export function buildCheckInDeadline(
   reservationDate: Date,
   sessionStartTime: Date,
   graceMinutes: number = CHECK_IN_GRACE_MINUTES,
+  createdAt: Date = new Date(),
 ): Date {
   const startAt = buildSessionStartAt(reservationDate, sessionStartTime);
-  return new Date(startAt.getTime() + graceMinutes * 60_000);
+  const baseTime = createdAt.getTime() > startAt.getTime() ? createdAt : startAt;
+  return new Date(baseTime.getTime() + graceMinutes * 60_000);
 }
 
 export function isPastCheckInGrace(params: {
@@ -43,6 +45,7 @@ export function isPastCheckInGrace(params: {
     params.reservationDate,
     params.sessionStartTime,
     params.graceMinutes ?? CHECK_IN_GRACE_MINUTES,
+    new Date(0) // Force fallback to use startAt
   );
   const now = params.now ?? new Date();
   return now.getTime() > deadline.getTime();

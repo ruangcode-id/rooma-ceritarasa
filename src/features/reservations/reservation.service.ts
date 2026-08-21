@@ -247,7 +247,9 @@ export async function createPublicReservation(
     const checkInToken = crypto.randomBytes(24).toString("hex");
     const checkInTokenExpiresAt = buildCheckInDeadline(
       reservationDate,
-      session.startTime
+      session.startTime,
+      15,
+      new Date()
     );
 
     const reservation = await tx.reservation.create({
