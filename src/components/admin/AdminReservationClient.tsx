@@ -14,6 +14,7 @@ import {
   Crown,
   UserFocus,
   NotePencil,
+  Eye,
 } from "@phosphor-icons/react";
 import { MetricCard } from "@/components/cards/MetricCard";
 import {
@@ -22,7 +23,7 @@ import {
 } from "@/components/tables/DataTable";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import AdminReservationDetailModal from "@/components/modals/AdminReservationDetailModal";
 import {
   StatusBadge,
@@ -159,6 +160,7 @@ export default function AdminReservationClient() {
   const [notesModalRow, setNotesModalRow] = useState<ReservationRow | null>(null);
 
   const searchParams = useSearchParams();
+  const router = useRouter();
   const detailId = searchParams?.get("detail");
 
   async function load() {
@@ -456,6 +458,19 @@ export default function AdminReservationClient() {
                 </button>
               </>
             ) : null}
+            <button
+              type="button"
+              onClick={() => {
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set("detail", reservation.id);
+                router.replace(currentUrl.pathname + currentUrl.search);
+              }}
+              disabled={isBusy}
+              className="rounded-xl bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-600 transition-all duration-300 hover:scale-105 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-1"
+            >
+              <Eye size={14} weight="bold" />
+              Detail
+            </button>
             {isBusy ? <LoadingSpinner className="self-center" /> : null}
           </div>
         );
