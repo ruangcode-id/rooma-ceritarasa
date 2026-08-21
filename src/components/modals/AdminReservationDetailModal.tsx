@@ -53,6 +53,8 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
   const [data, setData] = useState<DetailReservation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isExtending, setIsExtending] = useState(false);
+  const [showConfirmExtend, setShowConfirmExtend] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -87,7 +89,7 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
   };
 
   const handleExtendGrace = async () => {
-    if (!confirm("Apakah Anda yakin ingin menambah 15 menit waktu keterlambatan check-in?")) return;
+    setIsExtending(true);
     try {
       const res = await fetch(`/api/admin/reservations/${reservationId}/extend-grace`, {
         method: "POST",
@@ -98,11 +100,13 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
       const payload = await res.json();
       if (!payload.success) throw new Error(payload.error || "Gagal memperpanjang waktu");
       
-      alert("Waktu keterlambatan berhasil ditambah 15 menit.");
       router.refresh(); // Refresh the page data
       handleClose(); // Close the modal
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error unknown");
+    } finally {
+      setIsExtending(false);
+      setShowConfirmExtend(false);
     }
   };
 
@@ -194,19 +198,41 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
 
               {/* Check-In Deadline & Extension Action */}
               {(data.status === "confirmed" || data.status === "pending") && data.checkInTokenExpiresAt && (
-                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex items-center justify-between">
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h4 className="text-sm font-bold text-blue-900">Batas Waktu Check-In</h4>
                     <p className="text-sm text-blue-800 mt-0.5">
                       {format(new Date(data.checkInTokenExpiresAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
                     </p>
                   </div>
-                  <button
-                    onClick={handleExtendGrace}
-                    className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors shadow-sm"
-                  >
-                    +15 Menit Toleransi
-                  </button>
+                  
+                  {showConfirmExtend ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-blue-900 mr-2">Yakin tambah 15 menit?</span>
+                      <button
+                        onClick={() => setShowConfirmExtend(false)}
+                        disabled={isExtending}
+                        className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        onClick={handleExtendGrace}
+                        disabled={isExtending}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isExtending ? <LoadingSpinner className="size-3 border-white/40 border-t-white" /> : null}
+                        Ya, Tambah
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowConfirmExtend(true)}
+                      className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors shadow-sm"
+                    >
+                      +15 Menit Toleransi
+                    </button>
+                  )}
                 </div>
               )}
 
