@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { jsonError, jsonSuccess, jsonValidationError } from "@/lib/api-envelope";
-import { requireAdminApiSession } from "@/lib/require-admin-api";
+import { requireHrApiSession } from "@/lib/require-hr-api";
 import { updateCareerJobSchema } from "@/features/careers/career.validation";
 import {
   deleteCareerJob,
@@ -30,7 +30,7 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireAdminApiSession();
+  const authResult = await requireHrApiSession();
   if (!authResult.ok) return authResult.response;
 
   const { id } = await context.params;
@@ -52,11 +52,26 @@ export async function GET(
   }
 }
 
+function isUploadFile(value: FormDataEntryValue | null): value is File {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "arrayBuffer" in value &&
+    "size" in value &&
+    "type" in value
+  );
+}
+
+function formString(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return typeof value === "string" ? value : undefined;
+}
+
 export async function PUT(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireAdminApiSession();
+  const authResult = await requireHrApiSession();
   if (!authResult.ok) return authResult.response;
 
   const { id } = await context.params;
@@ -65,34 +80,64 @@ export async function PUT(
     return jsonValidationError(parsedId.error);
   }
 
-  let json: unknown;
-  try {
-    json = await request.json();
-  } catch {
-    return jsonError("Body harus berupa JSON.", 400);
+  const contentType = request.headers.get("content-type") || "";
+  let imageBuffer: Buffer | undefined = undefined;
+  let updateData: unknown = {};
+  
+  if (contentType.includes("multipart/form-data")) {
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return jsonError("Gagal parse form data.", 400);
+    }
+    
+    const image = formData.get("image");
+    if (image && isUploadFile(image) && image.size > 0) {
+      if (image.size > 8 * 1024 * 1024) return jsonError("Ukuran gambar maksimal 8MB.", 400);
+      if (!image.type.startsWith("image/")) return jsonError("File harus berupa image.", 400);
+      imageBuffer = Buffer.from(await image.arrayBuffer());
+    }
+
+    updateData = {
+      title: formString(formData, "title"),
+      description: formString(formData, "description"),
+      requirements: formString(formData, "requirements"),
+      deadline: formString(formData, "deadline"),
+      isOpen: formString(formData, "isOpen"),
+    };
+  } else {
+    try {
+      updateData = await request.json();
+    } catch {
+      return jsonError("Body harus berupa JSON atau multipart/form-data.", 400);
+    }
   }
 
-  if (!hasUpdateValue(json)) {
-    return jsonError("Minimal satu field harus diisi.", 400);
+  if (!hasUpdateValue(updateData) && !imageBuffer) {
+    return jsonError("Minimal satu field atau gambar harus diisi.", 400);
   }
 
-  const parsed = updateCareerJobSchema.safeParse(json);
+  const parsed = updateCareerJobSchema.safeParse(updateData);
   if (!parsed.success) {
     return jsonValidationError(parsed.error);
   }
 
-  if (Object.keys(parsed.data).length === 0) {
-    return jsonError("Minimal satu field harus diisi.", 400);
+  if (Object.keys(parsed.data).length === 0 && !imageBuffer) {
+    return jsonError("Minimal satu field atau gambar harus diisi.", 400);
   }
 
   try {
-    const job = await updateCareerJob(parsedId.data, parsed.data);
+    const job = await updateCareerJob(parsedId.data, parsed.data, imageBuffer ? { buffer: imageBuffer } : undefined);
     return jsonSuccess(job);
   } catch (error: unknown) {
     const mappedError = mapCareerError(error);
     if (mappedError) return mappedError;
 
-    console.error(`/api/admin/careers/${parsedId.data} PUT error:`, error);
+    if (error instanceof Error && error.message.startsWith("Missing Cloudinary env")) {
+      return jsonError("Cloudinary belum dikonfigurasi.", 500);
+    }
+    console.error(`/api/hr/careers/${parsedId.data} PUT error:`, error);
     return jsonError("Internal Server Error", 500);
   }
 }
@@ -101,7 +146,7 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireAdminApiSession();
+  const authResult = await requireHrApiSession();
   if (!authResult.ok) return authResult.response;
 
   const { id } = await context.params;

@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 
-export type Role = "admin" | "owner";
+export type Role = "admin" | "owner" | "hr";
 
 /**
  * Retrieves the current user from the session.

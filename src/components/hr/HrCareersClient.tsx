@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Briefcase, CalendarBlank, X, CheckCircle } from "@phosphor-icons/react";
+import { Plus, Briefcase, CalendarBlank, X, CheckCircle, Image as ImageIcon, UploadSimple } from "@phosphor-icons/react";
+import Image from "next/image";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { handleApiError } from "@/lib/handle-api-error";
@@ -15,12 +16,13 @@ type CareerJob = {
   description: string;
   requirements: string;
   deadline: string | null;
+  imageUrl: string | null;
   isOpen: boolean;
   createdAt: string;
 };
 
 async function fetchJobs(signal?: AbortSignal): Promise<CareerJob[]> {
-  const res = await fetch("/api/admin/careers", {
+  const res = await fetch("/api/hr/careers", {
     cache: "no-store",
     signal,
   });
@@ -32,7 +34,7 @@ async function fetchJobs(signal?: AbortSignal): Promise<CareerJob[]> {
   return payload.data || [];
 }
 
-export default function AdminCareersClient() {
+export default function HrCareersClient() {
   const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [jobs, setJobs] = useState<CareerJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +50,9 @@ export default function AdminCareersClient() {
   const [newRequirements, setNewRequirements] = useState("");
   const [newDeadline, setNewDeadline] = useState("");
   const [newIsOpen, setNewIsOpen] = useState(true);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadJobs() {
     setIsLoading(true);
@@ -88,6 +93,9 @@ export default function AdminCareersClient() {
     setNewRequirements("");
     setNewDeadline("");
     setNewIsOpen(true);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleEditClick = (job: CareerJob) => {
@@ -97,6 +105,7 @@ export default function AdminCareersClient() {
     setNewRequirements(job.requirements);
     setNewDeadline(job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : "");
     setNewIsOpen(job.isOpen);
+    setPreviewUrl(job.imageUrl);
     setIsAdding(true);
   };
 
@@ -104,7 +113,7 @@ export default function AdminCareersClient() {
     setIsSaving(true);
     setError("");
     try {
-      const res = await fetch(`/api/admin/careers/${job.id}`, {
+      const res = await fetch(`/api/hr/careers/${job.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isOpen: !job.isOpen }),
@@ -132,7 +141,7 @@ export default function AdminCareersClient() {
     setIsSaving(true);
     
     try {
-      const res = await fetch(`/api/admin/careers/${deleteJobPrompt.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/hr/careers/${deleteJobPrompt.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(await handleApiError(res));
 
       const data = await res.json();
@@ -155,26 +164,50 @@ export default function AdminCareersClient() {
     setIsSaving(true);
     setError("");
     try {
-      const payload = {
-        title: newTitle,
-        description: newDescription,
-        requirements: newRequirements,
-        deadline: newDeadline ? new Date(newDeadline).toISOString() : null,
-        isOpen: newIsOpen,
-      };
-
       let res;
+      
       if (editingJob) {
-        res = await fetch(`/api/admin/careers/${editingJob.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+        const hasTextChanges = newTitle !== editingJob.title || newDescription !== editingJob.description || newRequirements !== editingJob.requirements || newIsOpen !== editingJob.isOpen || newDeadline !== (editingJob.deadline ? new Date(editingJob.deadline).toISOString().split('T')[0] : "");
+        
+        if (!selectedFile && !hasTextChanges) {
+          resetForm();
+          return;
+        }
+
+        if (selectedFile) {
+          const formData = new FormData();
+          formData.append("image", selectedFile);
+          formData.append("title", newTitle);
+          formData.append("description", newDescription);
+          formData.append("requirements", newRequirements);
+          if (newDeadline) formData.append("deadline", new Date(newDeadline).toISOString());
+          formData.append("isOpen", String(newIsOpen));
+          res = await fetch(`/api/hr/careers/${editingJob.id}`, { method: "PUT", body: formData });
+        } else {
+          res = await fetch(`/api/hr/careers/${editingJob.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: newTitle,
+              description: newDescription,
+              requirements: newRequirements,
+              deadline: newDeadline ? new Date(newDeadline).toISOString() : null,
+              isOpen: newIsOpen,
+            }),
+          });
+        }
       } else {
-        res = await fetch("/api/admin/careers", {
+        const formData = new FormData();
+        if (selectedFile) formData.append("image", selectedFile);
+        formData.append("title", newTitle);
+        formData.append("description", newDescription);
+        formData.append("requirements", newRequirements);
+        if (newDeadline) formData.append("deadline", new Date(newDeadline).toISOString());
+        formData.append("isOpen", String(newIsOpen));
+
+        res = await fetch("/api/hr/careers", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          body: formData,
         });
       }
 
@@ -229,7 +262,7 @@ export default function AdminCareersClient() {
 
       {/* Add Job Modal */}
       {mounted && isAdding && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900">{editingJob ? "Edit Job Opening" : "Create New Job Opening"}</h3>
@@ -240,6 +273,48 @@ export default function AdminCareersClient() {
             
             <form onSubmit={handleAddSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
               {error && <div className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-600 border border-red-200">{error}</div>}
+
+              {/* Image Picker */}
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">{editingJob ? "Change Banner Image (Optional)" : "Banner Image *"}</label>
+                <div 
+                  className={`relative border-2 border-dashed rounded-xl overflow-hidden group cursor-pointer transition-colors ${
+                    previewUrl ? 'border-primary/50' : 'border-slate-300 hover:border-primary hover:bg-slate-50'
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    ref={fileInputRef} 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                        setPreviewUrl(URL.createObjectURL(file));
+                      }
+                    }} 
+                  />
+                  
+                  {previewUrl ? (
+                    <div className="relative aspect-21/9 w-full">
+                      <Image src={previewUrl} alt="Preview" fill className="object-cover" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <p className="text-white font-semibold flex items-center gap-2"><UploadSimple weight="bold" /> Change Image</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-8 flex flex-col items-center justify-center text-slate-500 group-hover:text-primary">
+                      <div className="w-10 h-10 bg-slate-100 group-hover:bg-primary/10 rounded-full flex items-center justify-center mb-2">
+                        <ImageIcon size={20} className="text-slate-400 group-hover:text-primary" />
+                      </div>
+                      <p className="text-sm font-medium">Click to select a banner image</p>
+                      <p className="text-xs text-slate-400 mt-1">Supports JPG, PNG, WEBP</p>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Position / Job Title *</label>
@@ -325,17 +400,24 @@ export default function AdminCareersClient() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {jobs.map((job) => (
-            <div key={job.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col relative overflow-hidden group">
-              <div className={`absolute top-0 left-0 w-1 h-full ${job.isOpen ? 'bg-green-500' : 'bg-slate-300'}`} />
+            <div key={job.id} className="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col relative overflow-hidden group">
+              <div className={`absolute top-0 left-0 w-1 z-10 h-full ${job.isOpen ? 'bg-green-500' : 'bg-slate-300'}`} />
               
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="text-lg font-bold text-slate-900 leading-tight">{job.title}</h3>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase shrink-0 ml-3 ${
-                  job.isOpen ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {job.isOpen ? 'OPEN' : 'CLOSED'}
-                </span>
-              </div>
+              {job.imageUrl && (
+                <div className="relative w-full aspect-21/9 bg-slate-100">
+                  <Image src={job.imageUrl} alt={job.title} fill className="object-cover" />
+                </div>
+              )}
+              
+              <div className="p-6 flex flex-col flex-1">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-lg font-bold text-slate-900 leading-tight">{job.title}</h3>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase shrink-0 ml-3 ${
+                    job.isOpen ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {job.isOpen ? 'OPEN' : 'CLOSED'}
+                  </span>
+                </div>
               
               <p className="text-sm text-slate-600 line-clamp-3 mb-5 flex-1">{job.description}</p>
               
@@ -365,6 +447,7 @@ export default function AdminCareersClient() {
                   <button onClick={() => handleDeleteClick(job)} className="text-[11px] font-bold text-red-600 hover:bg-red-50 px-2.5 py-1.5 rounded transition-colors uppercase tracking-wider">Delete</button>
                 </div>
               </div>
+              </div>
             </div>
           ))}
         </div>
@@ -372,7 +455,7 @@ export default function AdminCareersClient() {
 
       {/* Delete Confirmation Modal */}
       {mounted && deleteJobPrompt && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-10000 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">

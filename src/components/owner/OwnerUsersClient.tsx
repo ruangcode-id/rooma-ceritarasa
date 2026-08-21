@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { Plus, X, UserCircle, Crown, Trash, PencilSimple } from "@phosphor-icons/react";
+import { Plus, X, UserCircle, Crown, Trash, PencilSimple, Briefcase } from "@phosphor-icons/react";
 import { format, parseISO } from "date-fns";
 import { enUS } from "date-fns/locale";
 import { handleApiError } from "@/lib/handle-api-error";
 
 const emptySubscribe = () => () => {};
 
-type UserRole = "admin" | "owner";
+type UserRole = "admin" | "owner" | "hr";
 
 type User = {
   id: string;
@@ -205,7 +205,7 @@ export default function OwnerUsersClient() {
 
       {/* Add / Edit Modal */}
       {mounted && isAdding && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900">{editingUser ? "Edit Account" : "Create New Account"}</h3>
@@ -249,11 +249,16 @@ export default function OwnerUsersClient() {
 
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">Access Role *</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <label className={`border rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${role === 'admin' ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 text-slate-500 hover:border-primary/50 hover:bg-slate-50'}`}>
                     <input type="radio" name="role" value="admin" checked={role === "admin"} onChange={() => setRole("admin")} className="hidden" />
                     <UserCircle size={28} weight={role === "admin" ? "fill" : "regular"} />
                     <span className="text-xs font-bold uppercase tracking-wider">Admin</span>
+                  </label>
+                  <label className={`border rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${role === 'hr' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-slate-200 text-slate-500 hover:border-indigo-500/50 hover:bg-indigo-50/50'}`}>
+                    <input type="radio" name="role" value="hr" checked={role === "hr"} onChange={() => setRole("hr")} className="hidden" />
+                    <Briefcase size={28} weight={role === "hr" ? "fill" : "regular"} />
+                    <span className="text-xs font-bold uppercase tracking-wider">HR</span>
                   </label>
                   <label className={`border rounded-xl p-3 flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${role === 'owner' ? 'border-amber-500 bg-amber-50 text-amber-700' : 'border-slate-200 text-slate-500 hover:border-amber-500/50 hover:bg-amber-50/50'}`}>
                     <input type="radio" name="role" value="owner" checked={role === "owner"} onChange={() => setRole("owner")} className="hidden" />
@@ -294,7 +299,7 @@ export default function OwnerUsersClient() {
             <div key={user.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col group">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-inner ${user.role === 'owner' ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-slate-700 to-slate-900'}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-inner ${user.role === 'owner' ? 'bg-linear-to-br from-amber-400 to-amber-600' : user.role === 'hr' ? 'bg-linear-to-br from-indigo-500 to-indigo-700' : 'bg-linear-to-br from-slate-700 to-slate-900'}`}>
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -303,6 +308,10 @@ export default function OwnerUsersClient() {
                       {user.role === 'owner' ? (
                         <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded uppercase tracking-wider">
                           <Crown size={12} weight="fill" /> Owner
+                        </span>
+                      ) : user.role === 'hr' ? (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                          <Briefcase size={12} weight="fill" /> HR
                         </span>
                       ) : (
                         <span className="flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded uppercase tracking-wider">
@@ -339,7 +348,7 @@ export default function OwnerUsersClient() {
 
       {/* Delete Confirmation Modal */}
       {mounted && deleteUserPrompt && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-10000 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">

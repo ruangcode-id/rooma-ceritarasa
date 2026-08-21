@@ -21,6 +21,8 @@ type CareerJobRecord = {
   description: string;
   requirements: string;
   deadline: Date | null;
+  imageUrl: string | null;
+  imagePublicId: string | null;
   isOpen: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -75,6 +77,7 @@ function serializeAdminCareerJob(job: CareerJobRecord) {
     description: job.description,
     requirements: job.requirements,
     deadline: job.deadline?.toISOString() ?? null,
+    imageUrl: job.imageUrl,
     isOpen: job.isOpen,
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
@@ -89,6 +92,7 @@ function serializePublicCareerJob(job: CareerJobRecord) {
     description: job.description,
     requirements: job.requirements,
     deadline: job.deadline?.toISOString() ?? null,
+    imageUrl: job.imageUrl,
     createdAt: job.createdAt.toISOString(),
     updatedAt: job.updatedAt.toISOString(),
   };
@@ -139,7 +143,22 @@ async function uploadCareerCv(file: CareerCvFile) {
   };
 }
 
-export async function createCareerJob(input: CreateCareerJobInput) {
+async function uploadCareerJobImage(buffer: Buffer) {
+  const result = await uploadToCloudinary(buffer, {
+    folder: "rooma/careers/images",
+  });
+  return {
+    imageUrl: result.secure_url,
+    imagePublicId: result.public_id,
+  };
+}
+
+export async function createCareerJob(input: CreateCareerJobInput, imageFile?: { buffer: Buffer }) {
+  let imageUpload = null;
+  if (imageFile) {
+    imageUpload = await uploadCareerJobImage(imageFile.buffer);
+  }
+
   const job = await prisma.careerJob.create({
     data: {
       title: input.title,
@@ -147,6 +166,7 @@ export async function createCareerJob(input: CreateCareerJobInput) {
       requirements: input.requirements,
       deadline: input.deadline,
       isOpen: input.isOpen,
+      ...(imageUpload ? { imageUrl: imageUpload.imageUrl, imagePublicId: imageUpload.imagePublicId } : {}),
     },
   });
 
@@ -194,14 +214,24 @@ export async function getAdminCareerJob(id: string) {
   return job ? serializeAdminCareerJob(job) : null;
 }
 
-export async function updateCareerJob(id: string, input: UpdateCareerJobInput) {
+export async function updateCareerJob(id: string, input: UpdateCareerJobInput, imageFile?: { buffer: Buffer }) {
   const existing = await prisma.careerJob.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, imagePublicId: true },
   });
 
   if (!existing) {
     throw new Error("CAREER_JOB_NOT_FOUND");
+  }
+
+  let imageUpload = null;
+  if (imageFile) {
+    if (existing.imagePublicId) {
+      await deleteFromCloudinary(existing.imagePublicId, "image").catch((err) => {
+        console.error("Failed to delete old career image:", err);
+      });
+    }
+    imageUpload = await uploadCareerJobImage(imageFile.buffer);
   }
 
   const job = await prisma.careerJob.update({
@@ -216,6 +246,7 @@ export async function updateCareerJob(id: string, input: UpdateCareerJobInput) {
         : {}),
       ...(input.deadline !== undefined ? { deadline: input.deadline } : {}),
       ...(input.isOpen !== undefined ? { isOpen: input.isOpen } : {}),
+      ...(imageUpload ? { imageUrl: imageUpload.imageUrl, imagePublicId: imageUpload.imagePublicId } : {}),
     },
     include: {
       _count: {
@@ -230,7 +261,7 @@ export async function updateCareerJob(id: string, input: UpdateCareerJobInput) {
 export async function deleteCareerJob(id: string) {
   const existing = await prisma.careerJob.findUnique({
     where: { id },
-    select: { id: true },
+    select: { id: true, imagePublicId: true },
   });
 
   if (!existing) {
@@ -241,6 +272,12 @@ export async function deleteCareerJob(id: string) {
     where: { id },
   });
 
+  if (existing.imagePublicId) {
+    await deleteFromCloudinary(existing.imagePublicId, "image").catch((err) => {
+      console.error("Failed to delete career image on job deletion:", err);
+    });
+  }
+
   // Since it's deleted, we can just return a basic serialized version
   // Applications are cascaded, so we don't need to return their count.
   return {
@@ -249,6 +286,7 @@ export async function deleteCareerJob(id: string) {
     description: job.description,
     requirements: job.requirements,
     deadline: job.deadline?.toISOString() || null,
+    imageUrl: job.imageUrl,
     isOpen: job.isOpen,
     createdAt: job.createdAt.toISOString(),
     _count: { applications: 0 },
