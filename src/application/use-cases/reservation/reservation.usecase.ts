@@ -15,6 +15,7 @@ import {
   getReservationById,
   updateReservationTablesTransaction,
   AdminReservationFilters,
+  extendCheckInGracePeriod,
 } from "@/infrastructure/repositories/reservation.repository";
 import { appEvents, EVENTS } from "@/lib/events";
 import { prisma } from "@/infrastructure/database/prisma";
@@ -159,6 +160,10 @@ export async function createReservation(input: PublicReservationInput) {
 }
 
 export const AdminReservationUseCase = {
+  extendGracePeriodAction: async (id: string, minutes: number) => {
+    return extendCheckInGracePeriod(id, minutes);
+  },
+
   listReservationsAction: async (query: {
     date?: string;
     status?: string;

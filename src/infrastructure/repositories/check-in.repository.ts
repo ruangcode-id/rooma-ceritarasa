@@ -22,6 +22,7 @@ export async function markReservationCheckedIn(
       id: true,
       status: true,
       date: true,
+      checkInTokenExpiresAt: true,
       session: { select: { startTime: true } },
     },
   });
@@ -32,12 +33,14 @@ export async function markReservationCheckedIn(
     throw new Error("Reservation is not eligible for check-in");
   }
 
-  if (
-    isPastCheckInGrace({
-      reservationDate: reservation.date,
-      sessionStartTime: reservation.session.startTime,
-    })
-  ) {
+  const isExpired = reservation.checkInTokenExpiresAt
+    ? (new Date().getTime() > reservation.checkInTokenExpiresAt.getTime())
+    : isPastCheckInGrace({
+        reservationDate: reservation.date,
+        sessionStartTime: reservation.session.startTime,
+      });
+
+  if (isExpired) {
     throw new Error(CHECK_IN_GRACE_EXPIRED_MESSAGE);
   }
 
@@ -91,6 +94,7 @@ export async function runAutoNoShowJob(now: Date = new Date()) {
     select: {
       id: true,
       date: true,
+      checkInTokenExpiresAt: true,
       guest: { select: { name: true } },
       session: { select: { name: true, startTime: true } },
     },
@@ -105,11 +109,13 @@ export async function runAutoNoShowJob(now: Date = new Date()) {
   };
 
   for (const reservation of candidates) {
-    const overdue = isPastCheckInGrace({
-      reservationDate: reservation.date,
-      sessionStartTime: reservation.session.startTime,
-      now,
-    });
+    const overdue = reservation.checkInTokenExpiresAt
+      ? (now.getTime() > reservation.checkInTokenExpiresAt.getTime())
+      : isPastCheckInGrace({
+          reservationDate: reservation.date,
+          sessionStartTime: reservation.session.startTime,
+          now,
+        });
 
     if (!overdue) {
       results.skipped += 1;
