@@ -27,7 +27,7 @@ export default function AdminManualReservationCreateClient() {
   
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [sessionId, setSessionId] = useState<string>("");
-  const [partySize, setPartySize] = useState<number>(1);
+  const [partySize, setPartySize] = useState<number | "">("");
   const [tableIds, setTableIds] = useState<string[]>([]);
   
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -212,7 +212,7 @@ export default function AdminManualReservationCreateClient() {
                 required
                 min="1"
                 value={partySize}
-                onChange={(e) => setPartySize(Number(e.target.value))}
+                onChange={(e) => setPartySize(e.target.value === "" ? "" : Number(e.target.value))}
                 className="w-full h-11 rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
