@@ -43,6 +43,16 @@ export async function createReservationTransaction(
           isVip: false,
         },
       });
+    } else {
+      if (guest.name !== guestInput.name || (guestInput.email && guest.email !== guestInput.email)) {
+        guest = await tx.guest.update({
+          where: { id: guest.id },
+          data: {
+            name: guestInput.name,
+            ...(guestInput.email ? { email: guestInput.email } : {})
+          }
+        });
+      }
     }
 
     const session = await tx.restaurantSession.findUniqueOrThrow({
