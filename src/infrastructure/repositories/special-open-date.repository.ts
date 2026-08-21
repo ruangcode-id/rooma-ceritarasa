@@ -34,6 +34,7 @@ export const SpecialOpenDateRepository = {
           gte: startOfUTCDate(start),
           lte: startOfUTCDate(end),
         },
+        sessionId: null, // Only return fully opened dates
       },
       orderBy: { date: "asc" },
     });
@@ -43,32 +44,42 @@ export const SpecialOpenDateRepository = {
     dates: Date[];
     reason: string | null;
     createdBy: string | null;
+    sessionIds?: string[];
   }) => {
     const keys = uniqueDateKeys(args.dates);
     const normalizedDates = keys.map(dateKeyToDate);
 
-    const existing = await prisma.specialOpenDate.findMany({
-      where: { date: { in: normalizedDates } },
-      select: { date: true },
-    });
-    const existingKeys = new Set(existing.map((e) => startOfUTCDate(e.date).toISOString().slice(0, 10)));
+    const sessionsToOpen = args.sessionIds && args.sessionIds.length > 0 ? args.sessionIds : [null];
 
-    const toCreate = normalizedDates.filter(
-      (date) => !existingKeys.has(startOfUTCDate(date).toISOString().slice(0, 10))
-    );
+    const existing = await prisma.specialOpenDate.findMany({
+      where: { date: { in: normalizedDates }, sessionId: { in: sessionsToOpen } },
+      select: { date: true, sessionId: true },
+    });
+    const existingKeys = new Set(existing.map((e) => `${startOfUTCDate(e.date).toISOString().slice(0, 10)}_${e.sessionId || 'null'}`));
+
+    const toCreate: Prisma.SpecialOpenDateCreateManyInput[] = [];
+    for (const date of normalizedDates) {
+      for (const sessionId of sessionsToOpen) {
+        const key = `${startOfUTCDate(date).toISOString().slice(0, 10)}_${sessionId || 'null'}`;
+        if (!existingKeys.has(key)) {
+          toCreate.push({
+            date,
+            reason: args.reason,
+            createdBy: args.createdBy,
+            sessionId: sessionId,
+          });
+        }
+      }
+    }
 
     if (toCreate.length > 0) {
       await prisma.specialOpenDate.createMany({
-        data: toCreate.map((date) => ({
-          date,
-          reason: args.reason,
-          createdBy: args.createdBy,
-        } satisfies Prisma.SpecialOpenDateCreateManyInput)),
+        data: toCreate,
       });
     }
 
     return prisma.specialOpenDate.findMany({
-      where: { date: { in: normalizedDates } },
+      where: { date: { in: normalizedDates }, sessionId: { in: sessionsToOpen } },
       orderBy: { date: "asc" },
     });
   },
@@ -80,9 +91,18 @@ export const SpecialOpenDateRepository = {
   isDateSpecialOpen: async (date: Date): Promise<boolean> => {
     const normalized = startOfUTCDate(date);
     const existing = await prisma.specialOpenDate.findFirst({
-      where: { date: normalized },
+      where: { date: normalized, sessionId: null },
       select: { id: true },
     });
     return !!existing;
   },
+
+  getSessionSpecialOpenDates: async (date: Date): Promise<string[]> => {
+    const normalized = startOfUTCDate(date);
+    const opened = await prisma.specialOpenDate.findMany({
+      where: { date: normalized, sessionId: { not: null } },
+      select: { sessionId: true },
+    });
+    return opened.map(o => o.sessionId as string);
+  }
 };

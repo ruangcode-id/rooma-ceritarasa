@@ -6,6 +6,7 @@ import { z } from "zod";
 const createSpecialOpenDateSchema = z.object({
   date: z.string().min(1, "Date is required"),
   reason: z.string().optional().nullable(),
+  sessionIds: z.array(z.string().uuid("Invalid session ID")).optional().nullable(),
 });
 
 export async function GET() {
@@ -40,17 +41,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (dateObj.getUTCDay() !== 1) {
-      return NextResponse.json(
-        { success: false, error: "Special open dates can only be registered for Mondays." },
-        { status: 400 },
-      );
-    }
+
 
     const created = await SpecialOpenDateRepository.createSpecialOpenDates({
       dates: [dateObj],
       reason: parsed.reason ?? null,
       createdBy: authResult.userId,
+      sessionIds: parsed.sessionIds ?? undefined,
     });
 
     return NextResponse.json({ success: true, data: created });

@@ -217,6 +217,8 @@ model RestaurantSession {
 
   // Relations
   reservations Reservation[]
+  blockedDates BlockedDate[]
+  specialOpenDates SpecialOpenDate[]
 
   @@map("restaurant_sessions")
 }
@@ -227,9 +229,11 @@ model BlockedDate {
   reason    String?  @db.VarChar(200)
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
+  sessionId String?  @map("session_id") @db.Uuid
 
   // Relations
   creator User? @relation("CreatedByUser", fields: [createdBy], references: [id])
+  session RestaurantSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("blocked_dates")
 }
@@ -240,9 +244,11 @@ model SpecialOpenDate {
   reason    String?  @db.VarChar(200)
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
+  sessionId String?  @map("session_id") @db.Uuid
 
   // Relations
   creator User? @relation("SpecialOpenCreatedByUser", fields: [createdBy], references: [id])
+  session RestaurantSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("special_open_dates")
 }

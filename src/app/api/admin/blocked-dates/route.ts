@@ -76,6 +76,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: "Cannot block dates with confirmed reservations" }, { status: 400 });
       }
     }
-    return NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ success: false, error: "Internal Server Error", detail: error instanceof Error ? error.stack : String(error) }, { status: 500 });
   }
 }

@@ -2,6 +2,8 @@ import { SessionRepository } from "@/infrastructure/repositories/session.reposit
 import { createSessionSchema, updateSessionSchema } from "@/validations/session.validation";
 import { requireRole } from "@/lib/auth";
 import { Prisma } from "@/generated/prisma/client";
+import { BlockedDateRepository } from "@/infrastructure/repositories/blocked-date.repository";
+import { SpecialOpenDateRepository } from "@/infrastructure/repositories/special-open-date.repository";
 
 // Helper to convert HH:MM to Prisma DateTime
 const parseTime = (timeStr: string) => {
@@ -40,17 +42,36 @@ export const SessionUseCase = {
    * Public: List only active sessions (for booking page)
    */
   getPublicSessionsAction: async (date: Date) => {
-    // No role check needed
+    // 1. Fetch all active sessions (do not filter by weekday here)
     const sessions = await SessionRepository.getSessions({
       skip: 0,
       take: 100,
       isActive: true,
       date,
-      weekday: date.getUTCDay(),
     });
 
-    return sessions.sessions
-      .filter((s) => s.availableSlots > 0);
+    // 2. Fetch specific overrides for this date
+    const [blockedSessionIds, specialOpenSessionIds] = await Promise.all([
+      BlockedDateRepository.getBlockedSessionsOnDate(date),
+      SpecialOpenDateRepository.getSessionSpecialOpenDates(date),
+    ]);
+
+    const weekday = date.getUTCDay();
+
+    // 3. Filter sessions in-memory
+    return sessions.sessions.filter((s) => {
+      // If it has no available slots, exclude
+      if (s.availableSlots <= 0) return false;
+
+      // If explicitly blocked today, exclude
+      if (blockedSessionIds.includes(s.id)) return false;
+
+      // If explicitly opened today, include
+      if (specialOpenSessionIds.includes(s.id)) return true;
+
+      // Otherwise, fallback to standard schedule
+      return s.dayOfWeek.includes(weekday);
+    });
   },
 
   /**
