@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
   Armchair,
@@ -27,6 +27,24 @@ type OutdoorStatusData = {
   }>;
 };
 
+/** Dispatch a local toast using the GlobalNotificationToast event bus */
+function dispatchOutdoorToast(
+  title: string,
+  body: string,
+) {
+  window.dispatchEvent(
+    new CustomEvent("LOCAL_TOAST_EVENT", {
+      detail: {
+        id: `outdoor-${Date.now()}`,
+        type: "outdoor",
+        title,
+        body,
+        timestamp: Date.now(),
+      },
+    }),
+  );
+}
+
 export function OutdoorWeatherCard() {
   const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
   const [status, setStatus] = useState<OutdoorStatusData | null>(null);
@@ -35,6 +53,7 @@ export function OutdoorWeatherCard() {
   const [error, setError] = useState("");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [targetAction, setTargetAction] = useState<boolean>(false);
+  const morningToastShownRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -48,6 +67,17 @@ export function OutdoorWeatherCard() {
         const data = await res.json();
         if (data.success && isMounted) {
           setStatus(data.data);
+
+          // Morning reminder toast: show once when dashboard loads and outdoor is OFF
+          if (!data.data.isOpen && !morningToastShownRef.current) {
+            morningToastShownRef.current = true;
+            setTimeout(() => {
+              dispatchOutdoorToast(
+                "🌅 Morning Operational Reminder",
+                "Outdoor seating is currently Inactive. Enable it if the weather is clear and the restaurant plans to open the outdoor area today.",
+              );
+            }, 1500);
+          }
         }
       } catch (err) {
         if (isMounted) setError(err instanceof Error ? err.message : String(err));
@@ -83,6 +113,19 @@ export function OutdoorWeatherCard() {
 
       setStatus(data.data);
       setShowConfirmModal(false);
+
+      // Toast notification after successful toggle
+      if (targetAction) {
+        dispatchOutdoorToast(
+          "☀️ Outdoor Area Enabled",
+          "4 outdoor tables (OUT-1 to OUT-4 · 16 Pax) are now active and available for reservations today.",
+        );
+      } else {
+        dispatchOutdoorToast(
+          "🌧️ Outdoor Area Disabled",
+          "Outdoor tables have been deactivated and hidden from the guest reservation form.",
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
