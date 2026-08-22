@@ -3,56 +3,31 @@
 import { useEffect, useState, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import {
-  Plus,
-  Image as ImageIcon,
-  UploadSimple,
-  X,
-  Eye,
-  EyeSlash,
-  Trash,
-  Tag,
-  MagnifyingGlass,
-  ArrowsDownUp,
-} from "@phosphor-icons/react";
+import { Plus, Image as ImageIcon, UploadSimple, X } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
 
 const emptySubscribe = () => () => {};
 
-const DEFAULT_MENU_CATEGORIES = [
-  "Signature",
-  "A La Carte",
-  "Appetizer",
-  "Main Course",
-  "Dessert",
-  "Beverage",
-  "Cocktail",
-  "Wine",
-  "Set Menu",
-];
-
-const STORAGE_KEY_CATEGORIES = "rooma_admin_menu_categories";
-const STORAGE_KEY_DELETED = "rooma_admin_deleted_categories";
-
 type MenuPhotoData = {
   id: string;
+  imageUrl: string;
   title: string;
   description: string | null;
   category: string;
-  imageUrl: string;
-  price: number | null;
   sortOrder: number;
   isActive: boolean;
-  isAvailable?: boolean;
-  tags?: string[];
-  createdAt: string;
 };
 
 async function fetchMenuPhotos(signal?: AbortSignal): Promise<MenuPhotoData[]> {
-  const res = await fetch("/api/admin/menu?limit=100", { cache: "no-store", signal });
+  const res = await fetch("/api/admin/menu?limit=100", {
+    cache: "no-store",
+    signal,
+  });
   if (!res.ok) throw new Error(await handleApiError(res));
+
   const payload = await res.json();
   if (!payload.success) throw new Error(payload.error || payload.message || "Failed to load menu");
+
   return payload.data || [];
 }
 
@@ -63,109 +38,87 @@ export default function AdminMenuClient() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Filters & Search
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("ALL");
-
-  // Modals state
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  // Form/Modal State
+  const [isAdding, setIsAdding] = useState(false);
   const [editingPhoto, setEditingPhoto] = useState<MenuPhotoData | null>(null);
   const [deletePrompt, setDeletePrompt] = useState<MenuPhotoData | null>(null);
-  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
-  const [targetReassignCategory, setTargetReassignCategory] = useState<string>("Signature");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  // Form fields
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Signature");
-  const [customCategory, setCustomCategory] = useState("");
-  const [price, setPrice] = useState("");
-  const [sortOrder, setSortOrder] = useState("0");
-  const [isAvailable, setIsAvailable] = useState(true);
-
-  // Category Management State (initialized from localStorage lazily)
-  const [managedCategories, setManagedCategories] = useState<string[]>(() => {
-    if (typeof window === "undefined") return DEFAULT_MENU_CATEGORIES;
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_CATEGORIES);
-      return saved ? JSON.parse(saved) : DEFAULT_MENU_CATEGORIES;
-    } catch {
-      return DEFAULT_MENU_CATEGORIES;
-    }
-  });
-
-  const [deletedCategories, setDeletedCategories] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_DELETED);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [newCategoryInput, setNewCategoryInput] = useState("");
-  const [categoryError, setCategoryError] = useState("");
-
-  // Compute final available categories:
-  const availableCategories = Array.from(
-    new Set([
-      ...managedCategories,
-      ...photos.map((p) => p.category).filter(Boolean),
-    ])
-  ).filter((cat) => !deletedCategories.includes(cat));
+  const [category, setCategory] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
+
     void fetchMenuPhotos(controller.signal)
-      .then((data) => { if (!controller.signal.aborted) setPhotos(data); })
-      .catch((err: unknown) => {
-        if (!controller.signal.aborted)
-          setError(err instanceof Error ? err.message : String(err));
+      .then((loadedPhotos) => {
+        if (!controller.signal.aborted) setPhotos(loadedPhotos);
       })
-      .finally(() => { if (!controller.signal.aborted) setIsLoading(false); });
+      .catch((err: unknown) => {
+        if (!controller.signal.aborted) {
+          setError(err instanceof Error ? err.message : String(err));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+
     return () => controller.abort();
   }, []);
 
   const resetForm = () => {
-    setIsFormOpen(false);
+    setIsAdding(false);
     setEditingPhoto(null);
     setSelectedFile(null);
     setPreviewUrl(null);
     setTitle("");
     setDescription("");
-    setCategory(availableCategories[0] || "Signature");
-    setCustomCategory("");
-    setPrice("");
-    setSortOrder("0");
-    setIsAvailable(true);
-    setError("");
+    setCategory("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const openEditForm = (photo: MenuPhotoData) => {
+  const handleEditClick = (photo: MenuPhotoData) => {
     setEditingPhoto(photo);
-    setTitle(photo.title);
-    setDescription(photo.description ?? "");
-    setCategory(availableCategories.includes(photo.category) ? photo.category : "custom");
-    setCustomCategory(availableCategories.includes(photo.category) ? "" : photo.category);
-    setPrice(photo.price != null ? String(photo.price) : "");
-    setSortOrder(String(photo.sortOrder));
-    setIsAvailable(photo.isAvailable ?? true);
+    setTitle(photo.title || "");
+    setDescription(photo.description || "");
+    setCategory(photo.category || "");
     setPreviewUrl(photo.imageUrl);
-    setIsFormOpen(true);
+    setIsAdding(true);
+  };
+
+  const handleDeleteClick = (photo: MenuPhotoData) => {
+    setDeletePrompt(photo);
+  };
+
+  const executeDeletePhoto = async () => {
+    if (!deletePrompt) return;
+    setIsSaving(true);
+
+    try {
+      const res = await fetch(`/api/admin/menu/${deletePrompt.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(await handleApiError(res));
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || data.message || "Failed to delete menu item");
+
+      setPhotos(photos.filter((p) => p.id !== deletePrompt.id));
+      setDeletePrompt(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setTimeout(() => setError(""), 5000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith("image/")) {
-        setError("Please select an image file.");
+        alert("Please select an image file (JPG, PNG, WEBP).");
         return;
       }
       setSelectedFile(file);
@@ -173,247 +126,101 @@ export default function AdminMenuClient() {
     }
   };
 
-  const getEffectiveCategory = () =>
-    category === "custom" ? customCategory.trim() : category;
-
-  // Add new category
-  const handleAddCategory = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = newCategoryInput.trim();
-    if (!trimmed) return;
 
-    if (availableCategories.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
-      setCategoryError("Category already exists.");
+    if (!title || !category) {
+      setError("Menu Title and Category are required.");
       return;
     }
-
-    const updated = [...managedCategories, trimmed];
-    const updatedDeleted = deletedCategories.filter((c) => c.toLowerCase() !== trimmed.toLowerCase());
-
-    setManagedCategories(updated);
-    setDeletedCategories(updatedDeleted);
-    setNewCategoryInput("");
-    setCategoryError("");
-
-    try {
-      localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(updated));
-      localStorage.setItem(STORAGE_KEY_DELETED, JSON.stringify(updatedDeleted));
-    } catch {
-      // ignore
-    }
-  };
-
-  // Delete category from list (with optional photo reassignment)
-  const handleDeleteCategory = async (catName: string, reassignTo?: string) => {
-    const affectedPhotos = photos.filter((p) => p.category === catName);
-
-    // If there are affected photos and a target reassign category is chosen, update them
-    if (affectedPhotos.length > 0 && reassignTo && reassignTo !== catName) {
-      setIsSaving(true);
-      try {
-        await Promise.all(
-          affectedPhotos.map((p) =>
-            fetch(`/api/admin/menu/${p.id}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ category: reassignTo }),
-            })
-          )
-        );
-        // Update local state photos
-        setPhotos((prev) =>
-          prev.map((p) => (p.category === catName ? { ...p, category: reassignTo } : p))
-        );
-      } catch (err) {
-        console.error("Failed to reassign photos:", err);
-      } finally {
-        setIsSaving(false);
-      }
-    }
-
-    const updated = managedCategories.filter((c) => c !== catName);
-    const updatedDeleted = Array.from(new Set([...deletedCategories, catName]));
-
-    setManagedCategories(updated);
-    setDeletedCategories(updatedDeleted);
-    setCategoryToDelete(null);
-
-    try {
-      localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(updated));
-      localStorage.setItem(STORAGE_KEY_DELETED, JSON.stringify(updatedDeleted));
-    } catch {
-      // ignore
-    }
-
-    if (category === catName) {
-      setCategory(updated[0] || "Signature");
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const effectiveCategory = getEffectiveCategory();
-
-    if (!title.trim()) { setError("Title is required."); return; }
-    if (!effectiveCategory) { setError("Category is required."); return; }
-    if (!editingPhoto && !selectedFile) { setError("Please select an image."); return; }
 
     setIsSaving(true);
     setError("");
 
     try {
-      let res: Response;
+      let res;
 
       if (editingPhoto) {
+        // Editing Mode (PUT)
+        const hasTextChanges =
+          title !== editingPhoto.title ||
+          description !== (editingPhoto.description || "") ||
+          category !== editingPhoto.category;
+
+        if (!selectedFile && !hasTextChanges) {
+          resetForm();
+          return;
+        }
+
         if (selectedFile) {
           const formData = new FormData();
           formData.append("image", selectedFile);
           formData.append("title", title);
-          formData.append("category", effectiveCategory);
+          formData.append("category", category);
           if (description) formData.append("description", description);
-          if (price) formData.append("price", price);
-          formData.append("sortOrder", sortOrder);
-          formData.append("isAvailable", String(isAvailable));
           res = await fetch(`/api/admin/menu/${editingPhoto.id}`, { method: "PUT", body: formData });
         } else {
           res = await fetch(`/api/admin/menu/${editingPhoto.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              title,
-              category: effectiveCategory,
-              description: description || null,
-              price: price ? parseInt(price) : null,
-              sortOrder: parseInt(sortOrder),
-              isAvailable,
-            }),
+            body: JSON.stringify({ title, category, description: description || null }),
           });
         }
       } else {
+        // Adding Mode (POST)
+        if (!selectedFile) {
+          setError("Please select an image file first.");
+          setIsSaving(false);
+          return;
+        }
+
         const formData = new FormData();
-        formData.append("image", selectedFile!);
+        formData.append("image", selectedFile);
         formData.append("title", title);
-        formData.append("category", effectiveCategory);
+        formData.append("category", category);
         if (description) formData.append("description", description);
-        if (price) formData.append("price", price);
-        formData.append("sortOrder", sortOrder);
+        formData.append("sortOrder", "0");
         formData.append("isActive", "true");
-        formData.append("isAvailable", String(isAvailable));
+        formData.append("isAvailable", "true");
+
         res = await fetch("/api/admin/menu", { method: "POST", body: formData });
       }
 
       if (!res.ok) throw new Error(await handleApiError(res));
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || data.message || "Failed to save");
 
-      // Save custom category if user typed a new one
-      if (category === "custom" && !managedCategories.includes(effectiveCategory)) {
-        const updated = [...managedCategories, effectiveCategory];
-        setManagedCategories(updated);
-        try {
-          localStorage.setItem(STORAGE_KEY_CATEGORIES, JSON.stringify(updated));
-        } catch {
-          // ignore
-        }
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || data.message || "Failed to save menu photo");
       }
 
       if (editingPhoto) {
-        setPhotos((prev) => prev.map((p) => (p.id === editingPhoto.id ? data.data : p)));
+        setPhotos(photos.map((p) => (p.id === editingPhoto.id ? data.data : p)));
       } else {
-        setPhotos((prev) => [data.data, ...prev]);
+        setPhotos([data.data, ...photos]);
       }
       resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      setTimeout(() => setError(""), 5000);
     } finally {
       setIsSaving(false);
     }
   };
-
-  const handleToggleStatus = async (photo: MenuPhotoData) => {
-    try {
-      const res = await fetch(`/api/admin/menu/${photo.id}`, { method: "PATCH" });
-      if (!res.ok) throw new Error(await handleApiError(res));
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message || "Failed to toggle status");
-      setPhotos((prev) => prev.map((p) => (p.id === photo.id ? data.data : p)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setTimeout(() => setError(""), 4000);
-    }
-  };
-
-  const handleToggleAvailability = async (photo: MenuPhotoData) => {
-    try {
-      const nextAvailable = photo.isAvailable === false ? true : false;
-      const res = await fetch(`/api/admin/menu/${photo.id}/availability`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isAvailable: nextAvailable }),
-      });
-      if (!res.ok) throw new Error(await handleApiError(res));
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message || "Failed to toggle availability");
-      setPhotos((prev) => prev.map((p) => (p.id === photo.id ? data.data : p)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setTimeout(() => setError(""), 4000);
-    }
-  };
-
-  const executeDelete = async () => {
-    if (!deletePrompt) return;
-    setIsSaving(true);
-    try {
-      const res = await fetch(`/api/admin/menu/${deletePrompt.id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(await handleApiError(res));
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message || "Failed to delete");
-      setPhotos((prev) => prev.filter((p) => p.id !== deletePrompt.id));
-      setDeletePrompt(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setTimeout(() => setError(""), 4000);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const currencyFormatter = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 });
-
-  // Filtered photos based on category tab & search query
-  const filteredPhotos = photos.filter((p) => {
-    const matchesCategory = selectedCategoryFilter === "ALL" || p.category === selectedCategoryFilter;
-    const matchesSearch =
-      !searchQuery.trim() ||
-      p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
-  });
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Content & CRM</p>
           <h1 className="mt-2 text-3xl font-semibold text-slate-950">Menu Management</h1>
           <p className="mt-2 text-sm text-slate-600 max-w-xl">
-            Upload photos of your dishes or menu pages. Manage categories, prices, and descriptions that appear publicly on the guest Menu page.
+            Upload photos of your menu pages, dishes, or booklet sheets. These photos will be displayed publicly on the guest Menu page.
           </p>
         </div>
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div>
           <button
-            onClick={() => setIsCategoryModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-xs hover:bg-slate-50 hover:border-slate-400 transition-colors"
-            title="Manage menu categories"
-          >
-            <Tag size={16} weight="bold" />
-            Manage Categories
-          </button>
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-slate-800 transition-colors"
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-md hover:bg-slate-800"
           >
             <Plus weight="bold" />
             Upload Menu Photo
@@ -421,259 +228,14 @@ export default function AdminMenuClient() {
         </div>
       </header>
 
-      {error && !isFormOpen && !isCategoryModalOpen && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm font-medium text-red-600 border border-red-200">{error}</div>
-      )}
-
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200/80 shadow-xs">
-        {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <MagnifyingGlass size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search menu by title or description..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3.5 py-1.5 text-sm rounded-xl border border-slate-200 focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-            >
-              <X size={14} weight="bold" />
-            </button>
-          )}
+      {error && !isAdding && (
+        <div className="rounded-lg bg-red-50 p-4 text-sm font-medium text-red-600 border border-red-200">
+          {error}
         </div>
-
-        {/* Category Pills Filter */}
-        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-0.5">
-          <button
-            onClick={() => setSelectedCategoryFilter("ALL")}
-            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
-              selectedCategoryFilter === "ALL"
-                ? "bg-slate-900 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            All ({photos.length})
-          </button>
-          {availableCategories.map((cat) => {
-            const count = photos.filter((p) => p.category === cat).length;
-            if (count === 0 && selectedCategoryFilter !== cat) return null;
-            return (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategoryFilter(cat)}
-                className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                  selectedCategoryFilter === cat
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                {cat} ({count})
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Category Manager Modal */}
-      {mounted && isCategoryModalOpen && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-              <div className="flex items-center gap-2">
-                <Tag size={20} className="text-primary" weight="bold" />
-                <h3 className="text-lg font-bold text-slate-900">Manage Categories</h3>
-              </div>
-              <button
-                onClick={() => { setIsCategoryModalOpen(false); setCategoryError(""); }}
-                className="text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X size={20} weight="bold" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-5 overflow-y-auto flex-1">
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Add new categories or delete categories you don&apos;t use. The categories listed here will appear in your upload/edit dropdown and as tabs on the public menu page.
-              </p>
-
-              {/* Add category form */}
-              <form onSubmit={handleAddCategory} className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                  Add New Category
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="e.g. Mocktails, Specials, Chef Tasting..."
-                    value={newCategoryInput}
-                    onChange={(e) => setNewCategoryInput(e.target.value)}
-                    className="flex-1 border border-slate-300 rounded-lg px-3.5 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                  />
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg shadow-xs transition-colors shrink-0"
-                  >
-                    + Add
-                  </button>
-                </div>
-                {categoryError && (
-                  <p className="text-xs text-red-600 font-medium">{categoryError}</p>
-                )}
-              </form>
-
-              {/* Active categories list */}
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2.5">
-                  Active Categories ({availableCategories.length})
-                </label>
-                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {availableCategories.length === 0 ? (
-                    <p className="text-xs text-slate-400 italic py-3 text-center">No categories left. Add one above or reset.</p>
-                  ) : (
-                    availableCategories.map((cat) => {
-                      const itemCount = photos.filter((p) => p.category === cat).length;
-                      return (
-                        <div
-                          key={cat}
-                          className="flex items-center justify-between px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200/80 transition-colors group"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-slate-800">{cat}</span>
-                            <span className="text-[11px] text-slate-400 font-normal">
-                              ({itemCount} {itemCount === 1 ? "photo" : "photos"})
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCategoryToDelete(cat);
-                              if (itemCount > 0) {
-                                setTargetReassignCategory(
-                                  availableCategories.find((c) => c !== cat) || "Signature"
-                                );
-                              }
-                            }}
-                            title={`Delete "${cat}" category`}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors opacity-70 group-hover:opacity-100"
-                          >
-                            <Trash size={15} weight="bold" />
-                          </button>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="border-t border-slate-100 p-4 bg-slate-50 flex items-center justify-end rounded-b-2xl">
-              <button
-                type="button"
-                onClick={() => { setIsCategoryModalOpen(false); setCategoryError(""); }}
-                className="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-colors"
-              >
-                Done
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
       )}
 
-      {/* Delete Category Confirmation Modal (with photos reassignment or empty category confirmation) */}
-      {mounted && categoryToDelete && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6">
-              {photos.filter((p) => p.category === categoryToDelete).length > 0 ? (
-                /* Has photos -> Reassign & Delete */
-                <>
-                  <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Trash size={24} weight="fill" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 text-center mb-1">
-                    Delete &quot;{categoryToDelete}&quot;?
-                  </h3>
-                  <p className="text-xs text-slate-500 text-center leading-relaxed mb-4">
-                    There are{" "}
-                    <strong>
-                      {photos.filter((p) => p.category === categoryToDelete).length} photos
-                    </strong>{" "}
-                    currently using this category. Choose where to move them:
-                  </p>
-
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">
-                      Move photos to category:
-                    </label>
-                    <select
-                      value={targetReassignCategory}
-                      onChange={(e) => setTargetReassignCategory(e.target.value)}
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-xs focus:border-primary outline-none bg-white"
-                    >
-                      {availableCategories
-                        .filter((c) => c !== categoryToDelete)
-                        .map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))}
-                    </select>
-                  </div>
-                </>
-              ) : (
-                /* Empty category -> Simple confirmation popup */
-                <>
-                  <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Trash size={24} weight="fill" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 text-center mb-1">
-                    Delete &quot;{categoryToDelete}&quot;?
-                  </h3>
-                  <p className="text-xs text-slate-500 text-center leading-relaxed">
-                    Are you sure you want to remove <strong>&quot;{categoryToDelete}&quot;</strong> from active categories?
-                  </p>
-                </>
-              )}
-            </div>
-            <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-2.5">
-              <button
-                onClick={() => setCategoryToDelete(null)}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  const hasPhotos = photos.filter((p) => p.category === categoryToDelete).length > 0;
-                  void handleDeleteCategory(
-                    categoryToDelete,
-                    hasPhotos ? targetReassignCategory : undefined
-                  );
-                }}
-                disabled={isSaving}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold text-white bg-red-600 hover:bg-red-700 shadow-xs disabled:opacity-50 transition-colors"
-              >
-                {isSaving
-                  ? "Deleting..."
-                  : photos.filter((p) => p.category === categoryToDelete).length > 0
-                  ? "Move & Delete"
-                  : "Yes, Delete"}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* Upload / Edit Modal */}
-      {mounted && isFormOpen && createPortal(
+      {/* Upload Modal */}
+      {mounted && isAdding && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
@@ -685,15 +247,17 @@ export default function AdminMenuClient() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
+            <form onSubmit={handleUploadSubmit} className="flex-1 overflow-y-auto p-6 space-y-5">
               {error && (
-                <div className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-600 border border-red-200">{error}</div>
+                <div className="rounded-lg bg-red-50 p-3 text-sm font-medium text-red-600 border border-red-200">
+                  {error}
+                </div>
               )}
 
               {/* Image Picker */}
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">
-                  {editingPhoto ? "Change Photo (Optional)" : "Select Photo *"}
+                  {editingPhoto ? "Change Photo (Optional)" : "Select Photo / Page *"}
                 </label>
                 <div
                   className={`relative border-2 border-dashed rounded-xl overflow-hidden group cursor-pointer transition-colors ${
@@ -701,10 +265,17 @@ export default function AdminMenuClient() {
                   }`}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                  />
+
                   {previewUrl ? (
-                    <div className="relative aspect-video w-full">
-                      <Image src={previewUrl} alt="Preview" fill className="object-cover" />
+                    <div className="relative aspect-[3/4] sm:aspect-video w-full">
+                      <Image src={previewUrl} alt="Preview" fill className="object-contain bg-slate-900 p-2" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <p className="text-white font-semibold flex items-center gap-2">
                           <UploadSimple weight="bold" /> Change Photo
@@ -717,132 +288,64 @@ export default function AdminMenuClient() {
                         <ImageIcon size={24} className="text-slate-400 group-hover:text-primary" />
                       </div>
                       <p className="text-sm font-medium">Click to select an image</p>
-                      <p className="text-xs text-slate-400 mt-1">Supports JPG, PNG, WEBP (max 10MB)</p>
+                      <p className="text-xs text-slate-400 mt-1">Supports JPG, PNG, WEBP</p>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Title */}
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
                   Menu Title *
                 </label>
                 <input
-                  type="text" required
-                  placeholder="e.g. Crispy Duck Leg, Wagyu Sei Sapi, Mocktails..."
-                  value={title} onChange={(e) => setTitle(e.target.value)}
+                  type="text"
+                  required
+                  placeholder="Example: Special Today, Small Plates, Mains, Drinks..."
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
 
-              {/* Category */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    Category *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsCategoryModalOpen(true)}
-                    className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-                  >
-                    <Tag size={12} weight="bold" />
-                    Manage List
-                  </button>
-                </div>
-                <select
-                  value={category} onChange={(e) => setCategory(e.target.value)}
-                  className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-white"
-                >
-                  {availableCategories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                  <option value="custom">+ Add Custom Category...</option>
-                </select>
-                {category === "custom" && (
-                  <input
-                    type="text" required
-                    placeholder="Enter custom category name"
-                    value={customCategory} onChange={(e) => setCustomCategory(e.target.value)}
-                    className="mt-2 w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                  />
-                )}
-              </div>
-
-              {/* Price */}
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
-                  Price (IDR, Optional)
+                  Category *
                 </label>
                 <input
-                  type="number" min="0"
-                  placeholder="e.g. 185000 — leave empty if not applicable"
-                  value={price} onChange={(e) => setPrice(e.target.value)}
+                  type="text"
+                  required
+                  placeholder="Example: Special Today, Small Plates, To Share, Mains, Dessert, Drinks"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
                 />
               </div>
 
-              {/* Availability Status */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <div>
-                  <p className="text-xs font-semibold text-slate-900">Stock Availability</p>
-                  <p className="text-[11px] text-slate-500">
-                    {isAvailable ? "Available for ordering" : "Sold Out / Unavailable today"}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAvailable(!isAvailable)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-colors ${
-                    isAvailable
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-rose-100 text-rose-800"
-                  }`}
-                >
-                  {isAvailable ? "● In Stock" : "○ Sold Out"}
-                </button>
-              </div>
-
-              {/* Description */}
               <div>
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1.5">
-                  Description (Optional)
+                  Short Description (Optional)
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="A brief description of this menu item or photo..."
-                  value={description} onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Add details or highlights about this menu page..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
                 />
-              </div>
-
-              {/* Sort Order */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
-                    Sort Order Priority
-                  </label>
-                  <span className="text-[11px] text-slate-400">Smaller number = appears first</span>
-                </div>
-                <div className="relative">
-                  <ArrowsDownUp size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="number" min="0"
-                    placeholder="0"
-                    value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 border border-slate-300 rounded-lg text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                  />
-                </div>
               </div>
             </form>
 
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex justify-end gap-3 rounded-b-2xl">
-              <button type="button" onClick={resetForm} className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
+              >
                 Cancel
               </button>
               <button
-                onClick={handleSubmit}
+                onClick={handleUploadSubmit}
                 disabled={isSaving}
                 className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-md disabled:opacity-50 transition-colors"
               >
@@ -854,150 +357,79 @@ export default function AdminMenuClient() {
         document.body
       )}
 
-      {/* Photo Grid */}
+      {/* Menu Photo Grid */}
       {isLoading ? (
-        <div className="text-center py-12 text-slate-400 font-medium">Loading menu photos...</div>
-      ) : filteredPhotos.length === 0 ? (
+        <div className="text-center py-12 text-slate-400 font-medium">Loading menu...</div>
+      ) : photos.length === 0 ? (
         <div className="text-center py-16 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50">
           <ImageIcon size={48} className="mx-auto text-slate-300 mb-4" weight="light" />
-          <h3 className="text-lg font-bold text-slate-900 mb-2">
-            {searchQuery || selectedCategoryFilter !== "ALL" ? "No matching photos found" : "No Menu Photos Yet"}
-          </h3>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">No Menu Photos Yet</h3>
           <p className="text-slate-500 text-sm max-w-sm mx-auto">
-            {searchQuery || selectedCategoryFilter !== "ALL"
-              ? "Try clearing your search query or selecting a different category filter."
-              : "Upload photos of your menu pages or signature dishes to showcase them to your guests."}
+            Upload photos of your menu pages or dishes to display them on the guest Menu page.
           </p>
-          {(searchQuery || selectedCategoryFilter !== "ALL") && (
-            <button
-              onClick={() => { setSearchQuery(""); setSelectedCategoryFilter("ALL"); }}
-              className="mt-4 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 transition-colors"
-            >
-              Clear Filters
-            </button>
-          )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredPhotos.map((photo) => {
-            const isSoldOut = photo.isAvailable === false;
-            return (
-              <div
-                key={photo.id}
-                className={`relative group rounded-2xl overflow-hidden bg-white shadow-xs border transition-all ${
-                  photo.isActive ? "border-slate-200 hover:shadow-md hover:border-slate-300" : "border-slate-200 opacity-60"
-                }`}
-              >
-                {/* Image */}
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
-                  <Image
-                    src={photo.imageUrl}
-                    alt={photo.title}
-                    fill
-                    sizes="(max-width:640px) 100vw,(max-width:768px) 50vw,25vw"
-                    className={`object-cover transition-transform duration-500 group-hover:scale-105 ${isSoldOut ? "grayscale-30 brightness-95" : ""}`}
-                  />
-
-                  {/* Badges: Priority + Availability */}
-                  <div className="absolute top-2.5 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-black/60 text-white/90 backdrop-blur-md">
-                      #{photo.sortOrder}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleToggleAvailability(photo); }}
-                      className={`pointer-events-auto px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs transition-colors ${
-                        isSoldOut
-                          ? "bg-rose-600 text-white hover:bg-rose-700"
-                          : "bg-emerald-600 text-white hover:bg-emerald-700"
-                      }`}
-                      title="Click to toggle In Stock / Sold Out"
-                    >
-                      {isSoldOut ? "Sold Out" : "In Stock"}
-                    </button>
-                  </div>
-
-                  {/* Hover overlay with actions */}
-                  <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
-                    <div className="flex justify-between items-end w-full">
-                      {/* Eye toggle */}
-                      <button
-                        onClick={() => handleToggleStatus(photo)}
-                        title={photo.isActive ? "Deactivate" : "Activate"}
-                        className="text-white/80 hover:text-white px-1.5 py-0.5 rounded bg-white/10 backdrop-blur-md transition-colors text-xs font-bold -translate-y-1 group-hover:translate-y-0"
-                      >
-                        {photo.isActive ? (
-                          <span className="flex items-center gap-1"><EyeSlash size={13} weight="bold" /> Hide</span>
-                        ) : (
-                          <span className="flex items-center gap-1"><Eye size={13} weight="bold" /> Show</span>
-                        )}
-                      </button>
-                      {/* Edit + Delete */}
-                      <div className="flex gap-1 bg-white/20 backdrop-blur-md rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity -translate-y-2.5 group-hover:translate-y-0">
-                        <button
-                          onClick={() => openEditForm(photo)}
-                          className="text-white hover:text-primary px-1.5 py-0.5 rounded transition-colors text-xs font-bold"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => setDeletePrompt(photo)}
-                          className="text-red-300 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors text-xs font-bold"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Info */}
-                <div className="p-3.5">
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <h4 className="text-sm font-semibold text-slate-900 leading-tight line-clamp-1">{photo.title}</h4>
-                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                      {photo.category}
-                    </span>
-                  </div>
-
-                  {photo.description && (
-                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-1.5">{photo.description}</p>
-                  )}
-
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                    {photo.price != null ? (
-                      <p className={`text-xs font-semibold ${isSoldOut ? "text-slate-400 line-through" : "text-slate-800"}`}>
-                        {currencyFormatter.format(photo.price)}
-                      </p>
-                    ) : (
-                      <span className="text-[11px] text-slate-400 italic">No price</span>
-                    )}
-
-                    {!photo.isActive && (
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                        Hidden
+        <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+          {photos.map((photo) => (
+            <div
+              key={photo.id}
+              className="relative group break-inside-avoid rounded-2xl overflow-hidden bg-slate-100 shadow-sm hover:shadow-md transition-all"
+            >
+              <div className="relative w-full">
+                <Image
+                  src={photo.imageUrl || ""}
+                  alt={photo.title || "Menu photo"}
+                  width={500}
+                  height={500}
+                  className="w-full object-cover"
+                />
+                {/* Overlay on Hover */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                  <div className="flex justify-between items-start w-full">
+                    {photo.category && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase bg-white/20 text-white backdrop-blur-md mb-2">
+                        {photo.category}
                       </span>
                     )}
+                    <div className="flex gap-1 bg-white/20 backdrop-blur-md rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity translate-y-[-10px] group-hover:translate-y-0">
+                      <button
+                        onClick={() => handleEditClick(photo)}
+                        className="text-white hover:text-primary px-1.5 py-0.5 rounded transition-colors text-xs font-bold"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(photo)}
+                        className="text-red-300 hover:text-red-400 px-1.5 py-0.5 rounded transition-colors text-xs font-bold"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
+                  {photo.title && (
+                    <h4 className="text-white font-bold text-sm leading-tight drop-shadow-md">{photo.title}</h4>
+                  )}
+                  {photo.description && (
+                    <p className="text-white/80 text-xs mt-1 line-clamp-2">{photo.description}</p>
+                  )}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Delete Confirm Modal */}
+      {/* Delete Confirmation Modal */}
       {mounted && deletePrompt && createPortal(
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash size={32} weight="fill" />
+                <ImageIcon size={32} weight="fill" />
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Menu Photo?</h3>
               <p className="text-sm text-slate-500">
-                Are you sure you want to delete{" "}
-                <strong>&quot;{deletePrompt.title}&quot;</strong>? This action is permanent and cannot be undone.
+                Are you sure you want to delete <strong>&quot;{deletePrompt.title || "Untitled"}&quot;</strong>? This menu photo will be permanently deleted.
               </p>
             </div>
             <div className="border-t border-slate-100 p-4 bg-slate-50 flex gap-3">
@@ -1009,11 +441,11 @@ export default function AdminMenuClient() {
                 Cancel
               </button>
               <button
-                onClick={executeDelete}
+                onClick={executeDeletePhoto}
                 disabled={isSaving}
                 className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 shadow-md disabled:opacity-50 transition-colors"
               >
-                {isSaving ? "Deleting..." : "Yes, Delete"}
+                {isSaving ? "Deleting..." : "Yes, Delete Photo"}
               </button>
             </div>
           </div>

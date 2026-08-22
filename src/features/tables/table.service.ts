@@ -152,6 +152,7 @@ export const checkTableAvailability = async (
   sessionId: string,
   date: Date | string,
 ): Promise<void> => {
+  await syncDailyOutdoorState();
   const normalizedDate = parseDateOnlyUTC(date);
   const now = new Date();
 
@@ -202,6 +203,7 @@ export const getPublicTableAvailability = async (
   sessionId: string,
   date: Date | string,
 ): Promise<Array<BookableTable & { isAvailable: boolean }>> => {
+  await syncDailyOutdoorState();
   const normalizedDate = parseDateOnlyUTC(date);
   const now = new Date();
 
@@ -253,6 +255,7 @@ export const getAvailableTables = async (
   date: Date | string,
   capacity: number
 ) => {
+  await syncDailyOutdoorState();
   if (!Number.isInteger(capacity) || capacity <= 0) {
     throw new Error("capacity must be a positive integer");
   }
@@ -416,6 +419,71 @@ const DEFAULT_OUTDOOR_TABLE_DATA = [
   { tableNumber: "OUT-4", capacity: 4, posX: 40, posY: 10 },
 ];
 
+/** YYYY-MM-DD string according to Asia/Jakarta (WIB) timezone */
+export const getTodayWIBDateString = (): string => {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+};
+
+const OUTDOOR_DAILY_TOKEN_KEY = "OUTDOOR_DAILY_ACTIVE";
+
+export async function getOutdoorActiveDate(): Promise<string | null> {
+  try {
+    const record = await prisma.verificationToken.findUnique({
+      where: { token: OUTDOOR_DAILY_TOKEN_KEY },
+    });
+    return record ? record.identifier : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setOutdoorActiveDate(dateStr: string | null): Promise<void> {
+  try {
+    if (dateStr) {
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      await prisma.verificationToken.upsert({
+        where: { token: OUTDOOR_DAILY_TOKEN_KEY },
+        update: { identifier: dateStr, expires: expiresAt },
+        create: { identifier: dateStr, token: OUTDOOR_DAILY_TOKEN_KEY, expires: expiresAt },
+      });
+    } else {
+      await prisma.verificationToken.deleteMany({
+        where: { token: OUTDOOR_DAILY_TOKEN_KEY },
+      });
+    }
+  } catch (err) {
+    console.error("[SET OUTDOOR ACTIVE DATE ERROR]", err);
+  }
+}
+
+export async function syncDailyOutdoorState(): Promise<boolean> {
+  await ensureOutdoorTables();
+  const todayWIB = getTodayWIBDateString();
+  const activeDate = await getOutdoorActiveDate();
+
+  // If outdoor is not activated for today (e.g. new morning / new date):
+  if (activeDate !== todayWIB) {
+    const activeOutdoorCount = await prisma.table.count({
+      where: { tableNumber: { startsWith: "OUT-" }, isActive: true },
+    });
+
+    if (activeOutdoorCount > 0) {
+      await prisma.table.updateMany({
+        where: { tableNumber: { startsWith: "OUT-" } },
+        data: { isActive: false },
+      });
+    }
+    return false;
+  }
+
+  return true;
+}
+
 export async function ensureOutdoorTables(): Promise<void> {
   const existing = await prisma.table.findMany({
     where: { tableNumber: { startsWith: "OUT-" } },
@@ -437,7 +505,7 @@ export async function ensureOutdoorTables(): Promise<void> {
           capacity: t.capacity,
           posX: t.posX,
           posY: t.posY,
-          isActive: true,
+          isActive: false, // Default to OFF on initial creation
           status: TableStatus.AVAILABLE,
         },
       });
@@ -446,7 +514,7 @@ export async function ensureOutdoorTables(): Promise<void> {
 }
 
 export async function getOutdoorAreaStatus(): Promise<OutdoorAreaStatus> {
-  await ensureOutdoorTables();
+  await syncDailyOutdoorState();
 
   const now = new Date();
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -503,11 +571,22 @@ export async function getOutdoorAreaStatus(): Promise<OutdoorAreaStatus> {
 
 export async function toggleOutdoorArea(isOpen: boolean): Promise<OutdoorAreaStatus> {
   await ensureOutdoorTables();
+  const todayWIB = getTodayWIBDateString();
 
-  await prisma.table.updateMany({
-    where: { tableNumber: { startsWith: "OUT-" } },
-    data: { isActive: isOpen },
-  });
+  if (isOpen) {
+    await setOutdoorActiveDate(todayWIB);
+    await prisma.table.updateMany({
+      where: { tableNumber: { startsWith: "OUT-" } },
+      data: { isActive: true },
+    });
+  } else {
+    await setOutdoorActiveDate(null);
+    await prisma.table.updateMany({
+      where: { tableNumber: { startsWith: "OUT-" } },
+      data: { isActive: false },
+    });
+  }
 
   return getOutdoorAreaStatus();
 }
+
