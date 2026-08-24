@@ -64,21 +64,29 @@ export default function ReservationIntro({ onNext }: ReservationIntroProps) {
             <h2 className="text-xl font-bold text-slate-900">Seating Areas</h2>
           </div>
           
-          <div className="grid gap-6 mt-4">
+          <div className="grid gap-8 md:gap-6 mt-4">
             {AREAS.map((area) => (
-              <div key={area.id} className="relative w-full aspect-video bg-slate-100">
-                <Image
-                  src={area.image}
-                  alt={area.name}
-                  fill
-                  className={`transition-opacity duration-700 ${area.imageClass || "object-cover object-center"}`}
-                  priority
-                />
-                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent flex items-end">
-                  <div className="p-6 md:p-8 text-white">
+              <div key={area.id} className="relative w-full">
+                <div className="relative w-full aspect-video bg-slate-100">
+                  <Image
+                    src={area.image}
+                    alt={area.name}
+                    fill
+                    className={`transition-opacity duration-700 ${area.imageClass || "object-cover object-center"}`}
+                    priority
+                  />
+                </div>
+                {/* Desktop Text Overlay */}
+                <div className="hidden md:flex absolute inset-0 bg-linear-to-t from-black/80 via-transparent to-transparent items-end">
+                  <div className="p-8 text-white">
                     <h3 className="text-2xl font-serif mb-2">{area.name}</h3>
                     <p className="text-base text-slate-200 max-w-2xl">{area.description}</p>
                   </div>
+                </div>
+                {/* Mobile Text Below */}
+                <div className="md:hidden py-4">
+                  <h3 className="text-lg font-bold font-serif text-slate-900 mb-1">{area.name}</h3>
+                  <p className="text-sm text-slate-600">{area.description}</p>
                 </div>
               </div>
             ))}
@@ -105,7 +113,7 @@ export default function ReservationIntro({ onNext }: ReservationIntroProps) {
                 <div>
                   <h4 className="font-bold text-slate-900">System & Arrival</h4>
                   <p className="text-sm text-slate-600 leading-relaxed mt-1">
-                    We operate primarily by reservation (80% reservation, 20% walk-in). We allow a <strong className="text-slate-900">15-minute grace period</strong>. Reservations may be released after 15 minutes without notice.
+                    We operate primarily by reservation (80% reservation, 20% walk-in). We allow a <strong className="text-slate-900">30-minute grace period</strong>. Reservations may be released after 30 minutes without notice.
                   </p>
                 </div>
               </div>
