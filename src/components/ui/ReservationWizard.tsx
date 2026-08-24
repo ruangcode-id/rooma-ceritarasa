@@ -9,6 +9,7 @@ import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle, Info, WhatsappLogo 
 import Image from "next/image";
 import Script from "next/script";
 import { GuestReservationForm } from "../forms/GuestReservationForm";
+import ReservationIntro from "../public/ReservationIntro";
 import { payWithSnap } from "@/lib/midtrans-snap-client";
 
 interface Session {
@@ -142,7 +143,7 @@ export default function ReservationWizard({
 
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [snapReady, setSnapReady] = useState(false);
   const [reservationResult, setReservationResult] =
     useState<CreateReservationResult | null>(null);
@@ -388,7 +389,7 @@ export default function ReservationWizard({
       ) : null}
       
       {/* 1. Hero Image */}
-      {step !== 3 && (
+      {step !== 0 && step !== 3 && (
         <div className="w-full max-w-4xl h-48 md:h-80 relative overflow-hidden shadow-sm mb-8 bg-slate-900">
           {HERO_IMAGES.map((src, idx) => (
             <Image 
@@ -408,7 +409,7 @@ export default function ReservationWizard({
       )}
 
       {/* 2. Title & Address */}
-      {step !== 3 && (
+      {step !== 0 && step !== 3 && (
         <div className="text-center mb-10 px-4">
           <Image
             src="/assets/logo_no_background.png"
@@ -423,6 +424,9 @@ export default function ReservationWizard({
           </p>
         </div>
       )}
+
+      {/* --- STEP 0: INTRO & HOUSE RULES --- */}
+      {step === 0 && <ReservationIntro onNext={() => setStep(1)} />}
 
       {/* --- STEP 1: SELECTION --- */}
       {step === 1 && (
