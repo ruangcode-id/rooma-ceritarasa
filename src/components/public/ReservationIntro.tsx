@@ -11,14 +11,14 @@ interface ReservationIntroProps {
 const AREAS = [
   {
     id: "standard",
-    name: "Table 1, 3, 4, 6, 7 (2 Pax), Table 8 & 10 (2-3 Pax)",
+    name: "Table 1, 3, 4, 6, 7, 8 (2 Pax) & Table 10 (2-3 Pax)",
     image: "/assets/table-1-3-4-6-7-8.webp",
     description: "Comfortable and cozy seating perfectly designed for 2 to 3 pax.",
     imageClass: "object-cover object-center",
   },
   {
     id: "table2and5",
-    name: "Table 2 (3-4 Pax) & Table 5 (3-5 Pax)",
+    name: "Table 2 (2-3 Pax) & Table 5 (3-5 Pax)",
     image: "/assets/table2-and-5.webp",
     description: "Spacious seating located in the heart of our restaurant. Great for small groups and families.",
     imageClass: "object-cover object-bottom",
