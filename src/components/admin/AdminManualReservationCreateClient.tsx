@@ -22,6 +22,15 @@ type Table = {
   isAvailable: boolean;
 };
 
+/** Converts raw tableNumber to a human-readable label.
+ * Examples: "OUT-1" → "Out Table 1", "Table 1" → "Table 1", "TT1" → "TT1"
+ */
+function formatTableName(tableNumber: string): string {
+  const outMatch = tableNumber.match(/^OUT-?(\d+)$/i);
+  if (outMatch) return `Out Table ${outMatch[1]}`;
+  return tableNumber;
+}
+
 export default function AdminManualReservationCreateClient() {
   const router = useRouter();
   
@@ -245,7 +254,7 @@ export default function AdminManualReservationCreateClient() {
                             : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                       }`}
                     >
-                      <span className="font-bold">{table.tableNumber}</span>
+                      <span className="font-bold">{formatTableName(table.tableNumber)}</span>
                       <span className="text-xs font-normal opacity-80 block">{table.capacity} Pax</span>
                     </button>
                   );
