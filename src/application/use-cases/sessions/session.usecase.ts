@@ -51,12 +51,14 @@ export const SessionUseCase = {
     });
 
     // 2. Fetch specific overrides for this date
-    const [blockedSessionIds, specialOpenSessionIds] = await Promise.all([
+    const [blockedSessionIds, specialOpenSessionIds, isWholeDateSpecialOpen] = await Promise.all([
       BlockedDateRepository.getBlockedSessionsOnDate(date),
       SpecialOpenDateRepository.getSessionSpecialOpenDates(date),
+      SpecialOpenDateRepository.isDateSpecialOpen(date),
     ]);
 
     const weekday = date.getUTCDay();
+    const hasSpecialOverride = isWholeDateSpecialOpen || specialOpenSessionIds.length > 0;
 
     // 3. Filter sessions in-memory
     return sessions.sessions.filter((s) => {
@@ -66,8 +68,12 @@ export const SessionUseCase = {
       // If explicitly blocked today, exclude
       if (blockedSessionIds.includes(s.id)) return false;
 
-      // If explicitly opened today, include
-      if (specialOpenSessionIds.includes(s.id)) return true;
+      if (hasSpecialOverride) {
+        // If the date has ANY special open configuration, we enter "override mode".
+        // In override mode, a session is ONLY open if it is explicitly marked as special open,
+        // OR if the whole date is marked special open (sessionId: null).
+        return isWholeDateSpecialOpen || specialOpenSessionIds.includes(s.id);
+      }
 
       // Otherwise, fallback to standard schedule
       return s.dayOfWeek.includes(weekday);

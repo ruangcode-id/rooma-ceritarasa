@@ -34,7 +34,6 @@ export const SpecialOpenDateRepository = {
           gte: startOfUTCDate(start),
           lte: startOfUTCDate(end),
         },
-        sessionId: null, // Only return fully opened dates
       },
       orderBy: { date: "asc" },
     });

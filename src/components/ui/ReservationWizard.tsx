@@ -551,34 +551,29 @@ export default function ReservationWizard({
                 ) : (
                   <div className="grid grid-cols-7 gap-1">
                     {emptyDays.map(i => <div key={`empty-${i}`} className="p-2"></div>)}
-                    {daysInMonth.map((day, idx) => {
+                    {daysInMonth.map((day, dayIdx) => {
                       const dateStr = format(day, "yyyy-MM-dd");
                       const isPast = isBefore(day, today);
                       const isBlocked = blockedDates.has(dateStr);
-                      const isMonday = getDay(day) === 1;
                       const isSelected = selectedDate && isSameDay(day, selectedDate);
-                      const isDisabled = isPast || isBlocked || isMonday;
+                      const isDisabled = isPast || isBlocked;
                       
                       return (
-                        <button
-                          key={idx}
-                          onClick={() => handleDateSelect(day)}
-                          disabled={isDisabled}
-                          title={isMonday ? "Closed on Monday" : undefined}
-                          className={`
-                            py-3 text-center text-sm font-medium transition-colors relative
-                            ${isDisabled ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}
-                            ${isMonday && !isPast ? "bg-red-50" : ""}
-                            ${isSelected ? "bg-[#1f0609] text-white" : (!isDisabled && "hover:bg-slate-100 text-slate-700")}
-                          `}
-                        >
-                          {format(day, "d")}
-                          {isMonday && !isPast && (
-                            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-[7px] font-bold text-red-400 leading-none">
-                              TUTUP
-                            </span>
-                          )}
-                        </button>
+                        <div key={dayIdx} className="aspect-square">
+                          <button
+                            type="button"
+                            onClick={() => handleDateSelect(day)}
+                            disabled={isDisabled}
+                            title={isBlocked ? "Tidak tersedia" : undefined}
+                            className={`
+                              w-full h-full text-center text-sm font-medium transition-colors relative
+                              ${isDisabled ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}
+                              ${isSelected ? "bg-[#1f0609] text-white" : (!isDisabled && "hover:bg-slate-100 text-slate-700")}
+                            `}
+                          >
+                            {format(day, "d")}
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -702,8 +697,8 @@ export default function ReservationWizard({
                           ? "bg-slate-200 border-slate-200 text-slate-400 cursor-not-allowed"
                           : isInvalidPax
                             ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed"
-                            : isSelected
-                              ? "bg-slate-900 border-slate-900 text-white shadow-md"
+                            : isSelected 
+                              ? "bg-slate-900 text-white shadow-md ring-2 ring-slate-900 ring-offset-2 border-slate-900"
                               : "bg-white border-slate-900 text-slate-900 hover:bg-slate-100"
                         }
                       `}
