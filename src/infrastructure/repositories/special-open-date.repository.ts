@@ -50,9 +50,11 @@ export const SpecialOpenDateRepository = {
     const normalizedDates = keys.map(dateKeyToDate);
 
     const sessionsToOpen = args.sessionIds && args.sessionIds.length > 0 ? args.sessionIds : [null];
+    
+    const sessionIdFilter = args.sessionIds && args.sessionIds.length > 0 ? { in: args.sessionIds } : null;
 
     const existing = await prisma.specialOpenDate.findMany({
-      where: { date: { in: normalizedDates }, sessionId: { in: sessionsToOpen } },
+      where: { date: { in: normalizedDates }, sessionId: sessionIdFilter },
       select: { date: true, sessionId: true },
     });
     const existingKeys = new Set(existing.map((e) => `${startOfUTCDate(e.date).toISOString().slice(0, 10)}_${e.sessionId || 'null'}`));
@@ -79,7 +81,7 @@ export const SpecialOpenDateRepository = {
     }
 
     return prisma.specialOpenDate.findMany({
-      where: { date: { in: normalizedDates }, sessionId: { in: sessionsToOpen } },
+      where: { date: { in: normalizedDates }, sessionId: sessionIdFilter },
       orderBy: { date: "asc" },
     });
   },
