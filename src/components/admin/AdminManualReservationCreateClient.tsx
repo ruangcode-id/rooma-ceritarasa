@@ -72,7 +72,10 @@ export default function AdminManualReservationCreateClient() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          setTables(data.data);
+          const sorted = [...(data.data as Table[])].sort((a, b) =>
+            a.tableNumber.localeCompare(b.tableNumber, undefined, { numeric: true, sensitivity: "base" })
+          );
+          setTables(sorted);
         } else {
           setTables([]);
         }
@@ -242,7 +245,8 @@ export default function AdminManualReservationCreateClient() {
                             : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                       }`}
                     >
-                      T{table.tableNumber} <span className="text-xs font-normal opacity-80 block">{table.capacity} Pax</span>
+                      <span className="font-bold">{table.tableNumber}</span>
+                      <span className="text-xs font-normal opacity-80 block">{table.capacity} Pax</span>
                     </button>
                   );
                 })}

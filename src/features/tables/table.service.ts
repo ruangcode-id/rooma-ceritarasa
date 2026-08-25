@@ -234,20 +234,24 @@ export const getPublicTableAvailability = async (
     },
   });
 
-  return allTables.map((t) => ({
-    id: t.id,
-    tableNumber: t.tableNumber,
-    capacity: t.capacity,
-    posX: t.posX,
-    posY: t.posY,
-    status: t.status,
-    isActive: t.isActive,
-    isAvailable:
-      t.status !== TableStatus.MAINTENANCE &&
-      t.status !== TableStatus.OCCUPIED &&
-      t.status !== TableStatus.RESERVED &&
-      t.reservationTables.length === 0,
-  }));
+  return allTables
+    .map((t) => ({
+      id: t.id,
+      tableNumber: t.tableNumber,
+      capacity: t.capacity,
+      posX: t.posX,
+      posY: t.posY,
+      status: t.status,
+      isActive: t.isActive,
+      isAvailable:
+        t.status !== TableStatus.MAINTENANCE &&
+        t.status !== TableStatus.OCCUPIED &&
+        t.status !== TableStatus.RESERVED &&
+        t.reservationTables.length === 0,
+    }))
+    .sort((a, b) =>
+      a.tableNumber.localeCompare(b.tableNumber, undefined, { numeric: true, sensitivity: "base" })
+    );
 };
 
 export const getAvailableTables = async (
