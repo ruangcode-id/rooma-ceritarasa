@@ -236,7 +236,7 @@ export default function AdminMenuClient() {
 
       {/* Upload Modal */}
       {mounted && isAdding && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-lg font-bold text-slate-900">
@@ -274,7 +274,7 @@ export default function AdminMenuClient() {
                   />
 
                   {previewUrl ? (
-                    <div className="relative aspect-[3/4] sm:aspect-video w-full">
+                    <div className="relative aspect-3/4 sm:aspect-video w-full">
                       <Image src={previewUrl} alt="Preview" fill className="object-contain bg-slate-900 p-2" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <p className="text-white font-semibold flex items-center gap-2">
@@ -384,14 +384,14 @@ export default function AdminMenuClient() {
                   className="w-full object-cover"
                 />
                 {/* Overlay on Hover */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
+                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-4">
                   <div className="flex justify-between items-start w-full">
                     {photo.category && (
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold tracking-widest uppercase bg-white/20 text-white backdrop-blur-md mb-2">
                         {photo.category}
                       </span>
                     )}
-                    <div className="flex gap-1 bg-white/20 backdrop-blur-md rounded-md p-1 opacity-0 group-hover:opacity-100 transition-opacity translate-y-[-10px] group-hover:translate-y-0">
+                    <div className="flex gap-1 bg-white/20 backdrop-blur-md rounded-md p-1">
                       <button
                         onClick={() => handleEditClick(photo)}
                         className="text-white hover:text-primary px-1.5 py-0.5 rounded transition-colors text-xs font-bold"
@@ -421,7 +421,7 @@ export default function AdminMenuClient() {
 
       {/* Delete Confirmation Modal */}
       {mounted && deletePrompt && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-10000 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col transform scale-100 animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
