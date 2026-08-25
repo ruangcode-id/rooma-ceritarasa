@@ -59,7 +59,7 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
 
   let redirectTo = "/owner/dashboard";
   if (user.role === "admin") redirectTo = "/admin/dashboard";
-  if (user.role === "hr") redirectTo = "/hr";
+  if (user.role === "hr") redirectTo = "/hr/careers";
 
   try {
     await signIn("credentials", {
