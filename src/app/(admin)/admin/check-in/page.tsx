@@ -136,7 +136,7 @@ export default function AdminCheckInPage() {
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-2xl flex-col items-center justify-start space-y-6 px-4 py-8 lg:justify-center lg:py-0 lg:space-y-8">
-      <div className="w-full text-center">
+      <div className="w-full">
         <SectionTitle
           eyebrow="Front Desk"
           title="Guest Check-In"

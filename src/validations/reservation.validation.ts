@@ -18,6 +18,13 @@ export const publicReservationSchema = z.object({
     .union([z.literal(""), z.string().trim().email("Email tidak valid.")])
     .optional()
     .transform((value) => (value === "" ? undefined : value)),
+  guestBirthdate: z
+    .union([
+      z.literal(""),
+      z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal lahir harus YYYY-MM-DD."),
+    ])
+    .optional()
+    .transform((value) => (value === "" ? undefined : value)),
   sessionId: z.string().uuid("Session ID harus berupa UUID yang valid."),
   tableIds: z
     .array(
