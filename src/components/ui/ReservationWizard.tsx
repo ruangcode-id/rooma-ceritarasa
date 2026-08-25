@@ -63,10 +63,10 @@ const TABLE_COMBINATIONS = [
   { id: "combo_8_9_10", name: "Table 8, 9 & 10", tables: ["Table 8", "Table 9", "Table 10"], minPax: 13, maxPax: 15, note: "Combined for VIP/Events" },
 
   // 4. Outdoor Tables
-  { id: "outdoor_1", name: "Outdoor 1", tables: ["Outdoor 1"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
-  { id: "outdoor_2", name: "Outdoor 2", tables: ["Outdoor 2"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
-  { id: "outdoor_3", name: "Outdoor 3", tables: ["Outdoor 3"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
-  { id: "outdoor_4", name: "Outdoor 4", tables: ["Outdoor 4"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
+  { id: "outdoor_1", name: "Outdoor 1", tables: ["OUT-1"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
+  { id: "outdoor_2", name: "Outdoor 2", tables: ["OUT-2"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
+  { id: "outdoor_3", name: "Outdoor 3", tables: ["OUT-3"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
+  { id: "outdoor_4", name: "Outdoor 4", tables: ["OUT-4"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
 ];
 
 type ModalType = "guests" | "date" | "time" | null;
