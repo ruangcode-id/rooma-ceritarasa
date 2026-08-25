@@ -46,21 +46,22 @@ const HERO_IMAGES = [
 const TABLE_COMBINATIONS = [
   // 1. Single Tables
   { id: "single_1", name: "Table 1", tables: ["Table 1"], minPax: 1, maxPax: 2, note: "(Front of Kitchen)" },
-  { id: "single_2", name: "Table 2", tables: ["Table 2"], minPax: 1, maxPax: 3, note: "(Front of Kitchen)" },
+  { id: "single_2", name: "Table 2", tables: ["Table 2"], minPax: 3, maxPax: 4, note: "(Front of Kitchen)" },
   { id: "single_3", name: "Table 3", tables: ["Table 3"], minPax: 1, maxPax: 2, note: "(Front of Kitchen)" },
   { id: "single_4", name: "Table 4", tables: ["Table 4"], minPax: 1, maxPax: 2, note: "" },
   { id: "single_5", name: "Table 5", tables: ["Table 5"], minPax: 3, maxPax: 5, note: "Large Table" },
   { id: "single_6", name: "Table 6", tables: ["Table 6"], minPax: 1, maxPax: 2, note: "" },
   { id: "single_7", name: "Table 7", tables: ["Table 7"], minPax: 1, maxPax: 2, note: "" },
-  { id: "single_8", name: "Table 8", tables: ["Table 8"], minPax: 1, maxPax: 2, note: "" },
-  { id: "single_9", name: "Table 9", tables: ["Table 9"], minPax: 4, maxPax: 6, note: "Large Table" },
-  { id: "single_10", name: "Table 10", tables: ["Table 10"], minPax: 1, maxPax: 3, note: "" },
+  { id: "single_8", name: "Table 8", tables: ["Table 8"], minPax: 2, maxPax: 3, note: "" },
+  { id: "single_9", name: "Table 9", tables: ["Table 9"], minPax: 3, maxPax: 6, note: "Large Table" },
+  { id: "single_10", name: "Table 10", tables: ["Table 10"], minPax: 1, maxPax: 2, note: "" },
   
   // 3. Combined Groups
   { id: "combo_4_5", name: "Table 4 & 5", tables: ["Table 4", "Table 5"], minPax: 4, maxPax: 7, note: "Combined Area" },
   { id: "combo_6_7", name: "Table 6 & 7", tables: ["Table 6", "Table 7"], minPax: 3, maxPax: 4, note: "Combined Area" },
-  { id: "combo_8_9", name: "Table 8 & 9", tables: ["Table 8", "Table 9"], minPax: 7, maxPax: 12, note: "Combined for Large Groups" },
-  { id: "combo_8_9_10", name: "Table 8, 9 & 10", tables: ["Table 8", "Table 9", "Table 10"], minPax: 13, maxPax: 15, note: "Combined for VIP/Events" },
+  { id: "combo_8_9", name: "Table 8 & 9", tables: ["Table 8", "Table 9"], minPax: 8, maxPax: 10, note: "Combined for Large Groups" },
+  { id: "combo_8_9_10", name: "Table 8, 9 & 10", tables: ["Table 8", "Table 9", "Table 10"], minPax: 10, maxPax: 13, note: "Combined for VIP/Events" },
+  { id: "combo_6_7_8_9_10", name: "Table 6, 7, 8, 9 & 10", tables: ["Table 6", "Table 7", "Table 8", "Table 9", "Table 10"], minPax: 14, maxPax: 15, note: "Combined for Very Large Groups" },
 
   // 4. Outdoor Tables
   { id: "outdoor_1", name: "Outdoor 1", tables: ["OUT-1"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
@@ -500,6 +501,11 @@ export default function ReservationWizard({
                     <CaretRight size={20} />
                   </button>
                 </div>
+                {partySize > 15 && (
+                  <p className="text-xs text-red-500 mt-4 text-center px-4 leading-relaxed font-medium">
+                    For reservations &gt; 15 pax, please contact our team via WhatsApp.
+                  </p>
+                )}
                 <button 
                   onClick={() => setActiveModal(null)}
                   className="w-full mt-6 py-4 bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors border-2 border-slate-900"
