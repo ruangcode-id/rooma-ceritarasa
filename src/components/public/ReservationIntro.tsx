@@ -113,7 +113,7 @@ export default function ReservationIntro({ onNext }: ReservationIntroProps) {
                 <div>
                   <h4 className="font-bold text-slate-900">System & Arrival</h4>
                   <p className="text-sm text-slate-600 leading-relaxed mt-1">
-                    We operate primarily by reservation (80% reservation, 20% walk-in). We allow a <strong className="text-slate-900">30-minute grace period</strong>. Reservations may be released after 30 minutes without notice.
+                    We operate primarily by reservation (80% reservation, 20% walk-in). We allow a <strong className="text-slate-900">15-minute grace period</strong>. Reservations may be released after 15 minutes without notice.
                   </p>
                 </div>
               </div>
