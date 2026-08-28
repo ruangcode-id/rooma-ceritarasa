@@ -167,10 +167,10 @@ export default function ReservationIntro({ onNext }: ReservationIntroProps) {
                 type="checkbox"
                 checked={isAgreed}
                 onChange={(e) => setIsAgreed(e.target.checked)}
-                className="peer sr-only"
+                className="sr-only"
               />
-              <div className="w-6 h-6 border-2 border-slate-300 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center group-hover:border-primary">
-                <Check size={16} weight="bold" className="text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+              <div className={`w-6 h-6 border-2 rounded-md transition-colors flex items-center justify-center ${isAgreed ? 'bg-primary border-primary' : 'border-slate-300 group-hover:border-primary'}`}>
+                {isAgreed && <Check size={16} weight="bold" className="text-white" />}
               </div>
             </div>
             <div className="text-sm text-slate-700 font-medium">
