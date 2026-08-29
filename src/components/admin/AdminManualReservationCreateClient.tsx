@@ -7,7 +7,8 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { handleApiError } from "@/lib/handle-api-error";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle } from "@phosphor-icons/react";
-import PhoneInput from "react-phone-number-input";
+import PhoneInput, { getCountries, getCountryCallingCode } from "react-phone-number-input";
+import en from "react-phone-number-input/locale/en.json";
 import "react-phone-number-input/style.css";
 
 type Session = {
@@ -31,6 +32,13 @@ function formatTableName(tableNumber: string): string {
   const outMatch = tableNumber.match(/^OUT-?(\d+)$/i);
   if (outMatch) return `Out Table ${outMatch[1]}`;
   return tableNumber;
+}
+
+const customLabels = { ...en } as Record<string, string>;
+for (const country of getCountries()) {
+  if (en[country as keyof typeof en]) {
+    customLabels[country] = `${en[country as keyof typeof en]} (+${getCountryCallingCode(country)})`;
+  }
 }
 
 export default function AdminManualReservationCreateClient() {
@@ -286,6 +294,7 @@ export default function AdminManualReservationCreateClient() {
               <PhoneInput
                 defaultCountry="ID"
                 international
+                labels={customLabels}
                 value={phone}
                 onChange={setPhone}
                 className="w-full h-11 rounded-xl border border-slate-300 px-3 text-sm transition focus-within:border-primary focus-within:ring-1 focus-within:ring-primary bg-white"

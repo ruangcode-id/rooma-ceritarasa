@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Crown, CircleNotch } from "@phosphor-icons/react";
 import { handleApiError } from "@/lib/handle-api-error";
-import PhoneInput from "react-phone-number-input";
+import PhoneInput, { getCountries, getCountryCallingCode } from "react-phone-number-input";
+import en from "react-phone-number-input/locale/en.json";
 import "react-phone-number-input/style.css";
 
 interface GuestReservationFormProps {
@@ -27,6 +28,13 @@ type CreateReservationResult = {
   paymentToken: string;
   checkInToken: string;
 };
+
+const customLabels = { ...en } as Record<string, string>;
+for (const country of getCountries()) {
+  if (en[country as keyof typeof en]) {
+    customLabels[country] = `${en[country as keyof typeof en]} (+${getCountryCallingCode(country)})`;
+  }
+}
 
 export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vipToken, onSuccess, onBack }: GuestReservationFormProps) {
   const [loading, setLoading] = useState(false);
@@ -157,6 +165,7 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
             <PhoneInput
               defaultCountry="ID"
               international
+              labels={customLabels}
               value={phone}
               onChange={setPhone}
               className="w-full border-b-2 px-0 py-2 text-base transition-all border-slate-200 bg-transparent text-slate-900 focus-within:border-slate-900"
