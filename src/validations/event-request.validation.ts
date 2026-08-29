@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { INDONESIAN_MOBILE_REGEX } from "@/lib/phone";
+import { isValidPhoneNumber } from "@/lib/phone";
 
 /**
  * Skema validasi untuk public event request form.
@@ -15,7 +15,7 @@ export const submitEventRequestSchema = z.object({
     .string()
     .trim()
     .min(1, "Nomor HP wajib diisi")
-    .regex(INDONESIAN_MOBILE_REGEX, "Format nomor HP tidak valid (contoh: 08xx atau +62xx)"),
+    .refine(isValidPhoneNumber, "Format nomor HP tidak valid (gunakan format internasional)"),
 
   /** Email PIC — opsional, digunakan untuk notifikasi via Resend */
   email: z

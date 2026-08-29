@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/phone";
 
 const guestNameSchema = z
   .string()
@@ -9,7 +10,8 @@ const guestNameSchema = z
 const guestPhoneSchema = z
   .string()
   .trim()
-  .regex(/^\d{8,15}$/, "Nomor HP harus berisi 8-15 digit angka.");
+  .refine(isValidPhoneNumber, "Format nomor telepon tidak valid.")
+  .transform(normalizePhoneNumber);
 
 export const publicReservationSchema = z.object({
   guestName: guestNameSchema,

@@ -7,6 +7,8 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { handleApiError } from "@/lib/handle-api-error";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle } from "@phosphor-icons/react";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 type Session = {
   id: string;
@@ -38,6 +40,7 @@ export default function AdminManualReservationCreateClient() {
   const [sessionId, setSessionId] = useState<string>("");
   const [partySize, setPartySize] = useState<number | "">("");
   const [tableIds, setTableIds] = useState<string[]>([]);
+  const [phone, setPhone] = useState<string | undefined>("");
   
   const [sessions, setSessions] = useState<Session[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -116,7 +119,7 @@ export default function AdminManualReservationCreateClient() {
       tableIds,
       partySize: Number(formData.get("partySize")),
       guestName: formData.get("guestName"),
-      guestPhone: formData.get("guestPhone")?.toString().replace(/\D/g, ''),
+      guestPhone: phone,
       guestEmail: formData.get("guestEmail"),
       specialRequest: formData.get("specialRequest"),
     };
@@ -280,12 +283,18 @@ export default function AdminManualReservationCreateClient() {
             
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">WhatsApp Number *</label>
-              <input
-                type="tel"
-                name="guestPhone"
-                required
-                placeholder="081234567890"
-                className="w-full h-11 rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+              <PhoneInput
+                defaultCountry="ID"
+                international
+                value={phone}
+                onChange={setPhone}
+                className="w-full h-11 rounded-xl border border-slate-300 px-3 text-sm transition focus-within:border-primary focus-within:ring-1 focus-within:ring-primary bg-white"
+                numberInputProps={{
+                  className: "w-full bg-transparent outline-none ml-2",
+                  name: "guestPhone",
+                  required: true,
+                  placeholder: "812 3456 7890"
+                }}
               />
             </div>
             
