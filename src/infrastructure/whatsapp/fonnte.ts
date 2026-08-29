@@ -1,4 +1,5 @@
 import { getFonnteConfig } from "@/config/env";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 export const FONNTE_CONFIG_WARNING =
   "WA tidak terkirim karena konfigurasi Fonnte belum lengkap (FONNTE_TOKEN).";
@@ -25,6 +26,15 @@ export function normalizePhoneForFonnte(phone: string): string {
  */
 export function formatTargetForFonnteApi(phone: string): string {
   return phone.replace(/\D/g, "");
+}
+
+export function getFonnteCountryCode(phone: string): string {
+  const raw = phone.startsWith('+') ? phone : '+' + phone;
+  const parsed = parsePhoneNumberFromString(raw);
+  if (parsed && parsed.countryCallingCode) {
+    return String(parsed.countryCallingCode);
+  }
+  return "62";
 }
 
 function mapFonnteReason(reason: string): string {
@@ -99,9 +109,11 @@ export async function sendWhatsAppMessage(
   const { target } = validated;
 
   try {
+    const countryCode = getFonnteCountryCode(phone);
     const body: Record<string, string> = {
       target,
       message,
+      countryCode,
     };
     if (config.sender) {
       body.sender = formatTargetForFonnteApi(config.sender);
@@ -152,9 +164,11 @@ export async function sendWhatsAppMessageWithImage(
   const { target } = validated;
 
   try {
+    const countryCode = getFonnteCountryCode(phone);
     const formData = new FormData();
     formData.append("target", target);
     formData.append("message", message);
+    formData.append("countryCode", countryCode);
     if (config.sender) {
       formData.append("sender", formatTargetForFonnteApi(config.sender));
     }
