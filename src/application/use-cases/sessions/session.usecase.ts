@@ -2,6 +2,8 @@ import { SessionRepository } from "@/infrastructure/repositories/session.reposit
 import { createSessionSchema, updateSessionSchema } from "@/validations/session.validation";
 import { requireRole } from "@/lib/auth";
 import { Prisma } from "@/generated/prisma/client";
+import { BlockedDateRepository } from "@/infrastructure/repositories/blocked-date.repository";
+import { SpecialOpenDateRepository } from "@/infrastructure/repositories/special-open-date.repository";
 
 // Helper to convert HH:MM to Prisma DateTime
 const parseTime = (timeStr: string) => {
@@ -40,17 +42,74 @@ export const SessionUseCase = {
    * Public: List only active sessions (for booking page)
    */
   getPublicSessionsAction: async (date: Date) => {
-    // No role check needed
+    // 1. Fetch all active sessions (do not filter by weekday here)
     const sessions = await SessionRepository.getSessions({
       skip: 0,
       take: 100,
       isActive: true,
       date,
-      weekday: date.getUTCDay(),
     });
 
-    return sessions.sessions
-      .filter((s) => s.availableSlots > 0);
+    // 2. Fetch specific overrides for this date
+    const [blockedSessionIds, specialOpenSessionIds, isWholeDateSpecialOpen] = await Promise.all([
+      BlockedDateRepository.getBlockedSessionsOnDate(date),
+      SpecialOpenDateRepository.getSessionSpecialOpenDates(date),
+      SpecialOpenDateRepository.isDateSpecialOpen(date),
+    ]);
+
+    const weekday = date.getUTCDay();
+    const hasSpecialOverride = isWholeDateSpecialOpen || specialOpenSessionIds.length > 0;
+
+    // Time cutoff logic: If booking is for today (in WIB), hide sessions that have already started
+    const now = new Date();
+    const nowWib = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(now); // Format: "YYYY-MM-DD, HH:mm" or "YYYY-MM-DD HH:mm" depending on environment
+    
+    // Normalize separator just in case (some environments use comma, some use space)
+    const normalizedWib = nowWib.replace(", ", "T").replace(" ", "T");
+    const [wibDateStr, wibTimeStr] = normalizedWib.split("T");
+    const selectedDateStr = date.toISOString().split("T")[0];
+    const isTodayWib = selectedDateStr === wibDateStr;
+
+    // 3. Filter sessions in-memory
+    return sessions.sessions.filter((s) => {
+      // If it has no available slots, exclude
+      if (s.availableSlots <= 0) return false;
+
+      // Time cutoff: hide session if current WIB time >= session start time
+      if (isTodayWib) {
+        const startHour = s.startTime.getUTCHours();
+        const startMinute = s.startTime.getUTCMinutes();
+        
+        const [nowHourStr, nowMinuteStr] = wibTimeStr.split(":");
+        const nowHour = parseInt(nowHourStr, 10);
+        const nowMinute = parseInt(nowMinuteStr, 10);
+
+        if (nowHour > startHour || (nowHour === startHour && nowMinute >= startMinute)) {
+          return false;
+        }
+      }
+
+      // If explicitly blocked today, exclude
+      if (blockedSessionIds.includes(s.id)) return false;
+
+      if (hasSpecialOverride) {
+        // If the date has ANY special open configuration, we enter "override mode".
+        // In override mode, a session is ONLY open if it is explicitly marked as special open,
+        // OR if the whole date is marked special open (sessionId: null).
+        return isWholeDateSpecialOpen || specialOpenSessionIds.includes(s.id);
+      }
+
+      // Otherwise, fallback to standard schedule
+      return s.dayOfWeek.includes(weekday);
+    });
   },
 
   /**

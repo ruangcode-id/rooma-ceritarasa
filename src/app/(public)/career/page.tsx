@@ -1,6 +1,6 @@
 import { listPublicCareerJobs } from "@/features/careers/career.service";
 import { format } from "date-fns";
-import Link from "next/link";
+import Image from "next/image";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -53,6 +53,12 @@ export default async function CareerPage() {
                     </div>
 
                     <div className="mt-6 max-w-4xl">
+                      {job.imageUrl && (
+                        <div className="relative w-full max-w-xl aspect-21/9 mb-6 bg-slate-100 overflow-hidden rounded-none">
+                          <Image src={job.imageUrl} alt={job.title} fill className="object-cover rounded-none" />
+                        </div>
+                      )}
+                      
                       <p className="text-gray-600 text-lg leading-relaxed mb-6">
                         {job.description}
                       </p>
@@ -62,14 +68,12 @@ export default async function CareerPage() {
                         {job.requirements}
                       </div>
 
-                      <Link
-                        href={`https://wa.me/6281234567890?text=Hello%20Rooma%20Ceritarasa%20HR%20Team,%20I%20am%20interested%20in%20applying%20for%20the%20${encodeURIComponent(job.title)}%20position.%20Attached%20is%20my%20CV...`}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <a
+                        href={`mailto:4phgroup.hiring@gmail.com?subject=Job%20Application%20-%20${encodeURIComponent(job.title)}&body=Hello%20Rooma%20Ceritarasa%20HR%20Team,%0A%0AI%20would%20like%20to%20apply%20for%20the%20${encodeURIComponent(job.title)}%20position.%0A%0A[Please%20attach%20your%20CV/Resume%20and%20any%20other%20relevant%20documents]`}
                         className="inline-block border-b border-primary text-primary uppercase tracking-[0.15em] text-xs font-bold pb-1 hover:text-primary-dark hover:border-primary-dark transition-colors"
                       >
                         Submit Candidacy
-                      </Link>
+                      </a>
                     </div>
                   </li>
                 ))}

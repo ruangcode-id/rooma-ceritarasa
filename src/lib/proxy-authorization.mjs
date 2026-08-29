@@ -39,10 +39,12 @@ export function authorizeProxyRequest(request) {
   const { pathname, search } = request.nextUrl;
   const isAdminUI = matchesRoute(pathname, "/admin");
   const isOwnerUI = matchesRoute(pathname, "/owner");
+  const isHrUI = matchesRoute(pathname, "/hr");
   const isAdminApi = matchesRoute(pathname, "/api/admin");
   const isOwnerApi = matchesRoute(pathname, "/api/owner");
-  const isApiRoute = isAdminApi || isOwnerApi;
-  const isProtectedRoute = isAdminUI || isOwnerUI || isApiRoute;
+  const isHrApi = matchesRoute(pathname, "/api/hr");
+  const isApiRoute = isAdminApi || isOwnerApi || isHrApi;
+  const isProtectedRoute = isAdminUI || isOwnerUI || isHrUI || isApiRoute;
 
   if (!isProtectedRoute) {
     return NextResponse.next();
@@ -61,6 +63,7 @@ export function authorizeProxyRequest(request) {
   const role = request.auth.user.role;
   const canAccessAdmin = role === "admin" || role === "owner";
   const canAccessOwner = role === "owner";
+  const canAccessHr = role === "hr" || role === "owner" || role === "admin";
 
   if ((isAdminUI || isAdminApi) && !canAccessAdmin) {
     return isApiRoute
@@ -69,6 +72,12 @@ export function authorizeProxyRequest(request) {
   }
 
   if ((isOwnerUI || isOwnerApi) && !canAccessOwner) {
+    return isApiRoute
+      ? forbiddenResponse()
+      : NextResponse.redirect(new URL("/unauthorized", request.url));
+  }
+
+  if ((isHrUI || isHrApi) && !canAccessHr) {
     return isApiRoute
       ? forbiddenResponse()
       : NextResponse.redirect(new URL("/unauthorized", request.url));

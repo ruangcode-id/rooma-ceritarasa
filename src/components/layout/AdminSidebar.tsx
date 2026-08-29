@@ -53,7 +53,6 @@ const MENU_GROUPS = [
       { name: "Guests", href: "/admin/guests", icon: UsersThree },
       { name: "Gallery", href: "/admin/gallery", icon: Image },
       { name: "Menu", href: "/admin/menu", icon: ForkKnife },
-      { name: "Careers", href: "/admin/careers", icon: Briefcase },
       { name: "Notifications", href: "/admin/notifications", icon: BellRinging },
       { name: "VIP Assign", href: "/admin/vip", icon: Star },
       { name: "Settings", href: "/admin/settings", icon: Gear },

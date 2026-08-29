@@ -107,6 +107,7 @@ export default function AdminManualReservationClient() {
   const [search, setSearch] = useState("");
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [notesModalRow, setNotesModalRow] = useState<ReservationRow | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ id: string; action: "pay" | "cancel"; guestName: string } | null>(null);
 
   async function load() {
     setIsLoading(true);
@@ -157,58 +158,39 @@ export default function AdminManualReservationClient() {
     };
   }, [filterDate, filterStatus, search]);
 
-  async function markAsPaid(id: string) {
-    if (!confirm("Are you sure you want to mark this reservation as paid?")) return;
+  async function executeAction() {
+    if (!confirmDialog) return;
+    const { id, action } = confirmDialog;
     
     setIsUpdating(id);
     setError("");
 
     try {
-      const response = await fetch(`/api/admin/manual-reservations/${id}/pay`, {
-        method: "PATCH",
-      });
-      if (!response.ok) {
-        const errorMsg = await handleApiError(response);
-        throw new Error(errorMsg);
+      if (action === "pay") {
+        const response = await fetch(`/api/admin/manual-reservations/${id}/pay`, { method: "PATCH" });
+        if (!response.ok) throw new Error(await handleApiError(response));
+        const payload = await response.json();
+        if (!payload.success) throw new Error(payload.error ?? "Failed to update status.");
+      } else {
+        const response = await fetch(`/api/admin/reservations/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "cancelled" }),
+        });
+        if (!response.ok) throw new Error(await handleApiError(response));
       }
-
-      const payload = await response.json();
-      if (!payload.success) throw new Error(payload.error ?? "Failed to update status.");
 
       await load();
       router.refresh();
+      setConfirmDialog(null);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : String(requestError));
     } finally {
       setIsUpdating(null);
     }
   }
-
-  async function cancelReservation(id: string) {
-    if (!confirm("Are you sure you want to cancel this reservation?")) return;
-    
-    setIsUpdating(id);
-    setError("");
-
-    try {
-      const response = await fetch(`/api/admin/reservations/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
-      });
-      if (!response.ok) {
-        const errorMsg = await handleApiError(response);
-        throw new Error(errorMsg);
-      }
-
-      await load();
-      router.refresh();
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : String(requestError));
-    } finally {
-      setIsUpdating(null);
-    }
-  }
+  // Kept here so line numbers don't shift too much, but we don't need them anymore
+  // since we use setConfirmDialog directly in the JSX.
 
   const reservationColumns: Array<DataTableColumn<ReservationRow>> = [
     {
@@ -295,7 +277,7 @@ export default function AdminManualReservationClient() {
               <>
                 <button
                   type="button"
-                  onClick={() => markAsPaid(reservation.id)}
+                  onClick={() => setConfirmDialog({ id: reservation.id, action: "pay", guestName: reservation.guest.name })}
                   disabled={isBusy}
                   className="rounded-xl bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-600 transition-all hover:bg-green-100 disabled:opacity-50 inline-flex items-center gap-1"
                 >
@@ -303,7 +285,7 @@ export default function AdminManualReservationClient() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => cancelReservation(reservation.id)}
+                  onClick={() => setConfirmDialog({ id: reservation.id, action: "cancel", guestName: reservation.guest.name })}
                   disabled={isBusy}
                   className="rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition-all hover:bg-red-100 disabled:opacity-50"
                 >
@@ -453,6 +435,44 @@ export default function AdminManualReservationClient() {
             <div className="mt-6 flex justify-end">
               <button type="button" onClick={() => setNotesModalRow(null)} className="rounded-xl bg-slate-900 px-6 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-all cursor-pointer active:scale-95">
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setConfirmDialog(null)} />
+          <div className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-slate-900">
+              {confirmDialog.action === "pay" ? "Mark as Paid?" : "Cancel Reservation?"}
+            </h3>
+            <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+              Are you sure you want to {confirmDialog.action === "pay" ? "mark the reservation for" : "cancel the reservation for"}{" "}
+              <span className="font-semibold text-slate-900">{confirmDialog.guestName}</span>
+              {confirmDialog.action === "pay" ? " as paid?" : "?"}
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(null)}
+                disabled={isUpdating !== null}
+                className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                No, Keep it
+              </button>
+              <button
+                type="button"
+                onClick={executeAction}
+                disabled={isUpdating !== null}
+                className={`rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors flex items-center gap-2 disabled:opacity-50 ${
+                  confirmDialog.action === "pay" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                {isUpdating ? <LoadingSpinner className="size-4 border-white/40 border-t-white" /> : null}
+                {confirmDialog.action === "pay" ? "Yes, Mark Paid" : "Yes, Cancel"}
               </button>
             </div>
           </div>

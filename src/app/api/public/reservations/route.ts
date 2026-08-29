@@ -50,6 +50,7 @@ export async function POST(req: NextRequest) {
       guestName: parsed.data.guestName,
       guestPhone: parsed.data.guestPhone,
       guestEmail: parsed.data.guestEmail,
+      guestBirthdate: parsed.data.guestBirthdate,
       sessionId: parsed.data.sessionId,
       tableIds: parsed.data.tableIds,
       date: parsed.data.date,

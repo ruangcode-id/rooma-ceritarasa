@@ -25,7 +25,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id;
         const role = (user as unknown as { role?: unknown }).role;
-        if (role === "admin" || role === "owner") {
+        if (role === "admin" || role === "owner" || role === "hr") {
           token.role = role;
         }
       }
@@ -34,7 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as "admin" | "owner";
+        session.user.role = token.role as "admin" | "owner" | "hr";
       }
       return session;
     },

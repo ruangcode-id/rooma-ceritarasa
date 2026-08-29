@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { MapPinLine, CalendarCheck, X, ArrowRight, Crown, CheckCircle, XCircle } from "@phosphor-icons/react";
+import { MapPinLine, CalendarCheck, X, ArrowRight, Crown, CheckCircle, XCircle, Armchair } from "@phosphor-icons/react";
 
 export type NotificationToast = {
   id: string;
-  type: "check_in" | "new_reservation" | "general" | "success" | "error";
+  type: "check_in" | "new_reservation" | "general" | "success" | "error" | "outdoor";
   title: string;
   body: string;
   url?: string;
@@ -59,9 +59,19 @@ function playNotificationChime(type: NotificationToast["type"]) {
 export default function GlobalNotificationToast() {
   const router = useRouter();
   const [activeToast, setActiveToast] = useState<NotificationToast | null>(null);
+  const [isLeaving, setIsLeaving] = useState(false);
   const seenIdsRef = useRef<Set<string>>(new Set());
   const initialFetchDoneRef = useRef(false);
   const handledRelatedIdsRef = useRef<Set<string>>(new Set());
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismissToast = useCallback((toastId: string) => {
+    setIsLeaving(true);
+    setTimeout(() => {
+      setActiveToast((current) => (current?.id === toastId ? null : current));
+      setIsLeaving(false);
+    }, 350);
+  }, []);
 
   const triggerToast = useCallback((toast: NotificationToast, relatedId?: string | null) => {
     if (seenIdsRef.current.has(toast.id)) return;
@@ -71,14 +81,18 @@ export default function GlobalNotificationToast() {
       handledRelatedIdsRef.current.add(relatedId);
     }
 
+    // Clear any pending dismiss timer
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+
+    setIsLeaving(false);
     setActiveToast(toast);
     playNotificationChime(toast.type);
 
-    // Auto dismiss after 6 seconds
-    setTimeout(() => {
-      setActiveToast((current) => (current?.id === toast.id ? null : current));
+    // Auto dismiss after 6 seconds with smooth exit
+    dismissTimerRef.current = setTimeout(() => {
+      dismissToast(toast.id);
     }, 6000);
-  }, []);
+  }, [dismissToast]);
 
   // Poll /api/admin/notifications every 6 seconds to detect new check-ins real-time
   useEffect(() => {
@@ -219,6 +233,7 @@ export default function GlobalNotificationToast() {
   const isVip = activeToast.title.includes("👑") || activeToast.title.includes("VIP");
   const isError = activeToast.type === "error";
   const isSuccess = activeToast.type === "success";
+  const isOutdoor = activeToast.type === "outdoor";
 
   const handleCardClick = () => {
     if (isVip) {
@@ -230,7 +245,7 @@ export default function GlobalNotificationToast() {
     } else if (activeToast.url) {
       router.push(activeToast.url);
     }
-    setActiveToast(null);
+    dismissToast(activeToast.id);
   };
 
   // Determine styles based on type
@@ -244,6 +259,11 @@ export default function GlobalNotificationToast() {
     glowStyle = "bg-amber-500/20";
     headerColor = "text-amber-300";
     headerDotColor = "bg-amber-300";
+  } else if (isOutdoor) {
+    containerStyle = "bg-linear-to-br from-[#1f0609] via-[#2a080d] to-[#150306] border border-[#5a1a22]/60 shadow-[#1f0609]/50 hover:border-[#7a2530]";
+    glowStyle = "bg-[#1f0609]/30";
+    headerColor = "text-rose-300";
+    headerDotColor = "bg-rose-300";
   } else if (isSuccess) {
     containerStyle = "bg-slate-950/95 border border-green-500/40 shadow-green-950/30 hover:border-green-400";
     glowStyle = "bg-green-500/10";
@@ -257,7 +277,11 @@ export default function GlobalNotificationToast() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-100 flex max-w-md w-full animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto">
+    <div className={`fixed bottom-6 right-6 z-100 flex max-w-md w-full pointer-events-auto transition-all duration-350 ease-in-out ${
+      isLeaving
+        ? "animate-out slide-out-to-right-full fade-out duration-350 opacity-0"
+        : "animate-in slide-in-from-bottom-5 fade-in duration-300"
+    }`}>
       <div
         onClick={handleCardClick}
         className={`w-full rounded-2xl p-4 text-white shadow-2xl backdrop-blur-xl flex items-start gap-3 text-left cursor-pointer transition-all group relative overflow-hidden ${containerStyle}`}
@@ -270,6 +294,10 @@ export default function GlobalNotificationToast() {
           {isVip ? (
             <div className="rounded-xl bg-linear-to-br from-amber-400 to-amber-600 p-2.5 text-black shadow-lg shadow-amber-500/30">
               <Crown size={24} weight="fill" />
+            </div>
+          ) : isOutdoor ? (
+            <div className="rounded-xl bg-[#1f0609]/60 p-2.5 text-rose-300 border border-[#5a1a22]/50">
+              <Armchair size={24} weight="fill" />
             </div>
           ) : isSuccess ? (
             <div className="rounded-xl bg-green-500/20 p-2.5 text-green-400 border border-green-500/30">
@@ -294,7 +322,7 @@ export default function GlobalNotificationToast() {
         <div className="flex-1 min-w-0 pr-4">
           <div className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${headerColor}`}>
             <span className={`w-1.5 h-1.5 rounded-full animate-ping ${headerDotColor}`}></span>
-            {isVip ? "VIP Arrival Alert" : isError ? "Check-In Failed" : isSuccess ? "Global Front Desk Scanner" : activeToast.type === "check_in" ? "Guest Check-In Alert" : "Reservation Update"}
+            {isVip ? "VIP Arrival Alert" : isError ? "Check-In Failed" : isOutdoor ? "Outdoor Seating Area" : isSuccess ? "Global Front Desk Scanner" : activeToast.type === "check_in" ? "Guest Check-In Alert" : "Reservation Update"}
           </div>
 
           <h4 className="text-sm font-bold text-white mt-0.5 group-hover:opacity-80 transition-opacity">
@@ -317,7 +345,7 @@ export default function GlobalNotificationToast() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            setActiveToast(null);
+            dismissToast(activeToast.id);
           }}
           className="text-slate-400 hover:text-white p-1 rounded-lg transition-colors shrink-0"
           aria-label="Close notification"

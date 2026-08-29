@@ -84,6 +84,7 @@ export const BlockedDateUseCase = {
       dates: datesToBlock,
       reason: parsed.reason ?? null,
       createdBy,
+      sessionIds: parsed.sessionIds ?? undefined,
     });
 
     return created;

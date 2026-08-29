@@ -7,6 +7,8 @@ import { SectionTitle } from "@/components/ui/SectionTitle";
 import { handleApiError } from "@/lib/handle-api-error";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle } from "@phosphor-icons/react";
+import PhoneInput from "react-phone-number-input";
+import "react-phone-number-input/style.css";
 
 type Session = {
   id: string;
@@ -22,13 +24,23 @@ type Table = {
   isAvailable: boolean;
 };
 
+/** Converts raw tableNumber to a human-readable label.
+ * Examples: "OUT-1" → "Out Table 1", "Table 1" → "Table 1", "TT1" → "TT1"
+ */
+function formatTableName(tableNumber: string): string {
+  const outMatch = tableNumber.match(/^OUT-?(\d+)$/i);
+  if (outMatch) return `Out Table ${outMatch[1]}`;
+  return tableNumber;
+}
+
 export default function AdminManualReservationCreateClient() {
   const router = useRouter();
   
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [sessionId, setSessionId] = useState<string>("");
-  const [partySize, setPartySize] = useState<number>(1);
+  const [partySize, setPartySize] = useState<number | "">("");
   const [tableIds, setTableIds] = useState<string[]>([]);
+  const [phone, setPhone] = useState<string | undefined>("");
   
   const [sessions, setSessions] = useState<Session[]>([]);
   const [tables, setTables] = useState<Table[]>([]);
@@ -72,7 +84,10 @@ export default function AdminManualReservationCreateClient() {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          setTables(data.data);
+          const sorted = [...(data.data as Table[])].sort((a, b) =>
+            a.tableNumber.localeCompare(b.tableNumber, undefined, { numeric: true, sensitivity: "base" })
+          );
+          setTables(sorted);
         } else {
           setTables([]);
         }
@@ -104,7 +119,7 @@ export default function AdminManualReservationCreateClient() {
       tableIds,
       partySize: Number(formData.get("partySize")),
       guestName: formData.get("guestName"),
-      guestPhone: formData.get("guestPhone")?.toString().replace(/\D/g, ''),
+      guestPhone: phone,
       guestEmail: formData.get("guestEmail"),
       specialRequest: formData.get("specialRequest"),
     };
@@ -212,7 +227,7 @@ export default function AdminManualReservationCreateClient() {
                 required
                 min="1"
                 value={partySize}
-                onChange={(e) => setPartySize(Number(e.target.value))}
+                onChange={(e) => setPartySize(e.target.value === "" ? "" : Number(e.target.value))}
                 className="w-full h-11 rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -242,7 +257,8 @@ export default function AdminManualReservationCreateClient() {
                             : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                       }`}
                     >
-                      T{table.tableNumber} <span className="text-xs font-normal opacity-80 block">{table.capacity} Pax</span>
+                      <span className="font-bold">{formatTableName(table.tableNumber)}</span>
+                      <span className="text-xs font-normal opacity-80 block">{table.capacity} Pax</span>
                     </button>
                   );
                 })}
@@ -267,12 +283,18 @@ export default function AdminManualReservationCreateClient() {
             
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">WhatsApp Number *</label>
-              <input
-                type="tel"
-                name="guestPhone"
-                required
-                placeholder="081234567890"
-                className="w-full h-11 rounded-xl border border-slate-300 px-3 text-sm outline-none transition focus:border-primary focus:ring-1 focus:ring-primary"
+              <PhoneInput
+                defaultCountry="ID"
+                international
+                value={phone}
+                onChange={setPhone}
+                className="w-full h-11 rounded-xl border border-slate-300 px-3 text-sm transition focus-within:border-primary focus-within:ring-1 focus-within:ring-primary bg-white"
+                numberInputProps={{
+                  className: "w-full bg-transparent outline-none ml-2",
+                  name: "guestPhone",
+                  required: true,
+                  placeholder: "812 3456 7890"
+                }}
               />
             </div>
             

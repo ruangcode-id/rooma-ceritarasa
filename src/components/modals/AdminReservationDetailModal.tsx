@@ -16,6 +16,8 @@ type DetailReservation = {
   date: string;
   specialRequest?: string | null;
   createdAt: string;
+  checkInTokenExpiresAt: string | null;
+  graceExtensionMinutes: number;
   guest: {
     id: string;
     name: string;
@@ -40,11 +42,11 @@ type DetailReservation = {
 };
 
 const reservationStatuses: Array<StatusBadgeOption<string>> = [
-  { id: "pending", label: "Menunggu", className: "bg-amber-100 text-amber-700", Icon: Clock },
-  { id: "confirmed", label: "Terkonfirmasi", className: "bg-blue-100 text-blue-700", Icon: CalendarCheck },
-  { id: "checked_in", label: "Hadir", className: "bg-green-100 text-green-700", Icon: CheckCircle },
+  { id: "pending", label: "Pending", className: "bg-amber-100 text-amber-700", Icon: Clock },
+  { id: "confirmed", label: "Confirmed", className: "bg-blue-100 text-blue-700", Icon: CalendarCheck },
+  { id: "checked_in", label: "Checked-in", className: "bg-green-100 text-green-700", Icon: CheckCircle },
   { id: "no_show", label: "No-Show", className: "bg-slate-100 text-slate-600", Icon: Prohibit },
-  { id: "cancelled", label: "Batal", className: "bg-red-100 text-red-700", Icon: XCircle },
+  { id: "cancelled", label: "Cancelled", className: "bg-red-100 text-red-700", Icon: XCircle },
 ];
 
 export default function AdminReservationDetailModal({ reservationId }: { reservationId: string }) {
@@ -52,6 +54,8 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
   const [data, setData] = useState<DetailReservation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isExtending, setIsExtending] = useState(false);
+  const [showConfirmExtend, setShowConfirmExtend] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -62,7 +66,7 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
 
         const payload = await res.json();
         if (!payload.success) {
-          throw new Error(payload.error || "Gagal mengambil detail reservasi");
+          throw new Error(payload.error || "Failed to fetch reservation details");
         }
         if (isMounted) setData(payload.data);
       } catch (err) {
@@ -85,6 +89,28 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
     router.replace(currentUrl.pathname + currentUrl.search);
   };
 
+  const handleExtendGrace = async () => {
+    setIsExtending(true);
+    try {
+      const res = await fetch(`/api/admin/reservations/${reservationId}/extend-grace`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minutes: 15 }),
+      });
+      if (!res.ok) throw new Error(await handleApiError(res));
+      const payload = await res.json();
+      if (!payload.success) throw new Error(payload.error || "Failed to extend time");
+      
+      router.refresh(); // Refresh the page data
+      handleClose(); // Close the modal
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error unknown");
+    } finally {
+      setIsExtending(false);
+      setShowConfirmExtend(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center p-4">
       {/* Backdrop */}
@@ -96,7 +122,7 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
       {/* Modal Box */}
       <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h2 className="text-xl font-bold text-slate-900">Detail Reservasi</h2>
+          <h2 className="text-xl font-bold text-slate-900">Reservation Details</h2>
           <button
             onClick={handleClose}
             className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -109,11 +135,11 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <LoadingSpinner className="size-10 border-4" />
-              <p className="mt-4 text-sm text-slate-500">Memuat detail...</p>
+              <p className="mt-4 text-sm text-slate-500">Loading details...</p>
             </div>
           ) : error ? (
             <div className="rounded-xl bg-red-50 p-4 text-red-600">
-              <p className="font-semibold">Oops! Terjadi kesalahan.</p>
+              <p className="font-semibold">Oops! Something went wrong.</p>
               <p className="text-sm mt-1">{error}</p>
             </div>
           ) : data ? (
@@ -143,7 +169,7 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
                     <CalendarCheck size={20} className="text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tanggal</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Date</p>
                     <p className="text-sm font-medium text-slate-900">
                       {format(new Date(data.date), "dd MMM yyyy", { locale: localeId })}
                     </p>
@@ -154,7 +180,7 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
                     <Clock size={20} className="text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Sesi</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Session</p>
                     <p className="text-sm font-medium text-slate-900">
                       {data.session.name} ({data.session.startTime})
                     </p>
@@ -166,15 +192,62 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
                   </div>
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Pax</p>
-                    <p className="text-sm font-medium text-slate-900">{data.partySize} Tamu</p>
+                    <p className="text-sm font-medium text-slate-900">{data.partySize} Guests</p>
                   </div>
                 </div>
               </div>
 
+              {/* Check-In Deadline & Extension Action */}
+              {(data.status === "confirmed" || data.status === "pending") && data.checkInTokenExpiresAt && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-blue-900">Check-In Deadline</h4>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <p className="text-sm text-blue-800">
+                        {format(new Date(data.checkInTokenExpiresAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
+                      </p>
+                      {data.graceExtensionMinutes > 0 && (
+                        <span className="inline-flex items-center rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                          Extended +{data.graceExtensionMinutes} Mins
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {showConfirmExtend ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-blue-900 mr-2">Add 15 minutes?</span>
+                      <button
+                        onClick={() => setShowConfirmExtend(false)}
+                        disabled={isExtending}
+                        className="rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleExtendGrace}
+                        disabled={isExtending}
+                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {isExtending ? <LoadingSpinner className="size-3 border-white/40 border-t-white" /> : null}
+                        Yes, Add
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowConfirmExtend(true)}
+                      className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors shadow-sm"
+                    >
+                      +15 Mins Grace Period
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Tables */}
               <div>
                 <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                  Meja yang Dipesan
+                  Reserved Tables
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {data.reservationTables.map((rt) => (
@@ -182,8 +255,8 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
                       key={rt.table.id}
                       className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 shadow-sm"
                     >
-                      Meja {rt.table.tableNumber}
-                      <span className="text-xs font-normal text-slate-400">({rt.table.capacity} org)</span>
+                      Table {rt.table.tableNumber}
+                      <span className="text-xs font-normal text-slate-400">({rt.table.capacity} pax)</span>
                     </span>
                   ))}
                 </div>
@@ -196,7 +269,7 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
                     <div className="flex gap-3">
                       <Note size={20} className="text-amber-600 shrink-0 mt-0.5" />
                       <div>
-                        <h4 className="text-sm font-bold text-amber-900">Catatan Reservasi Ini (Special Request)</h4>
+                        <h4 className="text-sm font-bold text-amber-900">Reservation Note (Special Request)</h4>
                         <p className="text-sm text-amber-800 mt-1">{data.specialRequest}</p>
                       </div>
                     </div>
@@ -208,7 +281,7 @@ export default function AdminReservationDetailModal({ reservationId }: { reserva
                     <div className="flex gap-3">
                       <UserFocus size={20} className="text-slate-500 shrink-0 mt-0.5" />
                       <div>
-                        <h4 className="text-sm font-bold text-slate-800">Catatan Profil Tamu (Guest History Notes)</h4>
+                        <h4 className="text-sm font-bold text-slate-800">Guest Profile Note (Guest History Notes)</h4>
                         <p className="text-sm text-slate-600 mt-1">{data.guest.notes}</p>
                       </div>
                     </div>

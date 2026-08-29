@@ -136,7 +136,7 @@ export default function AdminCheckInPage() {
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-8rem)] max-w-2xl flex-col items-center justify-start space-y-6 px-4 py-8 lg:justify-center lg:py-0 lg:space-y-8">
-      <div className="w-full text-center">
+      <div className="w-full">
         <SectionTitle
           eyebrow="Front Desk"
           title="Guest Check-In"
@@ -182,7 +182,7 @@ export default function AdminCheckInPage() {
         </button>
       </div>
 
-      <div className="relative flex min-h-[420px] w-full shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:min-h-[420px] lg:p-8">
+      <div className="relative flex min-h-105 w-full shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:min-h-105 lg:p-8">
         <div
           className={`absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-center transition-transform duration-500 ${
             status === "success"

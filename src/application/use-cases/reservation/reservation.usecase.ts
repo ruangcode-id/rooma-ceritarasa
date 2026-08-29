@@ -15,6 +15,7 @@ import {
   getReservationById,
   updateReservationTablesTransaction,
   AdminReservationFilters,
+  extendCheckInGracePeriod,
 } from "@/infrastructure/repositories/reservation.repository";
 import { appEvents, EVENTS } from "@/lib/events";
 import { prisma } from "@/infrastructure/database/prisma";
@@ -159,6 +160,10 @@ export async function createReservation(input: PublicReservationInput) {
 }
 
 export const AdminReservationUseCase = {
+  extendGracePeriodAction: async (id: string, minutes: number) => {
+    return extendCheckInGracePeriod(id, minutes);
+  },
+
   listReservationsAction: async (query: {
     date?: string;
     status?: string;
@@ -276,16 +281,8 @@ export const AdminReservationUseCase = {
 
     await checkMultipleTablesAvailability(input.tableIds, input.sessionId, input.date);
 
-    const selectedTables = await prisma.table.findMany({
-      where: { id: { in: input.tableIds } },
-      select: { capacity: true, tableNumber: true },
-    });
-    const totalCapacity = selectedTables.reduce((sum, t) => sum + t.capacity, 0);
-    if (totalCapacity < input.partySize) {
-      throw new Error(
-        `Kapasitas total meja yang dipilih (${totalCapacity} orang) tidak mencukupi untuk jumlah tamu (${input.partySize} orang). Silakan pilih meja tambahan.`,
-      );
-    }
+    // NOTE: Admin manual reservations intentionally skip capacity validation.
+    // Admins can input any party size and combine any tables freely (e.g. for groups > 15 via WhatsApp).
 
     const cancelToken = crypto.randomBytes(16).toString("hex");
     const checkInToken = crypto.randomBytes(24).toString("hex");

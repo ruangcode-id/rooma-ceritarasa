@@ -9,6 +9,7 @@ import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle, Info, WhatsappLogo 
 import Image from "next/image";
 import Script from "next/script";
 import { GuestReservationForm } from "../forms/GuestReservationForm";
+import ReservationIntro from "../public/ReservationIntro";
 import { payWithSnap } from "@/lib/midtrans-snap-client";
 
 interface Session {
@@ -40,36 +41,34 @@ const HERO_IMAGES = [
 ];
 
 /**
- * Tables that are physically expandable with extra chairs.
- * Key = tableNumber, Value = base (default) seat count.
- * These tables have been updated in DB to their max capacity.
- * The badge informs guests that chairs can be added for larger groups.
+ * Smart Table Combinations based on the new logic rules.
  */
-const EXPANDABLE_TABLES: Record<string, number> = {
-  "T5": 4, // max 6 (2 extra chairs)
-  "5":  4,
-  "T8": 2, // max 3 (1 extra chair)
-  "8":  2,
-  "T10": 2, // max 3 (1 extra chair)
-  "10": 2,
-} as const;
+const TABLE_COMBINATIONS = [
+  // 1. Single Tables
+  { id: "single_1", name: "Table 1", tables: ["Table 1"], minPax: 1, maxPax: 2, note: "(Front of Kitchen)" },
+  { id: "single_2", name: "Table 2", tables: ["Table 2"], minPax: 3, maxPax: 4, note: "(Front of Kitchen)" },
+  { id: "single_3", name: "Table 3", tables: ["Table 3"], minPax: 1, maxPax: 2, note: "(Front of Kitchen)" },
+  { id: "single_4", name: "Table 4", tables: ["Table 4"], minPax: 1, maxPax: 2, note: "" },
+  { id: "single_5", name: "Table 5", tables: ["Table 5"], minPax: 3, maxPax: 5, note: "Large Table" },
+  { id: "single_6", name: "Table 6", tables: ["Table 6"], minPax: 1, maxPax: 2, note: "" },
+  { id: "single_7", name: "Table 7", tables: ["Table 7"], minPax: 1, maxPax: 2, note: "" },
+  { id: "single_8", name: "Table 8", tables: ["Table 8"], minPax: 2, maxPax: 3, note: "" },
+  { id: "single_9", name: "Table 9", tables: ["Table 9"], minPax: 3, maxPax: 6, note: "Large Table" },
+  { id: "single_10", name: "Table 10", tables: ["Table 10"], minPax: 1, maxPax: 2, note: "" },
+  
+  // 3. Combined Groups
+  { id: "combo_4_5", name: "Table 4 & 5", tables: ["Table 4", "Table 5"], minPax: 4, maxPax: 7, note: "Combined Area" },
+  { id: "combo_6_7", name: "Table 6 & 7", tables: ["Table 6", "Table 7"], minPax: 3, maxPax: 4, note: "Combined Area" },
+  { id: "combo_8_9", name: "Table 8 & 9", tables: ["Table 8", "Table 9"], minPax: 8, maxPax: 10, note: "Combined for Large Groups" },
+  { id: "combo_8_9_10", name: "Table 8, 9 & 10", tables: ["Table 8", "Table 9", "Table 10"], minPax: 10, maxPax: 13, note: "Combined for VIP/Events" },
+  { id: "combo_6_7_8_9_10", name: "Table 6, 7, 8, 9 & 10", tables: ["Table 6", "Table 7", "Table 8", "Table 9", "Table 10"], minPax: 14, maxPax: 15, note: "Combined for Very Large Groups" },
 
-/** Minimum guest requirements per table number */
-const TABLE_MIN_PARTY: Record<string, number> = {
-  "T2": 3, // Min 3 pax
-  "2":  3,
-  "T5": 3, // Min 3 pax
-  "5":  3,
-  "T9": 4, // Min 4 pax
-  "9":  4,
-};
-
-function getMinParty(tableNumber: string): number {
-  const cleanKey = tableNumber.replace(/^Table\s*/i, "").trim();
-  const withT = cleanKey.startsWith("T") ? cleanKey : `T${cleanKey}`;
-  const withoutT = cleanKey.replace(/^T/i, "");
-  return TABLE_MIN_PARTY[withT] ?? TABLE_MIN_PARTY[withoutT] ?? 1;
-}
+  // 4. Outdoor Tables
+  { id: "outdoor_1", name: "Outdoor 1", tables: ["OUT-1"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
+  { id: "outdoor_2", name: "Outdoor 2", tables: ["OUT-2"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
+  { id: "outdoor_3", name: "Outdoor 3", tables: ["OUT-3"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
+  { id: "outdoor_4", name: "Outdoor 4", tables: ["OUT-4"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
+];
 
 type ModalType = "guests" | "date" | "time" | null;
 
@@ -142,7 +141,7 @@ export default function ReservationWizard({
 
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [snapReady, setSnapReady] = useState(false);
   const [reservationResult, setReservationResult] =
     useState<CreateReservationResult | null>(null);
@@ -257,13 +256,6 @@ export default function ReservationWizard({
     setSelectedSessionId(null);
     setSelectedTableIds([]);
     setActiveModal(null); // Close modal instead of auto-advance
-  };
-
-  const toggleTable = (id: string) => {
-    setSelectedTableIds(prev => {
-      if (prev.includes(id)) return prev.filter(tId => tId !== id);
-      return [...prev, id];
-    });
   };
 
   const openSnapPayment = (token: string) => {
@@ -388,7 +380,7 @@ export default function ReservationWizard({
       ) : null}
       
       {/* 1. Hero Image */}
-      {step !== 3 && (
+      {step !== 0 && step !== 3 && (
         <div className="w-full max-w-4xl h-48 md:h-80 relative overflow-hidden shadow-sm mb-8 bg-slate-900">
           {HERO_IMAGES.map((src, idx) => (
             <Image 
@@ -408,7 +400,7 @@ export default function ReservationWizard({
       )}
 
       {/* 2. Title & Address */}
-      {step !== 3 && (
+      {step !== 0 && step !== 3 && (
         <div className="text-center mb-10 px-4">
           <Image
             src="/assets/logo_no_background.png"
@@ -423,6 +415,9 @@ export default function ReservationWizard({
           </p>
         </div>
       )}
+
+      {/* --- STEP 0: INTRO & HOUSE RULES --- */}
+      {step === 0 && <ReservationIntro onNext={() => setStep(1)} />}
 
       {/* --- STEP 1: SELECTION --- */}
       {step === 1 && (
@@ -506,6 +501,11 @@ export default function ReservationWizard({
                     <CaretRight size={20} />
                   </button>
                 </div>
+                {partySize > 15 && (
+                  <p className="text-xs text-red-500 mt-4 text-center px-4 leading-relaxed font-medium">
+                    For reservations &gt; 15 pax, please contact our team via WhatsApp.
+                  </p>
+                )}
                 <button 
                   onClick={() => setActiveModal(null)}
                   className="w-full mt-6 py-4 bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors border-2 border-slate-900"
@@ -557,34 +557,29 @@ export default function ReservationWizard({
                 ) : (
                   <div className="grid grid-cols-7 gap-1">
                     {emptyDays.map(i => <div key={`empty-${i}`} className="p-2"></div>)}
-                    {daysInMonth.map((day, idx) => {
+                    {daysInMonth.map((day, dayIdx) => {
                       const dateStr = format(day, "yyyy-MM-dd");
                       const isPast = isBefore(day, today);
                       const isBlocked = blockedDates.has(dateStr);
-                      const isMonday = getDay(day) === 1;
                       const isSelected = selectedDate && isSameDay(day, selectedDate);
-                      const isDisabled = isPast || isBlocked || isMonday;
+                      const isDisabled = isPast || isBlocked;
                       
                       return (
-                        <button
-                          key={idx}
-                          onClick={() => handleDateSelect(day)}
-                          disabled={isDisabled}
-                          title={isMonday ? "Closed on Monday" : undefined}
-                          className={`
-                            py-3 text-center text-sm font-medium transition-colors relative
-                            ${isDisabled ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}
-                            ${isMonday && !isPast ? "bg-red-50" : ""}
-                            ${isSelected ? "bg-[#1f0609] text-white" : (!isDisabled && "hover:bg-slate-100 text-slate-700")}
-                          `}
-                        >
-                          {format(day, "d")}
-                          {isMonday && !isPast && (
-                            <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 text-[7px] font-bold text-red-400 leading-none">
-                              TUTUP
-                            </span>
-                          )}
-                        </button>
+                        <div key={dayIdx} className="aspect-square">
+                          <button
+                            type="button"
+                            onClick={() => handleDateSelect(day)}
+                            disabled={isDisabled}
+                            title={isBlocked ? "Tidak tersedia" : undefined}
+                            className={`
+                              w-full h-full text-center text-sm font-medium transition-colors relative
+                              ${isDisabled ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}
+                              ${isSelected ? "bg-[#1f0609] text-white" : (!isDisabled && "hover:bg-slate-100 text-slate-700")}
+                            `}
+                          >
+                            {format(day, "d")}
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -678,73 +673,75 @@ export default function ReservationWizard({
                 Sorry, no tables available for this session.
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                {tables.map(table => {
-                  const isSelected = selectedTableIds.includes(table.id);
-                  const cleanNum = table.tableNumber.replace(/^Table\s*/i, "").trim();
-                  const withT = cleanNum.startsWith("T") ? cleanNum : `T${cleanNum}`;
-                  const isExpandable = withT in EXPANDABLE_TABLES || cleanNum in EXPANDABLE_TABLES;
-                  const minParty = getMinParty(table.tableNumber);
-                  const isTooLarge = partySize < minParty;
-                  const isDisabled = !table.isAvailable || isTooLarge;
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                {TABLE_COMBINATIONS.map(combo => {
+                  // 1. Check Availability constraint (all tables must be available in DB)
+                  const allTablesAvailable = combo.tables.every(tableName => {
+                    const t = tables.find(tb => tb.tableNumber === tableName);
+                    return t && t.isAvailable;
+                  });
+
+                  // 2. Check Pax constraints
+                  const isInvalidPax = partySize < combo.minPax || partySize > combo.maxPax;
+                  
+                  const isDisabled = !allTablesAvailable || isInvalidPax;
+
+                  // Find the IDs of the tables to determine selection state
+                  const comboTableIds = combo.tables.map(tableName => tables.find(t => t.tableNumber === tableName)?.id).filter(Boolean) as string[];
+                  // Check if this combo is exactly the one selected (all IDs match and length matches)
+                  const isSelected = selectedTableIds.length > 0 && selectedTableIds.length === comboTableIds.length && 
+                    comboTableIds.every(id => selectedTableIds.includes(id));
 
                   return (
                     <button
-                      key={table.id}
-                      onClick={() => !isDisabled && toggleTable(table.id)}
+                      key={combo.id}
+                      onClick={() => !isDisabled && setSelectedTableIds(comboTableIds)}
                       disabled={isDisabled}
                       className={`
-                        relative py-4 px-2 text-center transition-all flex flex-col items-center justify-center border-2
-                        ${!table.isAvailable
+                        relative py-5 px-3 text-center transition-all flex flex-col items-center justify-center border-2
+                        ${!allTablesAvailable
                           ? "bg-slate-200 border-slate-200 text-slate-400 cursor-not-allowed"
-                          : isTooLarge
+                          : isInvalidPax
                             ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed"
-                            : isSelected
-                              ? "bg-slate-900 border-slate-900 text-white shadow-md"
+                            : isSelected 
+                              ? "bg-slate-900 text-white shadow-md ring-2 ring-slate-900 ring-offset-2 border-slate-900"
                               : "bg-white border-slate-900 text-slate-900 hover:bg-slate-100"
                         }
                       `}
                     >
-                      {/* Expandable badge — Tailwind v4 */}
-                      {isExpandable && !isTooLarge && table.isAvailable && (
-                        <span
-                          className={`absolute -top-2 -right-2 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full leading-none ${
-                            isSelected
-                              ? "bg-amber-400 text-slate-900"
-                              : "bg-amber-100 text-amber-700 border border-amber-300"
-                          }`}
-                        >
-                          +seats
+                      <span className="font-bold text-sm md:text-base tracking-wide">
+                        {combo.name}
+                      </span>
+                      <span className="text-[10px] md:text-xs mt-1.5 opacity-80 tracking-widest uppercase">
+                        Max {combo.maxPax} Pax
+                      </span>
+                      {combo.note && (
+                        <span className="text-[9px] mt-1 text-slate-500 italic">
+                          {combo.note}
                         </span>
                       )}
-                      <span className="font-bold text-sm md:text-base tracking-wide">
-                        Table {cleanNum.replace(/^T/i, "")}
-                      </span>
-                      <span className="text-[10px] md:text-xs mt-1 opacity-80 tracking-widest">
-                        Capacity: {EXPANDABLE_TABLES[withT] ?? EXPANDABLE_TABLES[cleanNum] ?? table.capacity}
-                        {isExpandable && ` – ${table.capacity}`}
-                      </span>
-                      {isTooLarge && table.isAvailable && (
+                      {allTablesAvailable && isInvalidPax && (
                         <span className="text-[9px] font-bold uppercase tracking-wider mt-1 text-red-500 leading-none">
-                          Min. {minParty} guests
+                          {partySize < combo.minPax ? `Min. ${combo.minPax} pax` : `Max. ${combo.maxPax} pax`}
                         </span>
                       )}
                     </button>
                   );
                 })}
+                
+                {/* Fallback if no combos fit */}
+                {TABLE_COMBINATIONS.filter(combo => partySize >= combo.minPax && partySize <= combo.maxPax && combo.tables.every(tn => tables.find(t => t.tableNumber === tn)?.isAvailable)).length === 0 && (
+                  <div className="col-span-full text-center py-6 text-slate-500">
+                    No table arrangements are available for {partySize} guests at this time.
+                  </div>
+                )}
               </div>
             )}
             
             {/* Continue Button for Table Selection */}
             {selectedTableIds.length > 0 && (
               <div className="mt-10 flex flex-col items-center animate-in fade-in duration-300">
-                {tables.filter(t => selectedTableIds.includes(t.id)).reduce((acc, t) => acc + t.capacity, 0) < partySize ? (
-                  <p className="text-red-600 font-semibold mb-4 text-center">
-                    Total seat capacity is not enough for {partySize} guests. <br />
-                    Please select an additional table.
-                  </p>
-                ) : (
-                  <>
+                <>
                     {partySize === 2 && selectedDate && (selectedDate.getDay() === 0 || selectedDate.getDay() === 6) && (
                       <div className="mb-8 w-full max-w-md flex items-start gap-4 rounded-2xl bg-[#fcfbf9] border border-amber-200/60 p-5 shadow-sm animate-in fade-in duration-500">
                         <Info size={24} weight="fill" className="text-amber-600 shrink-0" />
@@ -765,7 +762,6 @@ export default function ReservationWizard({
                       Continue Request
                     </button>
                   </>
-                )}
               </div>
             )}
           </div>

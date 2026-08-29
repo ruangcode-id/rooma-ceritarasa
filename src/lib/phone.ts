@@ -1,19 +1,46 @@
-/** Normalize Indonesian mobile numbers for storage / uniqueness (canonical `08…`). */
-export function normalizeIndonesianPhone(input: string): string {
-  let s = input.trim().replace(/[\s.-]/g, "");
-  if (s.startsWith("+62")) {
-    s = `0${s.slice(3)}`;
-  } else if (s.startsWith("62") && !s.startsWith("622")) {
-    s = `0${s.slice(2)}`;
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
+
+/** Normalize phone number to E.164 format (e.g., +628..., +44...). */
+export function normalizePhoneNumber(input: string): string {
+  if (!input) return "";
+  
+  // First, if it starts with 08, assume Indonesian and prepend +62.
+  let raw = input.trim();
+  if (raw.startsWith("08")) {
+    raw = "+628" + raw.slice(2);
+  } else if (!raw.startsWith("+")) {
+    // If it doesn't start with '+', we might want to default to ID.
+    // For safety, prepend '+' if it looks like a country code,
+    // but the most robust way is forcing + in the UI.
+    // If it's a raw number without +, let's assume + is missing.
+    raw = "+" + raw;
   }
-  return s;
+
+  const phoneNumber = parsePhoneNumberFromString(raw);
+  if (phoneNumber) {
+    return phoneNumber.format('E.164');
+  }
+
+  // Fallback: just return digits with + if it couldn't parse
+  const digits = raw.replace(/[^\d+]/g, "");
+  return digits.startsWith("+") ? digits : `+${digits}`;
 }
 
-/** Indonesian mobile: `08xx…` or `+62xx…` / `62xx…` after normalization equals `08…`. */
-export const INDONESIAN_MOBILE_REGEX =
-  /^(\+62|62|0)8[1-9]\d{6,11}$/;
+export function isValidPhoneNumber(input: string): boolean {
+  if (!input) return false;
+  
+  let raw = input.trim();
+  // Assume Indonesian 08 if missing country code
+  if (raw.startsWith("08")) {
+    raw = "+628" + raw.slice(2);
+  } else if (!raw.startsWith("+")) {
+    raw = "+" + raw;
+  }
 
-export function isValidIndonesianMobile(input: string): boolean {
-  const raw = input.trim().replace(/[\s.-]/g, "");
-  return INDONESIAN_MOBILE_REGEX.test(raw);
+  const phoneNumber = parsePhoneNumberFromString(raw);
+  if (phoneNumber) {
+    return phoneNumber.isValid();
+  }
+  
+  return false;
 }

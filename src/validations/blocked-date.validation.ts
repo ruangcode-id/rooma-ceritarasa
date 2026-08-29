@@ -12,6 +12,7 @@ export const createBlockedDateSchema = z
     dateStart: dateOnlyString.optional(),
     dateEnd: dateOnlyString.optional(),
     reason: z.string().max(200, "Reason max 200 characters").optional().nullable(),
+    sessionIds: z.array(z.string().uuid("Invalid session ID")).optional().nullable(),
   })
   .refine(
     (data) => {

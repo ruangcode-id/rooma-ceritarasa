@@ -19,6 +19,7 @@ datasource db {
 enum UserRole {
   admin
   owner
+  hr
 }
 
 enum ReservationStatus {
@@ -216,6 +217,8 @@ model RestaurantSession {
 
   // Relations
   reservations Reservation[]
+  blockedDates BlockedDate[]
+  specialOpenDates SpecialOpenDate[]
 
   @@map("restaurant_sessions")
 }
@@ -226,9 +229,11 @@ model BlockedDate {
   reason    String?  @db.VarChar(200)
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
+  sessionId String?  @map("session_id") @db.Uuid
 
   // Relations
   creator User? @relation("CreatedByUser", fields: [createdBy], references: [id])
+  session RestaurantSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("blocked_dates")
 }
@@ -239,9 +244,11 @@ model SpecialOpenDate {
   reason    String?  @db.VarChar(200)
   createdBy String?  @map("created_by") @db.Uuid
   createdAt DateTime @default(now()) @map("created_at")
+  sessionId String?  @map("session_id") @db.Uuid
 
   // Relations
   creator User? @relation("SpecialOpenCreatedByUser", fields: [createdBy], references: [id])
+  session RestaurantSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("special_open_dates")
 }
@@ -282,6 +289,7 @@ model Reservation {
   paymentToken          String?           @unique @map("payment_token") @db.VarChar(100)
   checkInToken          String?           @unique @map("check_in_token") @db.VarChar(100)
   checkInTokenExpiresAt DateTime?         @map("check_in_token_expires_at")
+  graceExtensionMinutes Int               @default(0) @map("grace_extension_minutes")
   expiresAt             DateTime?         @map("expires_at")
   reminderSentAt        DateTime?         @map("reminder_sent_at")
   createdBy             String?           @map("created_by") @db.Uuid
@@ -445,6 +453,8 @@ model CareerJob {
   title        String    @db.VarChar(150)
   description  String    @db.Text
   requirements String    @db.Text
+  imageUrl     String?   @map("image_url") @db.Text
+  imagePublicId String?  @map("image_public_id") @db.VarChar(255)
   deadline     DateTime?
   isOpen       Boolean   @default(true) @map("is_open")
   createdAt    DateTime  @default(now()) @map("created_at")
