@@ -135,9 +135,22 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
         if (paymentStatus === "-") {
           return <span className="text-slate-400 text-xs">No payment</span>;
         }
+
         const isPaid = paymentStatus === "paid";
-        const isDeposit = dpType === "deposit";
-        const label = isDeposit ? "Deposit" : dpType === "full" ? "Full" : paymentStatus;
+        const isFailed = paymentStatus === "failed";
+        const isRefunded = paymentStatus === "refunded";
+
+        const label =
+          dpType === "deposit" ? "Deposit" :
+          dpType === "full" ? "Full" :
+          dpType === "refund" ? "Refund" :
+          paymentStatus;
+
+        const badgeClass =
+          isPaid ? "bg-emerald-50 text-emerald-700" :
+          isFailed || isRefunded ? "bg-red-50 text-red-600" :
+          "bg-amber-50 text-amber-700";
+
         const amountText = dpAmount ? formatCurrency(dpAmount) : null;
         const dateText = dpPaidAt
           ? new Intl.DateTimeFormat("id-ID", {
@@ -151,11 +164,7 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
         return (
           <div className="space-y-1">
             <span
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide ${
-                isPaid
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-amber-50 text-amber-700"
-              }`}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide ${badgeClass}`}
             >
               {label}
             </span>
@@ -169,6 +178,7 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
         );
       },
     },
+
 
     {
       id: "status",
