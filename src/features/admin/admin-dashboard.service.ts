@@ -34,6 +34,9 @@ export type AdminDashboardReservationRow = {
   status: AdminDashboardStatus;
   tables: string;
   paymentStatus: string;
+  dpType: "deposit" | "full" | null;
+  dpAmount: number | null;
+  dpPaidAt: string | null;
 };
 
 export type AdminDashboardData = {
@@ -106,7 +109,10 @@ export async function getAdminOperationalDashboard(
       where: {
         date: dashboardDate,
       },
-      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+      orderBy: [
+        { session: { startTime: "asc" } },
+        { createdAt: "asc" },
+      ],
       include: {
         guest: {
           select: {
@@ -138,6 +144,9 @@ export async function getAdminOperationalDashboard(
           },
           select: {
             status: true,
+            type: true,
+            amount: true,
+            paidAt: true,
           },
           take: 1,
         },
@@ -251,22 +260,28 @@ export async function getAdminOperationalDashboard(
     },
     statusCounts,
     sessions,
-    reservations: reservations.map((reservation) => ({
-      id: reservation.id,
-      guestName: reservation.guest.name,
-      guestPhone: reservation.guest.phone,
-      sessionName: reservation.session.name,
-      sessionTime: formatSessionTime(
-        reservation.session.startTime,
-        reservation.session.endTime
-      ),
-      partySize: reservation.partySize,
-      status: reservation.status,
-      tables:
-        reservation.reservationTables
-          .map((reservationTable) => reservationTable.table.tableNumber)
-          .join(", ") || "-",
-      paymentStatus: reservation.payments[0]?.status ?? "-",
-    })),
+    reservations: reservations.map((reservation) => {
+      const latestPayment = reservation.payments[0] ?? null;
+      return {
+        id: reservation.id,
+        guestName: reservation.guest.name,
+        guestPhone: reservation.guest.phone,
+        sessionName: reservation.session.name,
+        sessionTime: formatSessionTime(
+          reservation.session.startTime,
+          reservation.session.endTime
+        ),
+        partySize: reservation.partySize,
+        status: reservation.status,
+        tables:
+          reservation.reservationTables
+            .map((reservationTable) => reservationTable.table.tableNumber)
+            .join(", ") || "-",
+        paymentStatus: latestPayment?.status ?? "-",
+        dpType: (latestPayment?.type as "deposit" | "full" | null) ?? null,
+        dpAmount: latestPayment?.amount ? Number(latestPayment.amount) : null,
+        dpPaidAt: latestPayment?.paidAt?.toISOString() ?? null,
+      };
+    }),
   };
 }
