@@ -130,8 +130,46 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
     {
       id: "payment",
       header: "Payment",
-      accessor: "paymentStatus",
+      cell: (reservation) => {
+        const { paymentStatus, dpType, dpAmount, dpPaidAt } = reservation;
+        if (paymentStatus === "-") {
+          return <span className="text-slate-400 text-xs">No payment</span>;
+        }
+        const isPaid = paymentStatus === "paid";
+        const isDeposit = dpType === "deposit";
+        const label = isDeposit ? "Deposit" : dpType === "full" ? "Full" : paymentStatus;
+        const amountText = dpAmount ? formatCurrency(dpAmount) : null;
+        const dateText = dpPaidAt
+          ? new Intl.DateTimeFormat("id-ID", {
+              day: "2-digit",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "Asia/Jakarta",
+            }).format(new Date(dpPaidAt))
+          : null;
+        return (
+          <div className="space-y-1">
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide ${
+                isPaid
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "bg-amber-50 text-amber-700"
+              }`}
+            >
+              {label}
+            </span>
+            {amountText && (
+              <p className="text-xs font-semibold text-slate-800">{amountText}</p>
+            )}
+            {dateText && (
+              <p className="text-[10px] text-slate-400">{dateText}</p>
+            )}
+          </div>
+        );
+      },
     },
+
     {
       id: "status",
       header: "Status",
