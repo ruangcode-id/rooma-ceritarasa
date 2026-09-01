@@ -34,7 +34,7 @@ export type AdminDashboardReservationRow = {
   status: AdminDashboardStatus;
   tables: string;
   paymentStatus: string;
-  dpType: "deposit" | "full" | null;
+  dpType: "deposit" | "full" | "refund" | null;
   dpAmount: number | null;
   dpPaidAt: string | null;
 };
@@ -278,7 +278,7 @@ export async function getAdminOperationalDashboard(
             .map((reservationTable) => reservationTable.table.tableNumber)
             .join(", ") || "-",
         paymentStatus: latestPayment?.status ?? "-",
-        dpType: (latestPayment?.type as "deposit" | "full" | null) ?? null,
+        dpType: (latestPayment?.type as "deposit" | "full" | "refund" | null) ?? null,
         dpAmount: latestPayment?.amount ? Number(latestPayment.amount) : null,
         dpPaidAt: latestPayment?.paidAt?.toISOString() ?? null,
       };
