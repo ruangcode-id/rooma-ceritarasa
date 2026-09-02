@@ -86,6 +86,8 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
     {
       id: "guest",
       header: "Guest",
+      headerClassName: "whitespace-nowrap",
+      className: "min-w-[130px]",
       cell: (reservation) => (
         <div>
           <p className="font-semibold text-slate-900">
@@ -98,6 +100,8 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
     {
       id: "session",
       header: "Session",
+      headerClassName: "whitespace-nowrap",
+      className: "whitespace-nowrap",
       cell: (reservation) => (
         <div>
           <p>{reservation.sessionName}</p>
@@ -109,10 +113,14 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
       id: "party",
       header: "Pax",
       accessor: "partySize",
+      headerClassName: "text-center whitespace-nowrap",
+      className: "text-center font-semibold whitespace-nowrap",
     },
     {
       id: "tables",
       header: "Tables",
+      headerClassName: "whitespace-nowrap",
+      className: "whitespace-nowrap",
       cell: (reservation) => {
         const isOutdoor = reservation.tables.includes("OUT");
         return (
@@ -130,6 +138,8 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
     {
       id: "payment",
       header: "Payment",
+      headerClassName: "whitespace-nowrap",
+      className: "whitespace-nowrap min-w-[120px]",
       cell: (reservation) => {
         const { paymentStatus, dpType, dpAmount, dpPaidAt } = reservation;
         if (paymentStatus === "-") {
@@ -147,17 +157,18 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
           paymentStatus;
 
         const badgeClass =
-          isPaid ? "bg-emerald-50 text-emerald-700" :
-          isFailed || isRefunded ? "bg-red-50 text-red-600" :
-          "bg-amber-50 text-amber-700";
+          isPaid ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60" :
+          isFailed || isRefunded ? "bg-red-50 text-red-600 border border-red-200/60" :
+          "bg-amber-50 text-amber-700 border border-amber-200/60";
 
-        const amountText = dpAmount ? formatCurrency(dpAmount) : null;
+        const amountText = dpAmount !== null ? formatCurrency(dpAmount) : null;
         const dateText = dpPaidAt
           ? new Intl.DateTimeFormat("id-ID", {
               day: "2-digit",
               month: "short",
               hour: "2-digit",
               minute: "2-digit",
+              hour12: false,
               timeZone: "Asia/Jakarta",
             }).format(new Date(dpPaidAt))
           : null;
@@ -179,10 +190,11 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
       },
     },
 
-
     {
       id: "status",
       header: "Status",
+      headerClassName: "whitespace-nowrap",
+      className: "whitespace-nowrap",
       cell: (reservation) => (
         <StatusBadge
           status={reservation.status}
