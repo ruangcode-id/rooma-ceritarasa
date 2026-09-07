@@ -368,7 +368,7 @@ export default function ReservationWizard({
       setPaymentError(
         error instanceof Error
           ? error.message
-          : "Gagal membuat transaksi pembayaran."
+          : "Failed to create payment transaction."
       );
     }
   };
@@ -396,7 +396,7 @@ export default function ReservationWizard({
           onReady={() => setSnapReady(true)}
           onError={() => {
             setSnapReady(false);
-            setPaymentError("Gagal memuat Midtrans Snap.");
+            setPaymentError("Failed to load Midtrans Snap.");
           }}
         />
       ) : null}
