@@ -71,6 +71,20 @@ function getMinParty(tableNumber: string): number {
   return TABLE_MIN_PARTY[withT] ?? TABLE_MIN_PARTY[withoutT] ?? 1;
 }
 
+/**
+ * Deteksi Sesi 1 di sisi client — konsisten dengan backend `isSessionOne()`.
+ * Digunakan untuk menampilkan info banner bahwa Sesi 1 hanya indoor.
+ */
+function clientIsSession1(sessionName: string): boolean {
+  const name = sessionName.trim().toLowerCase();
+  return (
+    /\b(one|1)\b/i.test(name) ||
+    name === "session one" ||
+    name === "sesi 1" ||
+    name === "session 1"
+  );
+}
+
 type ModalType = "guests" | "date" | "time" | null;
 
 type CreateReservationResult = {
@@ -667,9 +681,26 @@ export default function ReservationWizard({
             <h3 className="text-lg font-medium text-center text-slate-800 mb-2">
               Select your seating area
             </h3>
-            <p className="text-sm text-center text-slate-500 mb-8 max-w-xl mx-auto">
+            <p className="text-sm text-center text-slate-500 mb-6 max-w-xl mx-auto">
               Please select your preferred seating area. For special occasions or private events, kindly contact our Reservations Team.
             </p>
+
+            {/* Session 1 indoor-only info banner */}
+            {selectedSessionId && clientIsSession1(
+              sessions.find(s => s.id === selectedSessionId)?.name ?? ""
+            ) && (
+              <div className="mb-8 w-full max-w-md mx-auto flex items-start gap-4 rounded-2xl bg-[#fcfbf9] border border-amber-200/60 p-5 shadow-sm animate-in fade-in duration-500">
+                <Info size={24} weight="fill" className="text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-left">
+                  <p className="text-xs uppercase tracking-[0.25em] font-semibold text-amber-800 mb-1">
+                    Indoor Only — Session 1
+                  </p>
+                  <p className="text-sm leading-relaxed text-slate-600">
+                    Session 1 (15:00–17:00) is available for <span className="font-semibold text-slate-800">indoor</span> seating only. Outdoor tables are available from Session 2 onwards.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {loadingTables ? (
               <div className="flex justify-center py-12"><CircleNotch size={32} className="animate-spin text-slate-400" /></div>

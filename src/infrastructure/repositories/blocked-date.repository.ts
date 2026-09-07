@@ -64,10 +64,11 @@ export const BlockedDateRepository = {
 		const keys = uniqueDateKeys(args.dates);
 		const normalizedDates = keys.map(dateKeyToDate);
 
-        const sessionsToBlock = args.sessionIds && args.sessionIds.length > 0 ? args.sessionIds : [null];
+        const sessionsToBlock: (string | null)[] = args.sessionIds && args.sessionIds.length > 0 ? args.sessionIds : [null];
+        const sessionFilter = args.sessionIds && args.sessionIds.length > 0 ? { in: args.sessionIds } : null;
 
 		const existing = await prisma.blockedDate.findMany({
-			where: { date: { in: normalizedDates }, sessionId: { in: sessionsToBlock } },
+			where: { date: { in: normalizedDates }, sessionId: sessionFilter },
 			select: { date: true, sessionId: true },
 		});
 		const existingKeys = new Set(existing.map((e) => `${startOfUTCDate(e.date).toISOString().slice(0, 10)}_${e.sessionId || 'null'}`));
@@ -94,7 +95,7 @@ export const BlockedDateRepository = {
 		}
 
 		return prisma.blockedDate.findMany({
-			where: { date: { in: normalizedDates }, sessionId: { in: sessionsToBlock } },
+			where: { date: { in: normalizedDates }, sessionId: sessionFilter },
 			orderBy: { date: "asc" },
 		});
 	},

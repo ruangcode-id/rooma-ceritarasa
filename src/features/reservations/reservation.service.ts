@@ -7,6 +7,7 @@ import {
 } from "@/generated/prisma/client";
 import { appEvents, EVENTS } from "@/lib/events";
 import { buildCheckInDeadline } from "@/infrastructure/check-in/grace";
+import { isSessionOne } from "@/features/tables/table.service";
 
 const RESERVATION_PENDING_EXPIRY_MINUTES = 15;
 
@@ -223,6 +224,17 @@ export async function createPublicReservation(
       throw new Error(
         "Beberapa meja tidak ditemukan atau tidak tersedia untuk reservasi."
       );
+    }
+
+    if (isSessionOne(session)) {
+      const outdoorTable = selectedTables.find((t) =>
+        t.tableNumber.startsWith("OUT-")
+      );
+      if (outdoorTable) {
+        throw new Error(
+          "Area outdoor tidak tersedia untuk Sesi 1 (15.00 - 17.00). Silakan pilih meja indoor."
+        );
+      }
     }
 
     const selectedCapacity = selectedTables.reduce(

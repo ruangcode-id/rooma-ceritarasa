@@ -144,6 +144,37 @@ const unblockedTableWhere = (
 });
 
 /**
+ * Helper untuk mendeteksi apakah sebuah sesi adalah Sesi 1 (15.00 - 17.00 WIB).
+ * Khusus Sesi 1, area outdoor (OUT-1 s/d OUT-4) ditiadakan karena kondisi sore masih terik/panas.
+ */
+export function isSessionOne(session: {
+  name: string;
+  startTime?: Date | string | null;
+}): boolean {
+  const name = session.name.trim().toLowerCase();
+  if (
+    /\b(one|1)\b/i.test(name) ||
+    name === "session one" ||
+    name === "sesi 1" ||
+    name === "session 1"
+  ) {
+    return true;
+  }
+
+  if (session.startTime) {
+    const timeStr =
+      typeof session.startTime === "string"
+        ? session.startTime
+        : session.startTime.toISOString();
+    if (timeStr.includes("15:00") || timeStr.includes("15.00")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Validasi bahwa meja spesifik yang dipilih guest tersedia untuk sesi + tanggal tertentu.
  * Melempar Error jika meja tidak aktif, tidak ditemukan, atau sedang dipesan/dalam window pembayaran.
  */
@@ -156,22 +187,34 @@ export const checkTableAvailability = async (
   const normalizedDate = parseDateOnlyUTC(date);
   const now = new Date();
 
-  const table = await prisma.table.findFirst({
-    where: {
-      id: tableId,
-      isActive: true,
-      status: {
-        notIn: [
-          TableStatus.MAINTENANCE,
-          TableStatus.OCCUPIED,
-          TableStatus.RESERVED,
-        ],
+  const [table, session] = await Promise.all([
+    prisma.table.findFirst({
+      where: {
+        id: tableId,
+        isActive: true,
+        status: {
+          notIn: [
+            TableStatus.MAINTENANCE,
+            TableStatus.OCCUPIED,
+            TableStatus.RESERVED,
+          ],
+        },
       },
-    },
-  });
+    }),
+    prisma.restaurantSession.findUnique({
+      where: { id: sessionId },
+      select: { name: true, startTime: true },
+    }),
+  ]);
 
   if (!table) {
     throw new Error("Meja tidak ditemukan atau tidak tersedia untuk reservasi.");
+  }
+
+  if (session && isSessionOne(session) && table.tableNumber.startsWith("OUT-")) {
+    throw new Error(
+      "Area outdoor tidak tersedia untuk Sesi 1 (15.00 - 17.00). Silakan pilih meja indoor."
+    );
   }
 
   const blocking = await prisma.reservationTable.findFirst({
@@ -207,8 +250,18 @@ export const getPublicTableAvailability = async (
   const normalizedDate = parseDateOnlyUTC(date);
   const now = new Date();
 
+  // Khusus Sesi 1 (15.00 - 17.00), area outdoor tidak tersedia (terik matahari)
+  const session = await prisma.restaurantSession.findUnique({
+    where: { id: sessionId },
+    select: { name: true, startTime: true },
+  });
+  const isSession1 = session ? isSessionOne(session) : false;
+
   const allTables = await prisma.table.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      ...(isSession1 ? { NOT: { tableNumber: { startsWith: "OUT-" } } } : {}),
+    },
     orderBy: [{ tableNumber: "asc" }],
     select: {
       id: true,
@@ -262,12 +315,19 @@ export const getAvailableTables = async (
 
   const normalizedDate = parseDateOnlyUTC(date);
 
+  const session = await prisma.restaurantSession.findUnique({
+    where: { id: sessionId },
+    select: { name: true, startTime: true },
+  });
+  const isSession1 = session ? isSessionOne(session) : false;
+
   const tables = await prisma.table.findMany({
     where: {
       ...unblockedTableWhere(sessionId, normalizedDate),
       capacity: {
         gte: capacity,
       },
+      ...(isSession1 ? { NOT: { tableNumber: { startsWith: "OUT-" } } } : {}),
     },
     orderBy: [
       { capacity: "asc" },
@@ -341,20 +401,26 @@ export const checkMultipleTablesAvailability = async (
   const now = new Date();
 
   // 1. Pastikan semua meja ada, aktif, dan tidak dalam status Maintenance/Occupied/Reserved
-  const activeTables = await prisma.table.findMany({
-    where: {
-      id: { in: tableIds },
-      isActive: true,
-      status: {
-        notIn: [
-          TableStatus.MAINTENANCE,
-          TableStatus.OCCUPIED,
-          TableStatus.RESERVED,
-        ],
+  const [activeTables, session] = await Promise.all([
+    prisma.table.findMany({
+      where: {
+        id: { in: tableIds },
+        isActive: true,
+        status: {
+          notIn: [
+            TableStatus.MAINTENANCE,
+            TableStatus.OCCUPIED,
+            TableStatus.RESERVED,
+          ],
+        },
       },
-    },
-    select: { id: true, tableNumber: true },
-  });
+      select: { id: true, tableNumber: true },
+    }),
+    prisma.restaurantSession.findUnique({
+      where: { id: sessionId },
+      select: { name: true, startTime: true },
+    }),
+  ]);
 
   if (activeTables.length !== tableIds.length) {
     const foundIds = activeTables.map((t) => t.id);
@@ -362,6 +428,16 @@ export const checkMultipleTablesAvailability = async (
     throw new Error(
       `Beberapa meja tidak ditemukan atau tidak tersedia: ${invalidIds.join(", ")}`,
     );
+  }
+
+  // Khusus Sesi 1: tolak jika ada meja outdoor
+  if (session && isSessionOne(session)) {
+    const outdoorTable = activeTables.find((t) => t.tableNumber.startsWith("OUT-"));
+    if (outdoorTable) {
+      throw new Error(
+        "Area outdoor tidak tersedia untuk Sesi 1 (15.00 - 17.00). Silakan pilih meja indoor.",
+      );
+    }
   }
 
   // 2. Cek apakah ada meja yang sudah di-lock oleh reservasi aktif lain

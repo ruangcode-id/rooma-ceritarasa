@@ -118,7 +118,7 @@ export function OutdoorWeatherCard() {
       if (targetAction) {
         dispatchOutdoorToast(
           "☀️ Outdoor Area Enabled",
-          "4 outdoor tables (OUT-1 to OUT-4 · 16 Pax) are now active and available for reservations today.",
+          "4 outdoor tables (OUT-1 to OUT-4 · 16 Pax) are active for Session 2 & 3 today. Session 1 remains indoor-only.",
         );
       } else {
         dispatchOutdoorToast(
@@ -148,22 +148,20 @@ export function OutdoorWeatherCard() {
               {isLoading ? (
                 <CircleNotch size={18} className="animate-spin" />
               ) : (
-                <Armchair size={18} weight="fill" />
+                <Armchair size={20} weight="fill" />
               )}
             </span>
 
-            {/* Text info */}
-            <div className="min-w-0 flex-1">
+            {/* Label + subtext */}
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-slate-500">
-                  Outdoor Seating Area
-                </p>
+                <h3 className="text-sm font-bold text-slate-900">Outdoor Seating Area</h3>
                 {!isLoading && (
                   <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                       isOpen
-                        ? "bg-green-100 text-green-700"
-                        : "bg-slate-100 text-slate-500"
+                        ? "bg-green-50 text-green-700 border border-green-200"
+                        : "bg-slate-100 text-slate-600 border border-slate-200"
                     }`}
                   >
                     <span
@@ -179,7 +177,7 @@ export function OutdoorWeatherCard() {
                 {isLoading
                   ? "Checking outdoor seating status..."
                   : isOpen
-                  ? "Tables OUT-1 to OUT-4 are active. Guests can select outdoor seating when making a reservation."
+                  ? "Tables OUT-1 to OUT-4 are active for Session 2 & 3. Session 1 remains indoor-only."
                   : "Outdoor tables are disabled and hidden from the guest reservation form."}
               </p>
             </div>
@@ -249,7 +247,7 @@ export function OutdoorWeatherCard() {
                 </h2>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600">
                   {targetAction
-                    ? "All 4 outdoor tables (OUT-1–OUT-4 · 16 Pax) will be activated and immediately available for guests to select on the reservation form."
+                    ? "All 4 outdoor tables (OUT-1–OUT-4 · 16 Pax) will be activated for Session 2 & 3. Session 1 will remain indoor-only."
                     : "All 4 outdoor tables (OUT-1–OUT-4) will be deactivated and hidden from the reservation form."}
                 </p>
 
