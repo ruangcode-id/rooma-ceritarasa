@@ -506,7 +506,10 @@ export default function ReservationWizard({
               <div className="p-8">
                 <div className="flex items-center justify-between bg-slate-50 p-4 border border-slate-100">
                   <button 
-                    onClick={() => setPartySize(Math.max(1, partySize - 1))}
+                    onClick={() => {
+                      setPartySize(Math.max(1, partySize - 1));
+                      setSelectedTableIds([]);
+                    }}
                     className="p-3 bg-white shadow-sm text-slate-600 hover:text-slate-900 disabled:opacity-50 transition-all"
                     disabled={partySize <= 1}
                   >
@@ -517,7 +520,10 @@ export default function ReservationWizard({
                     <span className="text-xs tracking-wider text-slate-500">pax</span>
                   </div>
                   <button 
-                    onClick={() => setPartySize(partySize + 1)}
+                    onClick={() => {
+                      setPartySize(partySize + 1);
+                      setSelectedTableIds([]);
+                    }}
                     className="p-3 bg-white shadow-sm text-slate-600 hover:text-slate-900 transition-all"
                   >
                     <CaretRight size={20} />
