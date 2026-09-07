@@ -4,7 +4,6 @@ import { useSearchParams } from "next/navigation";
 
 import { useState, useEffect, useRef } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfDay, getDay } from "date-fns";
-import { id as localeId } from "date-fns/locale";
 import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle, Info, WhatsappLogo } from "@phosphor-icons/react";
 import Image from "next/image";
 import Script from "next/script";
@@ -307,7 +306,7 @@ export default function ReservationWizard({
     } catch (error) {
       setPaymentState("waiting_snap");
       setPaymentError(
-        error instanceof Error ? error.message : "Midtrans Snap belum siap."
+        error instanceof Error ? error.message : "Midtrans Snap is not ready."
       );
     }
   };
@@ -318,7 +317,7 @@ export default function ReservationWizard({
 
     if (!snapClientKey) {
       setPaymentState("failed");
-      setPaymentError("Konfigurasi Midtrans belum tersedia.");
+      setPaymentError("Midtrans configuration is not available.");
       return;
     }
 
@@ -341,8 +340,8 @@ export default function ReservationWizard({
       if (!response.ok || !payload.success) {
         throw new Error(
           payload.success
-            ? "Gagal membuat transaksi pembayaran."
-            : payload.error ?? "Gagal membuat transaksi pembayaran."
+            ? "Failed to create payment transaction."
+            : payload.error ?? "Failed to create payment transaction."
         );
       }
 
@@ -354,7 +353,7 @@ export default function ReservationWizard({
       }
 
       if (!payload.data.token) {
-        throw new Error("Token pembayaran tidak tersedia.");
+        throw new Error("Payment token is not available.");
       }
 
       if (!snapReady) {
@@ -463,7 +462,7 @@ export default function ReservationWizard({
         >
           <span className="text-xs uppercase tracking-widest text-slate-400 mb-1">Date</span>
           <span className="text-base font-semibold text-slate-900">
-            {selectedDate ? format(selectedDate, "dd MMM yyyy", { locale: localeId }) : "Select Date"}
+            {selectedDate ? format(selectedDate, "dd MMM yyyy") : "Select Date"}
           </span>
         </button>
 
@@ -533,7 +532,7 @@ export default function ReservationWizard({
                   onClick={() => setActiveModal(null)}
                   className="w-full mt-6 py-4 bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors border-2 border-slate-900"
                 >
-                  save
+                  Save
                 </button>
               </div>
             )}
@@ -555,7 +554,7 @@ export default function ReservationWizard({
                     <CaretLeft size={20} />
                   </button>
                   <div className="text-base font-semibold">
-                    {format(currentMonth, "MMMM yyyy", { locale: localeId })}
+                    {format(currentMonth, "MMMM yyyy")}
                   </div>
                   <button 
                     onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
@@ -593,7 +592,7 @@ export default function ReservationWizard({
                             type="button"
                             onClick={() => handleDateSelect(day)}
                             disabled={isDisabled}
-                            title={isBlocked ? "Tidak tersedia" : undefined}
+                            title={isBlocked ? "Unavailable" : undefined}
                             className={`
                               w-full h-full text-center text-sm font-medium transition-colors relative
                               ${isDisabled ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}

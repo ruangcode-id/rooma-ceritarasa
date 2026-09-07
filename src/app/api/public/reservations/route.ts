@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       error instanceof Error ? error.message : "Internal Server Error";
 
     const isClientError =
+      message.includes("Outdoor tables are not available") ||
       message.includes("Area outdoor tidak tersedia") ||
       message.includes("tidak tersedia untuk reservasi") ||
       message.includes("Meja tidak ditemukan") ||

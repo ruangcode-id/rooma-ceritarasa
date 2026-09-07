@@ -249,7 +249,7 @@ export const checkTableAvailability = async (
 
   if (session && isSessionOne(session) && isOutdoorTable(table.tableNumber)) {
     throw new Error(
-      "Area outdoor tidak tersedia untuk Sesi 1 (15.00 - 17.00). Silakan pilih meja indoor."
+      "Outdoor tables are not available for Session 1 (15:00 - 17:00). Please select an indoor table or another session."
     );
   }
 
@@ -475,7 +475,7 @@ export const checkMultipleTablesAvailability = async (
     const outdoorTable = activeTables.find((t) => isOutdoorTable(t.tableNumber));
     if (outdoorTable) {
       throw new Error(
-        "Area outdoor tidak tersedia untuk Sesi 1 (15.00 - 17.00). Silakan pilih meja indoor.",
+        "Outdoor tables are not available for Session 1 (15:00 - 17:00). Please select an indoor table or another session.",
       );
     }
   }
