@@ -26,6 +26,18 @@ function isSessionOne(session) {
   return false;
 }
 
+function isOutdoorTable(tableNumber) {
+  const clean = tableNumber.trim().toLowerCase();
+  return (
+    clean.startsWith("out-") ||
+    clean.startsWith("outdoor") ||
+    clean.startsWith("out ") ||
+    clean.startsWith("out_") ||
+    clean === "outdoor" ||
+    clean === "out"
+  );
+}
+
 test("isSessionOne detects Session 1 correctly", () => {
   assert.equal(isSessionOne({ name: "Session one" }), true);
   assert.equal(isSessionOne({ name: "Session 1" }), true);
@@ -42,32 +54,43 @@ test("isSessionOne rejects other sessions", () => {
   assert.equal(isSessionOne({ name: "Sesi Malam", startTime: "1970-01-01T20:00:00.000Z" }), false);
 });
 
-test("Filtering outdoor tables for Session 1", () => {
+test("isOutdoorTable detects all outdoor naming conventions", () => {
+  assert.equal(isOutdoorTable("OUT-1"), true);
+  assert.equal(isOutdoorTable("out-2"), true);
+  assert.equal(isOutdoorTable("Outdoor 1"), true);
+  assert.equal(isOutdoorTable("outdoor 2"), true);
+  assert.equal(isOutdoorTable("OUT 3"), true);
+  assert.equal(isOutdoorTable("Table 1"), false);
+  assert.equal(isOutdoorTable("Table 10"), false);
+  assert.equal(isOutdoorTable("T2"), false);
+});
+
+test("Filtering outdoor tables for Session 1 with multiple formats", () => {
   const sampleTables = [
-    { tableNumber: "T1", capacity: 2 },
-    { tableNumber: "T2", capacity: 4 },
+    { tableNumber: "Table 1", capacity: 2 },
+    { tableNumber: "Table 2", capacity: 4 },
     { tableNumber: "OUT-1", capacity: 4 },
     { tableNumber: "OUT-2", capacity: 4 },
-    { tableNumber: "OUT-3", capacity: 4 },
-    { tableNumber: "OUT-4", capacity: 4 },
+    { tableNumber: "Outdoor 3", capacity: 4 },
+    { tableNumber: "Outdoor 4", capacity: 4 },
   ];
 
   const session1 = { name: "Session one" };
   const session2 = { name: "Session two" };
 
-  const isSession1 = isSessionOne(session1);
-  const tablesSession1 = isSession1
-    ? sampleTables.filter((t) => !t.tableNumber.startsWith("OUT-"))
+  const isSession1Result = isSessionOne(session1);
+  const tablesSession1 = isSession1Result
+    ? sampleTables.filter((t) => !isOutdoorTable(t.tableNumber))
     : sampleTables;
 
   assert.equal(tablesSession1.length, 2);
-  assert.equal(tablesSession1.every((t) => !t.tableNumber.startsWith("OUT-")), true);
+  assert.equal(tablesSession1.every((t) => !isOutdoorTable(t.tableNumber)), true);
 
-  const isSession2 = isSessionOne(session2);
-  const tablesSession2 = isSession2
-    ? sampleTables.filter((t) => !t.tableNumber.startsWith("OUT-"))
+  const isSession2Result = isSessionOne(session2);
+  const tablesSession2 = isSession2Result
+    ? sampleTables.filter((t) => !isOutdoorTable(t.tableNumber))
     : sampleTables;
 
   assert.equal(tablesSession2.length, 6);
-  assert.equal(tablesSession2.some((t) => t.tableNumber.startsWith("OUT-")), true);
+  assert.equal(tablesSession2.some((t) => isOutdoorTable(t.tableNumber)), true);
 });

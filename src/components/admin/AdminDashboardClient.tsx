@@ -122,7 +122,7 @@ const reservationColumns: Array<DataTableColumn<AdminDashboardReservationRow>> =
       headerClassName: "whitespace-nowrap",
       className: "whitespace-nowrap",
       cell: (reservation) => {
-        const isOutdoor = reservation.tables.includes("OUT");
+        const isOutdoor = /out/i.test(reservation.tables || "");
         return (
           <div>
             <p className="font-medium text-slate-800">{reservation.tables || "-"}</p>

@@ -7,7 +7,7 @@ import {
 } from "@/generated/prisma/client";
 import { appEvents, EVENTS } from "@/lib/events";
 import { buildCheckInDeadline } from "@/infrastructure/check-in/grace";
-import { isSessionOne } from "@/features/tables/table.service";
+import { isSessionOne, isOutdoorTable } from "@/features/tables/table.service";
 
 const RESERVATION_PENDING_EXPIRY_MINUTES = 15;
 
@@ -228,7 +228,7 @@ export async function createPublicReservation(
 
     if (isSessionOne(session)) {
       const outdoorTable = selectedTables.find((t) =>
-        t.tableNumber.startsWith("OUT-")
+        isOutdoorTable(t.tableNumber)
       );
       if (outdoorTable) {
         throw new Error(

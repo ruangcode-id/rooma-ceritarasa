@@ -145,7 +145,7 @@ const unblockedTableWhere = (
 
 /**
  * Helper untuk mendeteksi apakah sebuah sesi adalah Sesi 1 (15.00 - 17.00 WIB).
- * Khusus Sesi 1, area outdoor (OUT-1 s/d OUT-4) ditiadakan karena kondisi sore masih terik/panas.
+ * Khusus Sesi 1, area outdoor (OUT-1 s/d OUT-4 / Outdoor 1 s/d Outdoor 4) ditiadakan karena kondisi sore masih terik/panas.
  */
 export function isSessionOne(session: {
   name: string;
@@ -173,6 +173,42 @@ export function isSessionOne(session: {
 
   return false;
 }
+
+/**
+ * Helper untuk mendeteksi apakah sebuah meja adalah meja outdoor.
+ * Mendukung format "OUT-1", "Outdoor 1", "OUT 1", dsb.
+ */
+export function isOutdoorTable(tableNumber: string): boolean {
+  const clean = tableNumber.trim().toLowerCase();
+  return (
+    clean.startsWith("out-") ||
+    clean.startsWith("outdoor") ||
+    clean.startsWith("out ") ||
+    clean.startsWith("out_") ||
+    clean === "outdoor" ||
+    clean === "out"
+  );
+}
+
+/** Prisma filter untuk mencocokkan seluruh variasi penamaan meja outdoor */
+export const OUTDOOR_TABLE_FILTER = {
+  OR: [
+    { tableNumber: { startsWith: "OUT-", mode: "insensitive" as const } },
+    { tableNumber: { startsWith: "Outdoor", mode: "insensitive" as const } },
+    { tableNumber: { startsWith: "OUT ", mode: "insensitive" as const } },
+  ],
+};
+
+/** Prisma filter untuk mengecualikan seluruh meja outdoor */
+export const NOT_OUTDOOR_TABLE_FILTER = {
+  NOT: {
+    OR: [
+      { tableNumber: { startsWith: "OUT-", mode: "insensitive" as const } },
+      { tableNumber: { startsWith: "Outdoor", mode: "insensitive" as const } },
+      { tableNumber: { startsWith: "OUT ", mode: "insensitive" as const } },
+    ],
+  },
+};
 
 /**
  * Validasi bahwa meja spesifik yang dipilih guest tersedia untuk sesi + tanggal tertentu.
@@ -211,7 +247,7 @@ export const checkTableAvailability = async (
     throw new Error("Meja tidak ditemukan atau tidak tersedia untuk reservasi.");
   }
 
-  if (session && isSessionOne(session) && table.tableNumber.startsWith("OUT-")) {
+  if (session && isSessionOne(session) && isOutdoorTable(table.tableNumber)) {
     throw new Error(
       "Area outdoor tidak tersedia untuk Sesi 1 (15.00 - 17.00). Silakan pilih meja indoor."
     );
@@ -260,7 +296,7 @@ export const getPublicTableAvailability = async (
   const allTables = await prisma.table.findMany({
     where: {
       isActive: true,
-      ...(isSession1 ? { NOT: { tableNumber: { startsWith: "OUT-" } } } : {}),
+      ...(isSession1 ? NOT_OUTDOOR_TABLE_FILTER : {}),
     },
     orderBy: [{ tableNumber: "asc" }],
     select: {
@@ -327,7 +363,7 @@ export const getAvailableTables = async (
       capacity: {
         gte: capacity,
       },
-      ...(isSession1 ? { NOT: { tableNumber: { startsWith: "OUT-" } } } : {}),
+      ...(isSession1 ? NOT_OUTDOOR_TABLE_FILTER : {}),
     },
     orderBy: [
       { capacity: "asc" },
@@ -432,7 +468,7 @@ export const checkMultipleTablesAvailability = async (
 
   // Khusus Sesi 1: tolak jika ada meja outdoor
   if (session && isSessionOne(session)) {
-    const outdoorTable = activeTables.find((t) => t.tableNumber.startsWith("OUT-"));
+    const outdoorTable = activeTables.find((t) => isOutdoorTable(t.tableNumber));
     if (outdoorTable) {
       throw new Error(
         "Area outdoor tidak tersedia untuk Sesi 1 (15.00 - 17.00). Silakan pilih meja indoor.",
@@ -545,12 +581,15 @@ export async function syncDailyOutdoorState(): Promise<boolean> {
   // If outdoor is not activated for today (e.g. new morning / new date):
   if (activeDate !== todayWIB) {
     const activeOutdoorCount = await prisma.table.count({
-      where: { tableNumber: { startsWith: "OUT-" }, isActive: true },
+      where: {
+        ...OUTDOOR_TABLE_FILTER,
+        isActive: true,
+      },
     });
 
     if (activeOutdoorCount > 0) {
       await prisma.table.updateMany({
-        where: { tableNumber: { startsWith: "OUT-" } },
+        where: OUTDOOR_TABLE_FILTER,
         data: { isActive: false },
       });
     }
@@ -562,9 +601,14 @@ export async function syncDailyOutdoorState(): Promise<boolean> {
 
 export async function ensureOutdoorTables(): Promise<void> {
   const existing = await prisma.table.findMany({
-    where: { tableNumber: { startsWith: "OUT-" } },
+    where: OUTDOOR_TABLE_FILTER,
     select: { tableNumber: true },
   });
+
+  // Jika sudah ada 4 meja outdoor di database (misal "Outdoor 1"–"Outdoor 4" atau "OUT-1"–"OUT-4"), jangan duplikasi
+  if (existing.length >= 4) {
+    return;
+  }
 
   const existingNumbers = new Set(existing.map((t) => t.tableNumber));
   const missing = DEFAULT_OUTDOOR_TABLE_DATA.filter(
@@ -597,7 +641,7 @@ export async function getOutdoorAreaStatus(): Promise<OutdoorAreaStatus> {
 
   const [outdoorTables, outdoorReservationsToday] = await Promise.all([
     prisma.table.findMany({
-      where: { tableNumber: { startsWith: "OUT-" } },
+      where: OUTDOOR_TABLE_FILTER,
       orderBy: { tableNumber: "asc" },
       select: {
         id: true,
@@ -608,7 +652,7 @@ export async function getOutdoorAreaStatus(): Promise<OutdoorAreaStatus> {
     }),
     prisma.reservationTable.findMany({
       where: {
-        table: { tableNumber: { startsWith: "OUT-" } },
+        table: OUTDOOR_TABLE_FILTER,
         reservation: {
           date: todayStart,
           status: { in: [ReservationStatus.confirmed, ReservationStatus.checked_in, ReservationStatus.pending] },
@@ -652,13 +696,13 @@ export async function toggleOutdoorArea(isOpen: boolean): Promise<OutdoorAreaSta
   if (isOpen) {
     await setOutdoorActiveDate(todayWIB);
     await prisma.table.updateMany({
-      where: { tableNumber: { startsWith: "OUT-" } },
+      where: OUTDOOR_TABLE_FILTER,
       data: { isActive: true },
     });
   } else {
     await setOutdoorActiveDate(null);
     await prisma.table.updateMany({
-      where: { tableNumber: { startsWith: "OUT-" } },
+      where: OUTDOOR_TABLE_FILTER,
       data: { isActive: false },
     });
   }

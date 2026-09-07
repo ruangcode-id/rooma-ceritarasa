@@ -75,14 +75,23 @@ function getMinParty(tableNumber: string): number {
  * Deteksi Sesi 1 di sisi client — konsisten dengan backend `isSessionOne()`.
  * Digunakan untuk menampilkan info banner bahwa Sesi 1 hanya indoor.
  */
-function clientIsSession1(sessionName: string): boolean {
-  const name = sessionName.trim().toLowerCase();
-  return (
+function clientIsSession1(session?: { name: string; startTime?: string } | null): boolean {
+  if (!session) return false;
+  const name = session.name.trim().toLowerCase();
+  if (
     /\b(one|1)\b/i.test(name) ||
     name === "session one" ||
     name === "sesi 1" ||
     name === "session 1"
-  );
+  ) {
+    return true;
+  }
+
+  if (session.startTime && (session.startTime.includes("15:00") || session.startTime.includes("15.00"))) {
+    return true;
+  }
+
+  return false;
 }
 
 type ModalType = "guests" | "date" | "time" | null;
@@ -687,7 +696,7 @@ export default function ReservationWizard({
 
             {/* Session 1 indoor-only info banner */}
             {selectedSessionId && clientIsSession1(
-              sessions.find(s => s.id === selectedSessionId)?.name ?? ""
+              sessions.find(s => s.id === selectedSessionId)
             ) && (
               <div className="mb-8 w-full max-w-md mx-auto flex items-start gap-4 rounded-2xl bg-[#fcfbf9] border border-amber-200/60 p-5 shadow-sm animate-in fade-in duration-500">
                 <Info size={24} weight="fill" className="text-amber-600 shrink-0 mt-0.5" />
@@ -712,6 +721,7 @@ export default function ReservationWizard({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 {tables.map(table => {
                   const isSelected = selectedTableIds.includes(table.id);
+                  const isOutdoor = /out/i.test(table.tableNumber);
                   const cleanNum = table.tableNumber.replace(/^Table\s*/i, "").trim();
                   const withT = cleanNum.startsWith("T") ? cleanNum : `T${cleanNum}`;
                   const isExpandable = withT in EXPANDABLE_TABLES || cleanNum in EXPANDABLE_TABLES;
@@ -749,7 +759,7 @@ export default function ReservationWizard({
                         </span>
                       )}
                       <span className="font-bold text-sm md:text-base tracking-wide">
-                        Table {cleanNum.replace(/^T/i, "")}
+                        {isOutdoor ? table.tableNumber : `Table ${cleanNum.replace(/^T/i, "")}`}
                       </span>
                       <span className="text-[10px] md:text-xs mt-1 opacity-80 tracking-widest">
                         Capacity: {EXPANDABLE_TABLES[withT] ?? EXPANDABLE_TABLES[cleanNum] ?? table.capacity}
