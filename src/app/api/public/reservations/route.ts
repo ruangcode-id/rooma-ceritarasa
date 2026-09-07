@@ -73,6 +73,8 @@ export async function POST(req: NextRequest) {
       error instanceof Error ? error.message : "Internal Server Error";
 
     const isClientError =
+      message.includes("Outdoor tables are not available") ||
+      message.includes("Area outdoor tidak tersedia") ||
       message.includes("tidak tersedia untuk reservasi") ||
       message.includes("Meja tidak ditemukan") ||
       message.includes("Beberapa meja") ||
@@ -88,7 +90,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: isClientError ? "Data tidak valid atau reservasi tidak dapat diproses." : "Internal Server Error",
+        error: isClientError ? message : "Internal Server Error",
       },
       { status: isClientError ? 400 : 500 },
     );

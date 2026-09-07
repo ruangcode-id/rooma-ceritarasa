@@ -137,13 +137,13 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
       {vipLoading ? (
         <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-500">
           <CircleNotch className="animate-spin text-3xl" />
-          <p className="text-sm font-semibold animate-pulse">Memuat data VIP...</p>
+          <p className="text-sm font-semibold animate-pulse">Loading VIP data...</p>
         </div>
       ) : (
       <form onSubmit={handleSubmit} className="grid gap-8">
         <div>
           <label htmlFor="guestName" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-            Nama Lengkap *
+            Full Name *
           </label>
           <input
             id="guestName"
@@ -180,7 +180,7 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
           </div>
           <div>
             <label htmlFor="guestEmail" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-              Email <span className="text-slate-400 normal-case font-normal">(Opsional)</span>
+              Email <span className="text-slate-400 normal-case font-normal">(Optional)</span>
             </label>
             <input
               id="guestEmail"
@@ -192,7 +192,7 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
           </div>
           <div>
             <label htmlFor="guestBirthdate" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-              Date of Birth <span className="text-slate-400 normal-case font-normal">(Opsional)</span>
+              Date of Birth <span className="text-slate-400 normal-case font-normal">(Optional)</span>
             </label>
             <input
               id="guestBirthdate"
@@ -205,14 +205,14 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
 
         <div>
           <label htmlFor="specialRequest" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-            Catatan Tambahan (Opsional)
+            Special Requests (Optional)
           </label>
           <textarea
             id="specialRequest"
             name="specialRequest"
             rows={3}
             className="w-full border-2 border-slate-200 bg-transparent px-3 py-3 text-base text-slate-900 outline-none transition-all focus:border-slate-900 placeholder:text-slate-300 resize-none"
-            placeholder="Alergi, acara khusus, request tempat..."
+            placeholder="Dietary restrictions, special requests..."
           />
         </div>
 
@@ -222,14 +222,14 @@ export function GuestReservationForm({ date, sessionId, tableIds, guestCount, vi
             onClick={onBack}
             className="flex-1 py-4 border-2 border-slate-900 text-slate-900 font-bold uppercase tracking-widest hover:bg-slate-50 transition-colors"
           >
-            Kembali
+            Back
           </button>
           <button
             type="submit"
             disabled={loading}
             className="flex-1 py-4 bg-slate-900 border-2 border-slate-900 text-white font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors disabled:opacity-50"
           >
-            {loading ? "Memproses..." : "Konfirmasi"}
+            {loading ? "Processing..." : "Confirm Reservation"}
           </button>
         </div>
       </form>

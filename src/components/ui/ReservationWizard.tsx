@@ -4,7 +4,6 @@ import { useSearchParams } from "next/navigation";
 
 import { useState, useEffect, useRef } from "react";
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfDay, getDay } from "date-fns";
-import { id as localeId } from "date-fns/locale";
 import { CaretLeft, CaretRight, X, CircleNotch, CheckCircle, Info, WhatsappLogo } from "@phosphor-icons/react";
 import Image from "next/image";
 import Script from "next/script";
@@ -69,6 +68,29 @@ const TABLE_COMBINATIONS = [
   { id: "outdoor_3", name: "Outdoor 3", tables: ["OUT-3"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
   { id: "outdoor_4", name: "Outdoor 4", tables: ["OUT-4"], minPax: 2, maxPax: 4, note: "Outdoor Terrace" },
 ];
+
+/**
+ * Deteksi Sesi 1 di sisi client — konsisten dengan backend `isSessionOne()`.
+ * Digunakan untuk menampilkan info banner bahwa Sesi 1 hanya indoor.
+ */
+function clientIsSession1(session?: { name: string; startTime?: string } | null): boolean {
+  if (!session) return false;
+  const name = session.name.trim().toLowerCase();
+  if (
+    /\b(one|1)\b/i.test(name) ||
+    name === "session one" ||
+    name === "sesi 1" ||
+    name === "session 1"
+  ) {
+    return true;
+  }
+
+  if (session.startTime && (session.startTime.includes("15:00") || session.startTime.includes("15.00"))) {
+    return true;
+  }
+
+  return false;
+}
 
 type ModalType = "guests" | "date" | "time" | null;
 
@@ -284,7 +306,7 @@ export default function ReservationWizard({
     } catch (error) {
       setPaymentState("waiting_snap");
       setPaymentError(
-        error instanceof Error ? error.message : "Midtrans Snap belum siap."
+        error instanceof Error ? error.message : "Midtrans Snap is not ready."
       );
     }
   };
@@ -295,7 +317,7 @@ export default function ReservationWizard({
 
     if (!snapClientKey) {
       setPaymentState("failed");
-      setPaymentError("Konfigurasi Midtrans belum tersedia.");
+      setPaymentError("Midtrans configuration is not available.");
       return;
     }
 
@@ -318,8 +340,8 @@ export default function ReservationWizard({
       if (!response.ok || !payload.success) {
         throw new Error(
           payload.success
-            ? "Gagal membuat transaksi pembayaran."
-            : payload.error ?? "Gagal membuat transaksi pembayaran."
+            ? "Failed to create payment transaction."
+            : payload.error ?? "Failed to create payment transaction."
         );
       }
 
@@ -331,7 +353,7 @@ export default function ReservationWizard({
       }
 
       if (!payload.data.token) {
-        throw new Error("Token pembayaran tidak tersedia.");
+        throw new Error("Payment token is not available.");
       }
 
       if (!snapReady) {
@@ -346,7 +368,7 @@ export default function ReservationWizard({
       setPaymentError(
         error instanceof Error
           ? error.message
-          : "Gagal membuat transaksi pembayaran."
+          : "Failed to create payment transaction."
       );
     }
   };
@@ -374,7 +396,7 @@ export default function ReservationWizard({
           onReady={() => setSnapReady(true)}
           onError={() => {
             setSnapReady(false);
-            setPaymentError("Gagal memuat Midtrans Snap.");
+            setPaymentError("Failed to load Midtrans Snap.");
           }}
         />
       ) : null}
@@ -440,7 +462,7 @@ export default function ReservationWizard({
         >
           <span className="text-xs uppercase tracking-widest text-slate-400 mb-1">Date</span>
           <span className="text-base font-semibold text-slate-900">
-            {selectedDate ? format(selectedDate, "dd MMM yyyy", { locale: localeId }) : "Select Date"}
+            {selectedDate ? format(selectedDate, "dd MMM yyyy") : "Select Date"}
           </span>
         </button>
 
@@ -484,7 +506,10 @@ export default function ReservationWizard({
               <div className="p-8">
                 <div className="flex items-center justify-between bg-slate-50 p-4 border border-slate-100">
                   <button 
-                    onClick={() => setPartySize(Math.max(1, partySize - 1))}
+                    onClick={() => {
+                      setPartySize(Math.max(1, partySize - 1));
+                      setSelectedTableIds([]);
+                    }}
                     className="p-3 bg-white shadow-sm text-slate-600 hover:text-slate-900 disabled:opacity-50 transition-all"
                     disabled={partySize <= 1}
                   >
@@ -495,7 +520,10 @@ export default function ReservationWizard({
                     <span className="text-xs tracking-wider text-slate-500">pax</span>
                   </div>
                   <button 
-                    onClick={() => setPartySize(partySize + 1)}
+                    onClick={() => {
+                      setPartySize(partySize + 1);
+                      setSelectedTableIds([]);
+                    }}
                     className="p-3 bg-white shadow-sm text-slate-600 hover:text-slate-900 transition-all"
                   >
                     <CaretRight size={20} />
@@ -510,7 +538,7 @@ export default function ReservationWizard({
                   onClick={() => setActiveModal(null)}
                   className="w-full mt-6 py-4 bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors border-2 border-slate-900"
                 >
-                  save
+                  Save
                 </button>
               </div>
             )}
@@ -532,7 +560,7 @@ export default function ReservationWizard({
                     <CaretLeft size={20} />
                   </button>
                   <div className="text-base font-semibold">
-                    {format(currentMonth, "MMMM yyyy", { locale: localeId })}
+                    {format(currentMonth, "MMMM yyyy")}
                   </div>
                   <button 
                     onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
@@ -570,7 +598,7 @@ export default function ReservationWizard({
                             type="button"
                             onClick={() => handleDateSelect(day)}
                             disabled={isDisabled}
-                            title={isBlocked ? "Tidak tersedia" : undefined}
+                            title={isBlocked ? "Unavailable" : undefined}
                             className={`
                               w-full h-full text-center text-sm font-medium transition-colors relative
                               ${isDisabled ? "text-slate-300 cursor-not-allowed" : "cursor-pointer"}
@@ -662,9 +690,26 @@ export default function ReservationWizard({
             <h3 className="text-lg font-medium text-center text-slate-800 mb-2">
               Select your seating area
             </h3>
-            <p className="text-sm text-center text-slate-500 mb-8 max-w-xl mx-auto">
+            <p className="text-sm text-center text-slate-500 mb-6 max-w-xl mx-auto">
               Please select your preferred seating area. For special occasions or private events, kindly contact our Reservations Team.
             </p>
+
+            {/* Session 1 indoor-only info banner */}
+            {selectedSessionId && clientIsSession1(
+              sessions.find(s => s.id === selectedSessionId)
+            ) && (
+              <div className="mb-8 w-full max-w-md mx-auto flex items-start gap-4 rounded-2xl bg-[#fcfbf9] border border-amber-200/60 p-5 shadow-sm animate-in fade-in duration-500">
+                <Info size={24} weight="fill" className="text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-left">
+                  <p className="text-xs uppercase tracking-[0.25em] font-semibold text-amber-800 mb-1">
+                    Indoor Only — Session 1
+                  </p>
+                  <p className="text-sm leading-relaxed text-slate-600">
+                    Session 1 (15:00–17:00) is available for <span className="font-semibold text-slate-800">indoor</span> seating only. Outdoor tables are available from Session 2 onwards.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {loadingTables ? (
               <div className="flex justify-center py-12"><CircleNotch size={32} className="animate-spin text-slate-400" /></div>
@@ -672,71 +717,82 @@ export default function ReservationWizard({
               <div className="text-center text-slate-500 py-8 bg-white rounded-lg border border-slate-100">
                 Sorry, no tables available for this session.
               </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-                {TABLE_COMBINATIONS.map(combo => {
-                  // 1. Check Availability constraint (all tables must be available in DB)
-                  const allTablesAvailable = combo.tables.every(tableName => {
-                    const t = tables.find(tb => tb.tableNumber === tableName);
-                    return t && t.isAvailable;
-                  });
+            ) : (() => {
+              const isS1 = selectedSessionId && clientIsSession1(sessions.find(s => s.id === selectedSessionId));
+              const visibleCombos = isS1
+                ? TABLE_COMBINATIONS.filter(combo => !combo.id.startsWith("outdoor") && !combo.tables.some(t => /out/i.test(t)))
+                : TABLE_COMBINATIONS;
 
-                  // 2. Check Pax constraints
-                  const isInvalidPax = partySize < combo.minPax || partySize > combo.maxPax;
+              return (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                  {visibleCombos.map(combo => {
+                    // 1. Check Availability constraint (all tables must be available in DB)
+                    const allTablesAvailable = combo.tables.every(tableName => {
+                      const t = tables.find(tb => tb.tableNumber === tableName || (tableName === "OUT-1" && tb.tableNumber === "Outdoor 1") || (tableName === "OUT-2" && tb.tableNumber === "Outdoor 2") || (tableName === "OUT-3" && tb.tableNumber === "Outdoor 3") || (tableName === "OUT-4" && tb.tableNumber === "Outdoor 4"));
+                      return t && t.isAvailable;
+                    });
+
+                    // 2. Check Pax constraints
+                    const isInvalidPax = partySize < combo.minPax || partySize > combo.maxPax;
+                    
+                    const isDisabled = !allTablesAvailable || isInvalidPax;
+
+                    // Find the IDs of the tables to determine selection state
+                    const comboTableIds = combo.tables.map(tableName => {
+                      const found = tables.find(t => t.tableNumber === tableName || (tableName === "OUT-1" && t.tableNumber === "Outdoor 1") || (tableName === "OUT-2" && t.tableNumber === "Outdoor 2") || (tableName === "OUT-3" && t.tableNumber === "Outdoor 3") || (tableName === "OUT-4" && t.tableNumber === "Outdoor 4"));
+                      return found?.id;
+                    }).filter(Boolean) as string[];
+
+                    // Check if this combo is exactly the one selected (all IDs match and length matches)
+                    const isSelected = selectedTableIds.length > 0 && selectedTableIds.length === comboTableIds.length && 
+                      comboTableIds.every(id => selectedTableIds.includes(id));
+
+                    return (
+                      <button
+                        key={combo.id}
+                        onClick={() => !isDisabled && setSelectedTableIds(comboTableIds)}
+                        disabled={isDisabled}
+                        className={`
+                          relative py-5 px-3 text-center transition-all flex flex-col items-center justify-center border-2
+                          ${!allTablesAvailable
+                            ? "bg-slate-200 border-slate-200 text-slate-400 cursor-not-allowed"
+                            : isInvalidPax
+                              ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed"
+                              : isSelected 
+                                ? "bg-slate-900 text-white shadow-md ring-2 ring-slate-900 ring-offset-2 border-slate-900"
+                                : "bg-white border-slate-900 text-slate-900 hover:bg-slate-100"
+                          }
+                        `}
+                      >
+                        <span className="font-bold text-sm md:text-base tracking-wide">
+                          {combo.name}
+                        </span>
+                        <span className="text-[10px] md:text-xs mt-1.5 opacity-80 tracking-widest uppercase">
+                          Max {combo.maxPax} Pax
+                        </span>
+                        {combo.note && (
+                          <span className="text-[9px] mt-1 text-slate-500 italic">
+                            {combo.note}
+                          </span>
+                        )}
+                        {allTablesAvailable && isInvalidPax && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider mt-1 text-red-500 leading-none">
+                            {partySize < combo.minPax ? `Min. ${combo.minPax} pax` : `Max. ${combo.maxPax} pax`}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
                   
-                  const isDisabled = !allTablesAvailable || isInvalidPax;
-
-                  // Find the IDs of the tables to determine selection state
-                  const comboTableIds = combo.tables.map(tableName => tables.find(t => t.tableNumber === tableName)?.id).filter(Boolean) as string[];
-                  // Check if this combo is exactly the one selected (all IDs match and length matches)
-                  const isSelected = selectedTableIds.length > 0 && selectedTableIds.length === comboTableIds.length && 
-                    comboTableIds.every(id => selectedTableIds.includes(id));
-
-                  return (
-                    <button
-                      key={combo.id}
-                      onClick={() => !isDisabled && setSelectedTableIds(comboTableIds)}
-                      disabled={isDisabled}
-                      className={`
-                        relative py-5 px-3 text-center transition-all flex flex-col items-center justify-center border-2
-                        ${!allTablesAvailable
-                          ? "bg-slate-200 border-slate-200 text-slate-400 cursor-not-allowed"
-                          : isInvalidPax
-                            ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed"
-                            : isSelected 
-                              ? "bg-slate-900 text-white shadow-md ring-2 ring-slate-900 ring-offset-2 border-slate-900"
-                              : "bg-white border-slate-900 text-slate-900 hover:bg-slate-100"
-                        }
-                      `}
-                    >
-                      <span className="font-bold text-sm md:text-base tracking-wide">
-                        {combo.name}
-                      </span>
-                      <span className="text-[10px] md:text-xs mt-1.5 opacity-80 tracking-widest uppercase">
-                        Max {combo.maxPax} Pax
-                      </span>
-                      {combo.note && (
-                        <span className="text-[9px] mt-1 text-slate-500 italic">
-                          {combo.note}
-                        </span>
-                      )}
-                      {allTablesAvailable && isInvalidPax && (
-                        <span className="text-[9px] font-bold uppercase tracking-wider mt-1 text-red-500 leading-none">
-                          {partySize < combo.minPax ? `Min. ${combo.minPax} pax` : `Max. ${combo.maxPax} pax`}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-                
-                {/* Fallback if no combos fit */}
-                {TABLE_COMBINATIONS.filter(combo => partySize >= combo.minPax && partySize <= combo.maxPax && combo.tables.every(tn => tables.find(t => t.tableNumber === tn)?.isAvailable)).length === 0 && (
-                  <div className="col-span-full text-center py-6 text-slate-500">
-                    No table arrangements are available for {partySize} guests at this time.
-                  </div>
-                )}
-              </div>
-            )}
+                  {/* Fallback if no combos fit */}
+                  {visibleCombos.filter(combo => partySize >= combo.minPax && partySize <= combo.maxPax && combo.tables.every(tn => tables.find(t => t.tableNumber === tn || (tn === "OUT-1" && t.tableNumber === "Outdoor 1") || (tn === "OUT-2" && t.tableNumber === "Outdoor 2") || (tn === "OUT-3" && t.tableNumber === "Outdoor 3") || (tn === "OUT-4" && t.tableNumber === "Outdoor 4"))?.isAvailable)).length === 0 && (
+                    <div className="col-span-full text-center py-6 text-slate-500">
+                      No table arrangements are available for {partySize} guests at this time.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             
             {/* Continue Button for Table Selection */}
             {selectedTableIds.length > 0 && (
