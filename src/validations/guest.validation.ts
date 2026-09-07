@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { isValidIndonesianMobile, normalizeIndonesianPhone } from "@/lib/phone";
+import { isValidPhoneNumber, normalizePhoneNumber } from "@/lib/phone";
 
 export const GUEST_TAGS = [
   "VIP",
@@ -31,10 +31,10 @@ export const guestPhoneSchema = z
   .trim()
   .min(1)
   .max(20)
-  .refine(isValidIndonesianMobile, {
-    message: "Nomor telepon tidak valid (gunakan format 08xx atau +62xx).",
+  .refine(isValidPhoneNumber, {
+    message: "Nomor telepon tidak valid. Gunakan format internasional (contoh: +628...).",
   })
-  .transform(normalizeIndonesianPhone);
+  .transform(normalizePhoneNumber);
 
 export const createGuestSchema = z.object({
   name: guestNameSchema,
@@ -84,7 +84,7 @@ export const guestListQuerySchema = z.object({
     .trim()
     .max(20)
     .optional()
-    .transform((v) => (v && v.length > 0 ? normalizeIndonesianPhone(v) : undefined)),
+    .transform((v) => (v && v.length > 0 ? normalizePhoneNumber(v) : undefined)),
 });
 
 export type GuestListQuery = z.infer<typeof guestListQuerySchema>;

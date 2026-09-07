@@ -304,7 +304,7 @@ export default function AdminTablesClient() {
       {/* Grid Floor Plan Container */}
       <div 
         ref={boardRef}
-        className="w-full h-[600px] bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 relative overflow-hidden select-none"
+        className="w-full h-150 bg-slate-100 rounded-2xl border-2 border-dashed border-slate-300 relative overflow-hidden select-none"
         style={{
           backgroundImage: "radial-gradient(#cbd5e1 1px, transparent 1px)",
           backgroundSize: "20px 20px"
@@ -327,7 +327,7 @@ export default function AdminTablesClient() {
                 top: `${table.posY}px`,
                 touchAction: 'none' // penting untuk mobile drag
               }}
-              className={`absolute w-[100px] h-[100px] flex flex-col items-center justify-center rounded-2xl border-2 shadow-sm transition-shadow cursor-grab active:cursor-grabbing group
+              className={`absolute w-25 h-25 flex flex-col items-center justify-center rounded-2xl border-2 shadow-sm transition-shadow cursor-grab active:cursor-grabbing group
                 ${draggingTableId === table.id ? 'z-10 shadow-xl border-primary scale-105 bg-primary/5' : 'border-slate-300 bg-white hover:border-slate-400'}
                 ${table.status === 'OCCUPIED' ? 'bg-red-50 border-red-200' : table.status === 'RESERVED' ? 'bg-blue-50 border-blue-200' : ''}
               `}
@@ -365,7 +365,7 @@ export default function AdminTablesClient() {
 
       {/* Delete Confirmation Modal */}
       {mounted && deleteTableId && createPortal(
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-10000 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6">
               <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Table</h3>

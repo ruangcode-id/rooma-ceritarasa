@@ -23,11 +23,13 @@ const MENU_GROUPS = [
 interface HrSidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  user?: any;
 }
 
 export default function HrSidebar({
   isOpen = false,
   onClose,
+  user,
 }: HrSidebarProps) {
   const pathname = usePathname();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -111,17 +113,17 @@ export default function HrSidebar({
           {/* User Profile & Sign Out Unified */}
           <div className="flex items-center gap-2 rounded-xl bg-slate-800 p-3 transition-all duration-200">
             {/* Avatar */}
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-medium text-white">
-              HR
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-sm font-medium text-white uppercase">
+              {user?.name ? user.name.charAt(0) : "HR"}
             </div>
 
             {/* Name + Email */}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white">
-                HR Staff
+                {user?.name || "HR Staff"}
               </p>
               <p className="truncate text-xs text-slate-400">
-                hr@rooma.com
+                {user?.email || "hr@rooma.com"}
               </p>
             </div>
 

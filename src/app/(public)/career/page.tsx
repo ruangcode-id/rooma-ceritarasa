@@ -69,7 +69,7 @@ export default async function CareerPage() {
                       </div>
 
                       <a
-                        href={`mailto:hr@roomaceritarasa.com?subject=Job%20Application%20-%20${encodeURIComponent(job.title)}&body=Hello%20Rooma%20Ceritarasa%20HR%20Team,%0A%0AI%20would%20like%20to%20apply%20for%20the%20${encodeURIComponent(job.title)}%20position.%0A%0A[Please%20attach%20your%20CV/Resume%20and%20any%20other%20relevant%20documents]`}
+                        href={`mailto:4phgroup.hiring@gmail.com?subject=Job%20Application%20-%20${encodeURIComponent(job.title)}&body=Hello%20Rooma%20Ceritarasa%20HR%20Team,%0A%0AI%20would%20like%20to%20apply%20for%20the%20${encodeURIComponent(job.title)}%20position.%0A%0A[Please%20attach%20your%20CV/Resume%20and%20any%20other%20relevant%20documents]`}
                         className="inline-block border-b border-primary text-primary uppercase tracking-[0.15em] text-xs font-bold pb-1 hover:text-primary-dark hover:border-primary-dark transition-colors"
                       >
                         Submit Candidacy

@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   description: "Panel for Human Resources",
 };
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <HrLayout>{children}</HrLayout>;
+import { auth } from "@/auth";
+
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  return <HrLayout user={session?.user}>{children}</HrLayout>;
 }

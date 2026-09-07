@@ -1,6 +1,6 @@
 // Guest repository — Prisma data access layer
 import { prisma } from "@/infrastructure/database/prisma";
-import { normalizeIndonesianPhone } from "@/lib/phone";
+import { normalizePhoneNumber } from "@/lib/phone";
 
 export type CreateGuestInput = {
   name: string;
@@ -13,7 +13,7 @@ export type CreateGuestInput = {
  * Hanya mencari guest yang belum di-soft-delete (deletedAt: null).
  */
 export async function findGuestByPhone(phone: string) {
-  const normalized = normalizeIndonesianPhone(phone);
+  const normalized = normalizePhoneNumber(phone);
   return prisma.guest.findFirst({
     where: {
       phone: normalized,
@@ -30,7 +30,7 @@ export async function createGuest(input: CreateGuestInput) {
   return prisma.guest.create({
     data: {
       name: input.name.trim(),
-      phone: normalizeIndonesianPhone(input.phone),
+      phone: normalizePhoneNumber(input.phone),
       email: input.email ?? null,
       isVip: false,
     },

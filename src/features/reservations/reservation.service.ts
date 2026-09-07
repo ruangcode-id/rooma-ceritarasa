@@ -23,6 +23,7 @@ export type CreateReservationInput = {
   partySize: number;
   specialRequest?: string;
   vipToken?: string;
+  guestBirthdate?: string;
 };
 
 export type CreateReservationResult = {
@@ -118,12 +119,15 @@ export async function createPublicReservation(
         },
       });
 
+      const birthdateObj = input.guestBirthdate ? new Date(input.guestBirthdate) : undefined;
+
       if (!guest) {
         guest = await tx.guest.create({
           data: {
             name: input.guestName,
             phone: input.guestPhone,
             email: input.guestEmail ?? null,
+            birthdate: birthdateObj,
             isVip: false,
             tags: [],
           },
@@ -136,6 +140,7 @@ export async function createPublicReservation(
           data: {
             name: input.guestName,
             email: input.guestEmail ?? guest.email,
+            ...(birthdateObj && { birthdate: birthdateObj }),
           },
         });
       }

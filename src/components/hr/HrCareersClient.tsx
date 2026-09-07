@@ -433,7 +433,7 @@ export default function HrCareersClient() {
                   </div>
                 )}
                 
-                <div className="pt-3 mt-3 border-t border-slate-50 flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="pt-3 mt-3 border-t border-slate-50 flex gap-1 justify-end">
                   <button 
                     onClick={() => handleToggleStatus(job)} 
                     disabled={isSaving}

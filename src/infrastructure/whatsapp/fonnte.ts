@@ -1,4 +1,5 @@
 import { getFonnteConfig } from "@/config/env";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 
 export const FONNTE_CONFIG_WARNING =
   "WA tidak terkirim karena konfigurasi Fonnte belum lengkap (FONNTE_TOKEN).";
@@ -19,19 +20,21 @@ export function normalizePhoneForFonnte(phone: string): string {
 }
 
 /**
- * Format target untuk API Fonnte + countryCode "62".
- * Fonnte mengganti angka 0 depan; kirim 08xxx, bukan 628xxx (hindari double prefix).
+ * Format target untuk API Fonnte (format internasional tanpa tanda +).
+ * Contoh: "+62 822..." -> "62822..."
  * @see https://docs.fonnte.com/api-send-message/
  */
 export function formatTargetForFonnteApi(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.startsWith("62")) {
-    return `0${digits.slice(2)}`;
+  return phone.replace(/\D/g, "");
+}
+
+export function getFonnteCountryCode(phone: string): string {
+  const raw = phone.startsWith('+') ? phone : '+' + phone;
+  const parsed = parsePhoneNumberFromString(raw);
+  if (parsed && parsed.countryCallingCode) {
+    return String(parsed.countryCallingCode);
   }
-  if (!digits.startsWith("0")) {
-    return `0${digits}`;
-  }
-  return digits;
+  return "62";
 }
 
 function mapFonnteReason(reason: string): string {
@@ -106,10 +109,11 @@ export async function sendWhatsAppMessage(
   const { target } = validated;
 
   try {
+    const countryCode = getFonnteCountryCode(phone);
     const body: Record<string, string> = {
       target,
       message,
-      countryCode: "62",
+      countryCode,
     };
     if (config.sender) {
       body.sender = formatTargetForFonnteApi(config.sender);
@@ -160,10 +164,11 @@ export async function sendWhatsAppMessageWithImage(
   const { target } = validated;
 
   try {
+    const countryCode = getFonnteCountryCode(phone);
     const formData = new FormData();
     formData.append("target", target);
     formData.append("message", message);
-    formData.append("countryCode", "62");
+    formData.append("countryCode", countryCode);
     if (config.sender) {
       formData.append("sender", formatTargetForFonnteApi(config.sender));
     }

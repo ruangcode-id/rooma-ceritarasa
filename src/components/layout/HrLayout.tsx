@@ -6,7 +6,12 @@ import { List, SignOut } from "@phosphor-icons/react";
 import { signOut } from "next-auth/react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
-export default function HrLayout({ children }: { children: React.ReactNode }) {
+interface HrLayoutProps {
+  children: React.ReactNode;
+  user?: any;
+}
+
+export default function HrLayout({ children, user }: HrLayoutProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -38,7 +43,7 @@ export default function HrLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <HrSidebar isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <HrSidebar isOpen={isOpen} onClose={() => setIsOpen(false)} user={user} />
 
       <ConfirmDialog
         open={showLogoutConfirm}

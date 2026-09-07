@@ -22,6 +22,7 @@
     "chart.js": "^4.5.1",
     "cloudinary": "^2.10.0",
     "date-fns": "^4.4.0",
+    "libphonenumber-js": "^1.13.12",
     "lru-cache": "^11.5.2",
     "midtrans-client": "^1.4.3",
     "next": "16.2.4",
@@ -31,6 +32,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-phone-number-input": "^3.4.18",
     "resend": "^6.12.4",
     "web-push": "^3.6.7",
     "zod": "^4.3.6"

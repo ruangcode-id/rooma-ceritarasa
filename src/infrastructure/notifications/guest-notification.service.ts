@@ -287,12 +287,34 @@ export async function notifyGuestReservationConfirmed(reservationId: string) {
     check_in_code: checkInCode,
   };
 
-  await sendWaFromTemplate(
-    reservation.guest.phone,
-    "reservasi_konfirmasi",
-    vars,
-    DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE,
-  );
+  // Generate QR buffer untuk dikirim sebagai gambar via WA
+  let qrBuffer: Buffer | null = null;
+  if (checkInCode) {
+    try {
+      qrBuffer = await generateCheckInQrBuffer(checkInCode);
+    } catch (error) {
+      console.warn("[guest-notify] Failed to generate QR buffer for WA (confirmed):", error);
+    }
+  }
+
+  if (qrBuffer) {
+    await sendWaImageFromTemplate(
+      reservation.guest.phone,
+      "reservasi_konfirmasi",
+      vars,
+      qrBuffer,
+      "check-in-qr.png",
+      DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE,
+    );
+  } else {
+    // Fallback ke teks biasa jika QR gagal di-generate
+    await sendWaFromTemplate(
+      reservation.guest.phone,
+      "reservasi_konfirmasi",
+      vars,
+      DEFAULT_WA_RESERVATION_CONFIRMED_TEMPLATE,
+    );
+  }
 
   if (reservation.guest.email) {
     await sendReservationEmailWithCheckInQr({
