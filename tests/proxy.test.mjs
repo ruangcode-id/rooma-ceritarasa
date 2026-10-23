@@ -23,8 +23,10 @@ assert.equal(
 const expectedMatchers = [
   "/admin/:path*",
   "/owner/:path*",
+  "/hr/:path*",
   "/api/admin/:path*",
   "/api/owner/:path*",
+  "/api/hr/:path*",
 ];
 
 function readConfiguredMatchers() {
@@ -73,8 +75,11 @@ test("proxy matcher protects only admin and owner page/API namespaces", () => {
     "/admin/reservations",
     "/owner",
     "/owner/users",
+    "/hr",
+    "/hr/careers",
     "/api/admin/reservations",
     "/api/owner/users/123",
+    "/api/hr/careers",
   ];
   const publicPaths = [
     "/",

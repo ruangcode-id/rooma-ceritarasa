@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AdminReservationUseCase } from "@/application/use-cases/reservation/reservation.usecase";
-import { requireRole } from "@/lib/auth";
+import { requireAdminApiSession } from "@/lib/require-admin-api";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireRole(["admin", "owner"]);
+    const authResult = await requireAdminApiSession();
+    if (!authResult.ok) return authResult.response;
     const { id } = await params;
 
     const { minutes } = await req.json().catch(() => ({ minutes: 15 }));
