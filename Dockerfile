@@ -1,6 +1,6 @@
 # Stage 1: Install dependencies
 # Salin prisma/ terlebih dahulu agar postinstall (prisma generate) bisa berjalan
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
 COPY package.json package-lock.json ./
@@ -11,7 +11,7 @@ ENV DATABASE_URL="postgresql://prisma:prisma@127.0.0.1:5432/prisma?schema=public
 RUN npm ci
 
 # Stage 2: Build aplikasi Next.js
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
 COPY --from=deps /app/node_modules ./node_modules
@@ -29,7 +29,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # Stage 3: Production runner
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl curl
 

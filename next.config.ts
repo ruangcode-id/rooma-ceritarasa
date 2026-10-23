@@ -40,6 +40,10 @@ const paymentPageHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Delegasikan kompresi ke reverse proxy (Caddy / Cloudflare)
+  // guna meminimalkan attack surface Brotli/zlib decoder di memori Node.js
+  compress: false,
+
   images: {
     deviceSizes: [400, 512, 640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 450, 512],

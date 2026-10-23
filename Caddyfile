@@ -25,6 +25,12 @@
 		-Server
 	}
 
+	# Mitigasi celah Brotli Node.js: Tolak request body masuk yang membawa encoding brotli
+	@malicious_brotli_payload {
+		header Content-Encoding *br*
+	}
+	respond @malicious_brotli_payload "Unsupported Content Encoding" 415
+
 	reverse_proxy app:3000 {
 		health_uri /api/health
 		health_interval 30s
