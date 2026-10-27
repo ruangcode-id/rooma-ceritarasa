@@ -9,6 +9,7 @@ export const createSessionSchema = z.object({
   endTime: z.string().regex(timeRegex, "Invalid end time format (HH:MM or HH:MM:SS)"),
   maxCapacity: z.number().int().positive("Max capacity must be a positive integer"),
   isActive: z.boolean().optional(),
+  isOutdoorAllowed: z.boolean().optional(),
   dayOfWeek: z.array(z.number().int().min(0).max(6))
     .min(1, "dayOfWeek must include at least one day")
     .refine((days) => new Set(days).size === days.length, "dayOfWeek must not contain duplicates"),
@@ -28,6 +29,7 @@ export const updateSessionSchema = z.object({
   endTime: z.string().regex(timeRegex, "Invalid end time format (HH:MM or HH:MM:SS)").optional(),
   maxCapacity: z.number().int().positive("Max capacity must be a positive integer").optional(),
   isActive: z.boolean().optional(),
+  isOutdoorAllowed: z.boolean().optional(),
   dayOfWeek: z.array(z.number().int().min(0).max(6))
     .min(1, "dayOfWeek must include at least one day")
     .refine((days) => new Set(days).size === days.length, "dayOfWeek must not contain duplicates")
