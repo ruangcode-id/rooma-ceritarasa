@@ -273,6 +273,47 @@ export async function updateReservationTablesTransaction(
   });
 }
 
+export async function rescheduleReservationTransaction(
+  reservationId: string,
+  params: {
+    date: Date;
+    sessionId: string;
+    tableIds: string[];
+    newCheckInDeadline: Date | null;
+  }
+) {
+  if (params.tableIds.length === 0) {
+    throw new Error("At least one table is required");
+  }
+
+  return prisma.$transaction(async (tx) => {
+    await tx.reservation.update({
+      where: { id: reservationId },
+      data: {
+        date: params.date,
+        sessionId: params.sessionId,
+        checkInTokenExpiresAt: params.newCheckInDeadline,
+      },
+    });
+
+    await tx.reservationTable.deleteMany({ where: { reservationId } });
+    await tx.reservationTable.createMany({
+      data: params.tableIds.map((tableId) => ({ reservationId, tableId })),
+    });
+
+    return tx.reservation.findUnique({
+      where: { id: reservationId },
+      include: {
+        guest: true,
+        session: true,
+        reservationTables: {
+          include: { table: { select: { id: true, tableNumber: true, capacity: true } } },
+        },
+      },
+    });
+  });
+}
+
 export async function extendCheckInGracePeriod(id: string, minutes: number) {
   const reservation = await prisma.reservation.findUnique({
     where: { id },

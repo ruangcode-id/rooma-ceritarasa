@@ -11,6 +11,7 @@
     "test:proxy": "node --test tests/proxy.test.mjs",
     "test:api-auth": "node --test tests/api-auth-guards.test.mjs",
     "test:ui-errors": "node --test tests/ui-error-handling.test.mjs",
+    "test:dp-reschedule": "node --test tests/dp-reschedule.test.mjs",
     "test:security": "node --test tests/proxy.test.mjs tests/api-auth-guards.test.mjs tests/ui-error-handling.test.mjs tests/security-integrations.test.mjs"
   },
   "dependencies": {

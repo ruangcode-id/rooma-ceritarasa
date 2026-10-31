@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdminApiSession } from "@/lib/require-admin-api";
-import { z } from "zod";
 import { ReservationStatus } from "@/generated/prisma/client";
 import { AdminReservationUseCase } from "@/application/use-cases/reservation/reservation.usecase";
 import { prisma } from "@/infrastructure/database/prisma";
+import { adminUpdateReservationSchema } from "@/validations/reservation.validation";
 
 export async function GET(
   req: NextRequest,
@@ -39,33 +39,15 @@ export async function GET(
   }
 }
 
-const patchBodySchema = z
-  .object({
-    status: z
-      .enum(["confirmed", "checked_in", "no_show", "cancelled"] as const, {
-        error:
-          "Invalid status. Must be one of: confirmed, checked_in, no_show, cancelled",
-      })
-      .optional(),
-    tableIds: z.array(z.string().uuid("Each tableId must be a valid UUID")).min(1).optional(),
-  })
-  .refine((data) => data.status !== undefined || data.tableIds !== undefined, {
-    message: "At least one of 'status' or 'tableIds' must be provided",
-  });
-
 /**
- * Admin Reservation Update (Status & Table Assignment)
+ * Admin Reservation Update (Status, Reschedule Date/Session, Table Assignment)
  * PATCH /api/admin/reservations/[id]
  *
  * Body options:
  *   - { "status": "confirmed" | "checked_in" | "no_show" | "cancelled" }
  *   - { "tableIds": ["uuid-1", "uuid-2", ...] }
- *   - Both combined: { "status": "confirmed", "tableIds": ["uuid-1", "uuid-2"] }
- *
- * Catatan:
- * - "cancelled" akan membebaskan meja dan men-emit event "reservasi_cancelled" ke Dev C.
- * - tableIds mengganti SEMUA meja reservasi secara atomik.
- * - Total kapasitas meja gabungan harus >= partySize tamu (Opsi 1 — Strict Validation).
+ *   - Reschedule: { "date": "2026-11-02", "sessionId": "uuid-session", "tableIds": ["uuid-1"] }
+ *   - Combined with status: { "status": "confirmed", "date": "...", "sessionId": "...", "tableIds": [...] }
  */
 export async function PATCH(
   req: NextRequest,
@@ -92,11 +74,13 @@ export async function PATCH(
         { status: 400 }
       );
     }
-    const parsed = patchBodySchema.parse(json);
+    const parsed = adminUpdateReservationSchema.parse(json);
 
     const result = await AdminReservationUseCase.updateReservationAction({
       reservationId: id,
       status: parsed.status as ReservationStatus | undefined,
+      date: parsed.date,
+      sessionId: parsed.sessionId,
       tableIds: parsed.tableIds,
     });
 
@@ -105,22 +89,23 @@ export async function PATCH(
     const message = error instanceof Error ? error.message : "";
     const name = error instanceof Error ? error.name : "";
 
-
-
     if (name === "ZodError") {
       return NextResponse.json(
-        { success: false, error: "Invalid request body" },
+        { success: false, error: message || "Invalid request body" },
         { status: 400 }
       );
     }
 
-    // Kapasitas kurang / meja tidak tersedia / reservasi tidak ditemukan (business rule error)
+    // Business rule error (kapasitas kurang, tutup senin, blocked date, meja konflik, dll)
     if (
       message.includes("tidak ditemukan") ||
       message.includes("tidak mencukupi") ||
-      message.includes("sudah dipesan")
+      message.includes("sudah dipesan") ||
+      message.includes("tidak tersedia") ||
+      message.includes("tutup setiap hari") ||
+      message.includes("outdoor")
     ) {
-      return NextResponse.json({ success: false, error: "Validation or business rule error" }, { status: 400 });
+      return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 
     // Prisma: record not found
