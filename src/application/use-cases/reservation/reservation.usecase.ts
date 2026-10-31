@@ -14,9 +14,11 @@ import {
   updateReservationStatus,
   getReservationById,
   updateReservationTablesTransaction,
+  rescheduleReservationTransaction,
   AdminReservationFilters,
   extendCheckInGracePeriod,
 } from "@/infrastructure/repositories/reservation.repository";
+import { buildCheckInDeadline } from "@/infrastructure/check-in/grace";
 import { appEvents, EVENTS } from "@/lib/events";
 import { prisma } from "@/infrastructure/database/prisma";
 import { createPublicReservation } from "@/features/reservations/reservation.service";
@@ -197,14 +199,113 @@ export const AdminReservationUseCase = {
     return getAdminReservations(filters);
   },
 
+  rescheduleReservationAction: async (input: {
+    reservationId: string;
+    date?: string;
+    sessionId?: string;
+    tableIds: string[];
+  }) => {
+    const { reservationId, date, sessionId, tableIds } = input;
+    const reservation = await getReservationById(reservationId);
+    if (!reservation) {
+      throw new Error("Reservasi tidak ditemukan.");
+    }
+
+    const targetDate = date ? parseDateOnlyUTC(date) : reservation.date;
+    const targetSessionId = sessionId ?? reservation.sessionId;
+
+    // Check if target date is blocked
+    const isBlocked = await BlockedDateRepository.isDateBlocked(targetDate);
+    if (isBlocked) {
+      const dateStr = date ?? reservation.date.toISOString().slice(0, 10);
+      throw new Error(`Tanggal ${dateStr} tidak tersedia untuk reservasi.`);
+    }
+
+    // Check Monday closure
+    if (targetDate.getUTCDay() === 1) {
+      const isSpecialOpen = await SpecialOpenDateRepository.isDateSpecialOpen(targetDate);
+      if (!isSpecialOpen) {
+        throw new Error("Restoran tutup setiap hari Senin. Silakan pilih tanggal lain.");
+      }
+    }
+
+    // Check session exists and is active
+    const targetSession = await prisma.restaurantSession.findUnique({
+      where: { id: targetSessionId },
+      select: { id: true, name: true, startTime: true, isActive: true },
+    });
+    if (!targetSession || !targetSession.isActive) {
+      throw new Error("Sesi tidak ditemukan atau sedang tidak aktif.");
+    }
+
+    // Check tables availability (exclude current reservation to allow re-picking same tables)
+    await checkMultipleTablesAvailability(
+      tableIds,
+      targetSessionId,
+      targetDate,
+      reservationId
+    );
+
+    // Check capacity
+    const tables = await prisma.table.findMany({
+      where: { id: { in: tableIds } },
+      select: { id: true, capacity: true, tableNumber: true },
+    });
+    const totalCapacity = tables.reduce((sum, t) => sum + t.capacity, 0);
+
+    if (totalCapacity < reservation.partySize) {
+      throw new Error(
+        `Kapasitas total meja yang dipilih (${totalCapacity} orang) tidak mencukupi untuk jumlah tamu reservasi (${reservation.partySize} orang).`
+      );
+    }
+
+    // Calculate new checkInDeadline
+    const existingGrace = reservation.graceExtensionMinutes ?? 0;
+    const newCheckInDeadline = buildCheckInDeadline(
+      targetDate,
+      targetSession.startTime,
+      15 + existingGrace,
+      new Date()
+    );
+
+    const updated = await rescheduleReservationTransaction(reservationId, {
+      date: targetDate,
+      sessionId: targetSessionId,
+      tableIds,
+      newCheckInDeadline,
+    });
+
+    if (reservation.status === ReservationStatus.confirmed) {
+      notifyGuestReservationConfirmed(reservationId).catch((err) =>
+        console.error("[admin-reschedule] guest notify failed:", err)
+      );
+    }
+
+    return updated;
+  },
+
   updateReservationAction: async (input: {
     reservationId: string;
     status?: ReservationStatus;
+    date?: string;
+    sessionId?: string;
     tableIds?: string[];
   }) => {
-    const { reservationId, status, tableIds } = input;
+    const { reservationId, status, date, sessionId, tableIds } = input;
 
-    if (tableIds && tableIds.length > 0) {
+    let rescheduled = false;
+    if (date !== undefined || sessionId !== undefined) {
+      if (!tableIds || tableIds.length === 0) {
+        throw new Error("Meja (tableIds) wajib dipilih saat mengubah tanggal atau sesi reservasi.");
+      }
+      await AdminReservationUseCase.rescheduleReservationAction({
+        reservationId,
+        date,
+        sessionId,
+        tableIds,
+      });
+      rescheduled = true;
+    } else if (tableIds && tableIds.length > 0) {
       const reservation = await getReservationById(reservationId);
       if (!reservation) {
         throw new Error("Reservasi tidak ditemukan.");
@@ -214,7 +315,7 @@ export const AdminReservationUseCase = {
         tableIds,
         reservation.sessionId,
         reservation.date,
-        reservationId,
+        reservationId
       );
 
       const tables = await prisma.table.findMany({
@@ -225,7 +326,7 @@ export const AdminReservationUseCase = {
 
       if (totalCapacity < reservation.partySize) {
         throw new Error(
-          `Kapasitas total meja yang dipilih (${totalCapacity} orang) tidak mencukupi untuk jumlah tamu reservasi (${reservation.partySize} orang).`,
+          `Kapasitas total meja yang dipilih (${totalCapacity} orang) tidak mencukupi untuk jumlah tamu reservasi (${reservation.partySize} orang).`
         );
       }
 
@@ -251,14 +352,24 @@ export const AdminReservationUseCase = {
         existing.status !== ReservationStatus.confirmed
       ) {
         notifyGuestReservationConfirmed(reservationId).catch((err) =>
-          console.error("[admin-reservation] guest notify failed:", err),
+          console.error("[admin-reservation] guest notify failed:", err)
         );
       }
 
-      return { reservationId, updatedStatus: updatedReservation.status, tablesUpdated: !!tableIds };
+      return {
+        reservationId,
+        updatedStatus: updatedReservation.status,
+        tablesUpdated: !!tableIds,
+        rescheduled,
+      };
     }
 
-    return { reservationId, updatedStatus: null, tablesUpdated: !!tableIds };
+    return {
+      reservationId,
+      updatedStatus: null,
+      tablesUpdated: !!tableIds,
+      rescheduled,
+    };
   },
 
   createManualReservationAction: async (

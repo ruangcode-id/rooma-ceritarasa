@@ -140,13 +140,16 @@ export default function ReservationIntro({ onNext }: ReservationIntroProps) {
                   <Users size={20} weight="fill" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900">Deposit Policy</h4>
+                  <h4 className="font-bold text-slate-900">Deposit & Reschedule Policy</h4>
                   <p className="text-sm text-slate-600 leading-relaxed mt-1">
                     Deposits will be deducted from your final bill:
                     <br/>• <strong className="text-slate-900">1-2 Pax:</strong> No deposit (Rp 75.000 on weekends)
                     <br/>• <strong className="text-slate-900">3-4 Pax:</strong> Rp 150.000
                     <br/>• <strong className="text-slate-900">5+ Pax:</strong> Rp 300.000
                     <br/>• <strong className="text-slate-900">10+ Pax:</strong> Min. order Rp 1.000.000
+                    <br/><br/>
+                    • <strong className="text-slate-900">Non-Refundable:</strong> Uang deposit (DP) bersifat non-refundable (tidak dapat dikembalikan jika dibatalkan).
+                    <br/>• <strong className="text-slate-900">Reschedule:</strong> Perubahan jadwal/sesi dapat dilakukan maksimal <strong className="text-slate-900">H-1</strong> dengan menghubungi Admin via WhatsApp (tergantung ketersediaan meja).
                   </p>
                 </div>
               </div>
@@ -174,7 +177,7 @@ export default function ReservationIntro({ onNext }: ReservationIntroProps) {
               </div>
             </div>
             <div className="text-sm text-slate-700 font-medium">
-              I have read and agree to the <span className="font-bold text-slate-900">House Rules</span>, <span className="font-bold text-slate-900">Deposit Policy</span>, and understand that seating preferences are subject to availability.
+              I have read and agree to the <span className="font-bold text-slate-900">House Rules</span>, <span className="font-bold text-slate-900">Deposit & Reschedule Policy (Non-Refundable)</span>, and understand that seating preferences are subject to availability.
             </div>
           </label>
 
