@@ -212,8 +212,9 @@ model RestaurantSession {
   startTime   DateTime @map("start_time") @db.Time()
   endTime     DateTime @map("end_time") @db.Time()
   maxCapacity Int      @map("max_capacity")
-  isActive    Boolean  @default(true) @map("is_active")
-  dayOfWeek   Int[]    @map("day_of_week")
+  isActive         Boolean  @default(true) @map("is_active")
+  dayOfWeek        Int[]    @map("day_of_week")
+  isOutdoorAllowed Boolean  @default(true) @map("is_outdoor_allowed")
 
   // Relations
   reservations Reservation[]

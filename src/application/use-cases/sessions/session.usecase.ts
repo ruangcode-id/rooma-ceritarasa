@@ -138,6 +138,7 @@ export const SessionUseCase = {
       endTime: parseTime(parsedData.endTime),
       maxCapacity: parsedData.maxCapacity,
       isActive: parsedData.isActive ?? true,
+      isOutdoorAllowed: parsedData.isOutdoorAllowed ?? true,
       dayOfWeek: parsedData.dayOfWeek,
     });
   },

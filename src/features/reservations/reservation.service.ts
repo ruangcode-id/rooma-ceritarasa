@@ -7,7 +7,7 @@ import {
 } from "@/generated/prisma/client";
 import { appEvents, EVENTS } from "@/lib/events";
 import { buildCheckInDeadline } from "@/infrastructure/check-in/grace";
-import { isSessionOne, isOutdoorTable } from "@/features/tables/table.service";
+import { isSessionOutdoorAllowed, isOutdoorTable } from "@/features/tables/table.service";
 
 const RESERVATION_PENDING_EXPIRY_MINUTES = 15;
 
@@ -231,13 +231,13 @@ export async function createPublicReservation(
       );
     }
 
-    if (isSessionOne(session)) {
+    if (!isSessionOutdoorAllowed(session)) {
       const outdoorTable = selectedTables.find((t) =>
         isOutdoorTable(t.tableNumber)
       );
       if (outdoorTable) {
         throw new Error(
-          "Outdoor tables are not available for Session 1 (15:00 - 17:00). Please select an indoor table or another session."
+          "Meja outdoor tidak tersedia untuk sesi ini. Silakan pilih meja indoor atau sesi lainnya."
         );
       }
     }

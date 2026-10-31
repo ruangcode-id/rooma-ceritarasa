@@ -14,6 +14,7 @@ type SessionData = {
   endTime: string;
   maxCapacity: number;
   isActive: boolean;
+  isOutdoorAllowed: boolean;
   dayOfWeek: number[];
 };
 
@@ -38,6 +39,7 @@ async function fetchSessions(signal?: AbortSignal): Promise<SessionData[]> {
 
   return (payload.data ?? []).map((session) => ({
     ...session,
+    isOutdoorAllowed: session.isOutdoorAllowed ?? true,
     startTime: typeof session.startTime === "string" ? session.startTime.substring(11, 16) : session.startTime,
     endTime: typeof session.endTime === "string" ? session.endTime.substring(11, 16) : session.endTime,
   }));
@@ -61,6 +63,7 @@ export default function AdminSessionsClient() {
   const [newCapacity, setNewCapacity] = useState("");
   const [newDays, setNewDays] = useState<number[]>([]);
   const [isActive, setIsActive] = useState(true);
+  const [isOutdoorAllowed, setIsOutdoorAllowed] = useState(true);
 
   async function loadSessions() {
     setIsLoading(true);
@@ -102,6 +105,7 @@ export default function AdminSessionsClient() {
     setNewCapacity("");
     setNewDays([]);
     setIsActive(true);
+    setIsOutdoorAllowed(true);
   };
 
   const handleEditClick = (session: SessionData) => {
@@ -111,6 +115,7 @@ export default function AdminSessionsClient() {
     setNewCapacity(String(session.maxCapacity));
     setNewDays(session.dayOfWeek);
     setIsActive(session.isActive);
+    setIsOutdoorAllowed(session.isOutdoorAllowed ?? true);
     setEditSessionId(session.id);
     setIsAdding(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -169,6 +174,7 @@ export default function AdminSessionsClient() {
         endTime: newEndTime,
         maxCapacity: parseInt(newCapacity),
         isActive: isActive,
+        isOutdoorAllowed: isOutdoorAllowed,
         dayOfWeek: newDays,
       };
 
@@ -225,19 +231,30 @@ export default function AdminSessionsClient() {
 
       {isAdding && (
         <form onSubmit={handleAddSession} className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-5 animate-in slide-in-from-top-4">
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-2">
             <h2 className="text-lg font-bold text-slate-900">{editSessionId ? "Edit Operational Session" : "Add New Session"}</h2>
-            {editSessionId && (
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer bg-amber-50/60 border border-amber-200/60 px-3 py-1.5 rounded-lg">
                 <input 
                   type="checkbox" 
-                  checked={isActive} 
-                  onChange={(e) => setIsActive(e.target.checked)}
+                  checked={isOutdoorAllowed} 
+                  onChange={(e) => setIsOutdoorAllowed(e.target.checked)}
                   className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
                 />
-                <span className="text-sm font-semibold text-slate-700">Active Session</span>
+                <span className="text-xs font-semibold text-amber-900">☀️ Buka Area Outdoor</span>
               </label>
-            )}
+              {editSessionId && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={isActive} 
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    className="w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary"
+                  />
+                  <span className="text-sm font-semibold text-slate-700">Active Session</span>
+                </label>
+              )}
+            </div>
           </div>
           <div className="grid gap-5 md:grid-cols-2">
             <div>
@@ -320,9 +337,14 @@ export default function AdminSessionsClient() {
               <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-lg font-bold text-slate-900">{session.name}</h3>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase ${session.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                  {session.isActive ? 'Active' : 'Inactive'}
-                </span>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase ${session.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                    {session.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${session.isOutdoorAllowed !== false ? 'bg-amber-50 text-amber-700 border border-amber-200/80' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+                    {session.isOutdoorAllowed !== false ? '☀️ Outdoor Buka' : '🏠 Indoor Only'}
+                  </span>
+                </div>
               </div>
               
               <div className="space-y-3 mb-5">

@@ -16,6 +16,7 @@ interface Session {
   name: string;
   startTime: string;
   endTime: string;
+  isOutdoorAllowed?: boolean;
 }
 
 interface Table {
@@ -73,7 +74,7 @@ const TABLE_COMBINATIONS = [
  * Deteksi Sesi 1 di sisi client — konsisten dengan backend `isSessionOne()`.
  * Digunakan untuk menampilkan info banner bahwa Sesi 1 hanya indoor.
  */
-function clientIsSession1(session?: { name: string; startTime?: string } | null): boolean {
+function clientIsSession1(session?: { name: string; startTime?: string; isOutdoorAllowed?: boolean } | null): boolean {
   if (!session) return false;
   const name = session.name.trim().toLowerCase();
   if (
@@ -90,6 +91,18 @@ function clientIsSession1(session?: { name: string; startTime?: string } | null)
   }
 
   return false;
+}
+
+/**
+ * Deteksi apakah area outdoor ditutup untuk sesi tertentu.
+ * Mengutamakan field `isOutdoorAllowed` dari backend.
+ */
+function clientIsOutdoorClosed(session?: Session | null): boolean {
+  if (!session) return false;
+  if (session.isOutdoorAllowed !== undefined && session.isOutdoorAllowed !== null) {
+    return !session.isOutdoorAllowed;
+  }
+  return clientIsSession1(session);
 }
 
 type ModalType = "guests" | "date" | "time" | null;
@@ -694,18 +707,18 @@ export default function ReservationWizard({
               Please select your preferred seating area. For special occasions or private events, kindly contact our Reservations Team.
             </p>
 
-            {/* Session 1 indoor-only info banner */}
-            {selectedSessionId && clientIsSession1(
+            {/* Session outdoor-closed info banner */}
+            {selectedSessionId && clientIsOutdoorClosed(
               sessions.find(s => s.id === selectedSessionId)
             ) && (
               <div className="mb-8 w-full max-w-md mx-auto flex items-start gap-4 rounded-2xl bg-[#fcfbf9] border border-amber-200/60 p-5 shadow-sm animate-in fade-in duration-500">
                 <Info size={24} weight="fill" className="text-amber-600 shrink-0 mt-0.5" />
                 <div className="text-left">
                   <p className="text-xs uppercase tracking-[0.25em] font-semibold text-amber-800 mb-1">
-                    Indoor Only — Session 1
+                    Indoor Only — {sessions.find(s => s.id === selectedSessionId)?.name ?? "This Session"}
                   </p>
                   <p className="text-sm leading-relaxed text-slate-600">
-                    Session 1 (15:00–17:00) is available for <span className="font-semibold text-slate-800">indoor</span> seating only. Outdoor tables are available from Session 2 onwards.
+                    Area outdoor ditutup untuk sesi ini. Meja outdoor tersedia mulai Sesi 3 (17:00 ke atas).
                   </p>
                 </div>
               </div>
@@ -718,8 +731,9 @@ export default function ReservationWizard({
                 Sorry, no tables available for this session.
               </div>
             ) : (() => {
-              const isS1 = selectedSessionId && clientIsSession1(sessions.find(s => s.id === selectedSessionId));
-              const visibleCombos = isS1
+              const currentSession = sessions.find(s => s.id === selectedSessionId);
+              const isOutdoorClosed = selectedSessionId && clientIsOutdoorClosed(currentSession);
+              const visibleCombos = isOutdoorClosed
                 ? TABLE_COMBINATIONS.filter(combo => !combo.id.startsWith("outdoor") && !combo.tables.some(t => /out/i.test(t)))
                 : TABLE_COMBINATIONS;
 

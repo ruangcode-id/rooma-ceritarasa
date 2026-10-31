@@ -144,13 +144,19 @@ const unblockedTableWhere = (
 });
 
 /**
- * Helper untuk mendeteksi apakah sebuah sesi adalah Sesi 1 (15.00 - 17.00 WIB).
- * Khusus Sesi 1, area outdoor (OUT-1 s/d OUT-4 / Outdoor 1 s/d Outdoor 4) ditiadakan karena kondisi sore masih terik/panas.
+ * Helper untuk mendeteksi apakah sebuah sesi mengizinkan area outdoor.
+ * Memprioritaskan nilai field `isOutdoorAllowed` dari database.
+ * Fallback: Jika belum diset, anggap Sesi 1 / jam 15.00 outdoor tidak tersedia.
  */
-export function isSessionOne(session: {
+export function isSessionOutdoorAllowed(session: {
   name: string;
   startTime?: Date | string | null;
+  isOutdoorAllowed?: boolean | null;
 }): boolean {
+  if (session.isOutdoorAllowed !== undefined && session.isOutdoorAllowed !== null) {
+    return session.isOutdoorAllowed;
+  }
+
   const name = session.name.trim().toLowerCase();
   if (
     /\b(one|1)\b/i.test(name) ||
@@ -158,7 +164,7 @@ export function isSessionOne(session: {
     name === "sesi 1" ||
     name === "session 1"
   ) {
-    return true;
+    return false;
   }
 
   if (session.startTime) {
@@ -167,11 +173,22 @@ export function isSessionOne(session: {
         ? session.startTime
         : session.startTime.toISOString();
     if (timeStr.includes("15:00") || timeStr.includes("15.00")) {
-      return true;
+      return false;
     }
   }
 
-  return false;
+  return true;
+}
+
+/**
+ * Backward-compatibility alias
+ */
+export function isSessionOne(session: {
+  name: string;
+  startTime?: Date | string | null;
+  isOutdoorAllowed?: boolean | null;
+}): boolean {
+  return !isSessionOutdoorAllowed(session);
 }
 
 /**
@@ -239,7 +256,7 @@ export const checkTableAvailability = async (
     }),
     prisma.restaurantSession.findUnique({
       where: { id: sessionId },
-      select: { name: true, startTime: true },
+      select: { name: true, startTime: true, isOutdoorAllowed: true },
     }),
   ]);
 
@@ -247,9 +264,9 @@ export const checkTableAvailability = async (
     throw new Error("Meja tidak ditemukan atau tidak tersedia untuk reservasi.");
   }
 
-  if (session && isSessionOne(session) && isOutdoorTable(table.tableNumber)) {
+  if (session && !isSessionOutdoorAllowed(session) && isOutdoorTable(table.tableNumber)) {
     throw new Error(
-      "Outdoor tables are not available for Session 1 (15:00 - 17:00). Please select an indoor table or another session."
+      "Meja outdoor tidak tersedia untuk sesi ini. Silakan pilih meja indoor atau sesi lainnya."
     );
   }
 
@@ -286,17 +303,17 @@ export const getPublicTableAvailability = async (
   const normalizedDate = parseDateOnlyUTC(date);
   const now = new Date();
 
-  // Khusus Sesi 1 (15.00 - 17.00), area outdoor tidak tersedia (terik matahari)
+  // Periksa apakah sesi mengizinkan meja outdoor
   const session = await prisma.restaurantSession.findUnique({
     where: { id: sessionId },
-    select: { name: true, startTime: true },
+    select: { name: true, startTime: true, isOutdoorAllowed: true },
   });
-  const isSession1 = session ? isSessionOne(session) : false;
+  const allowOutdoor = session ? isSessionOutdoorAllowed(session) : true;
 
   const allTables = await prisma.table.findMany({
     where: {
       isActive: true,
-      ...(isSession1 ? NOT_OUTDOOR_TABLE_FILTER : {}),
+      ...(!allowOutdoor ? NOT_OUTDOOR_TABLE_FILTER : {}),
     },
     orderBy: [{ tableNumber: "asc" }],
     select: {
@@ -357,9 +374,9 @@ export const getAvailableTables = async (
 
   const session = await prisma.restaurantSession.findUnique({
     where: { id: sessionId },
-    select: { name: true, startTime: true },
+    select: { name: true, startTime: true, isOutdoorAllowed: true },
   });
-  const isSession1 = session ? isSessionOne(session) : false;
+  const allowOutdoor = session ? isSessionOutdoorAllowed(session) : true;
 
   const tables = await prisma.table.findMany({
     where: {
@@ -367,7 +384,7 @@ export const getAvailableTables = async (
       capacity: {
         gte: capacity,
       },
-      ...(isSession1 ? NOT_OUTDOOR_TABLE_FILTER : {}),
+      ...(!allowOutdoor ? NOT_OUTDOOR_TABLE_FILTER : {}),
     },
     orderBy: [
       { capacity: "asc" },
@@ -458,7 +475,7 @@ export const checkMultipleTablesAvailability = async (
     }),
     prisma.restaurantSession.findUnique({
       where: { id: sessionId },
-      select: { name: true, startTime: true },
+      select: { name: true, startTime: true, isOutdoorAllowed: true },
     }),
   ]);
 
@@ -470,12 +487,12 @@ export const checkMultipleTablesAvailability = async (
     );
   }
 
-  // Khusus Sesi 1: tolak jika ada meja outdoor
-  if (session && isSessionOne(session)) {
+  // Tolak jika sesi tidak mengizinkan meja outdoor tapi ada meja outdoor dipilih
+  if (session && !isSessionOutdoorAllowed(session)) {
     const outdoorTable = activeTables.find((t) => isOutdoorTable(t.tableNumber));
     if (outdoorTable) {
       throw new Error(
-        "Outdoor tables are not available for Session 1 (15:00 - 17:00). Please select an indoor table or another session.",
+        "Meja outdoor tidak tersedia untuk sesi ini. Silakan pilih meja indoor atau sesi lainnya.",
       );
     }
   }
