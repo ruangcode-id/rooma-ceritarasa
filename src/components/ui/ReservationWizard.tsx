@@ -142,6 +142,7 @@ type PaymentState =
 type ReservationWizardProps = {
   snapClientKey: string;
   snapScriptUrl: string;
+  initialSessions?: Session[];
 };
 
 function formatRupiah(amount: number) {
@@ -155,6 +156,7 @@ function formatRupiah(amount: number) {
 export default function ReservationWizard({
   snapClientKey,
   snapScriptUrl,
+  initialSessions,
 }: ReservationWizardProps) {
   const searchParams = useSearchParams();
   const vipToken = searchParams.get("vipToken");
@@ -452,7 +454,12 @@ export default function ReservationWizard({
       )}
 
       {/* --- STEP 0: INTRO & HOUSE RULES --- */}
-      {step === 0 && <ReservationIntro onNext={() => setStep(1)} />}
+      {step === 0 && (
+        <ReservationIntro
+          onNext={() => setStep(1)}
+          sessions={initialSessions}
+        />
+      )}
 
       {/* --- STEP 1: SELECTION --- */}
       {step === 1 && (

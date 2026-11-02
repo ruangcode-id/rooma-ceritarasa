@@ -1,11 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Check, Info, Clock, ShieldCheck, MapPin, Users, WarningCircle } from "@phosphor-icons/react";
 
+export interface PublicSessionInfo {
+  id?: string;
+  name: string;
+  startTime: string | Date;
+  endTime: string | Date;
+  isOutdoorAllowed?: boolean;
+}
+
 interface ReservationIntroProps {
   onNext: () => void;
+  sessions?: PublicSessionInfo[];
+}
+
+const DEFAULT_SESSIONS: PublicSessionInfo[] = [
+  { id: "s1", name: "Sesi 1 (Lunch)", startTime: "12:00", endTime: "13:30", isOutdoorAllowed: false },
+  { id: "s2", name: "Sesi 2 (Afternoon)", startTime: "15:00", endTime: "16:30", isOutdoorAllowed: false },
+  { id: "s3", name: "Sesi 3 (Dinner 1)", startTime: "17:00", endTime: "19:00", isOutdoorAllowed: true },
+  { id: "s4", name: "Sesi 4 (Dinner 2)", startTime: "19:30", endTime: "21:30", isOutdoorAllowed: true },
+];
+
+function formatSessionTime(val: string | Date | undefined): string {
+  if (!val) return "";
+  if (typeof val === "string") {
+    const trimmed = val.trim();
+    if (/^\d{1,2}[:.]\d{2}$/.test(trimmed)) {
+      return trimmed.replace(".", ":");
+    }
+  }
+  try {
+    const d = new Date(val);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString("en-GB", { timeZone: "UTC", hour: "2-digit", minute: "2-digit" });
+    }
+  } catch {}
+  return String(val);
 }
 
 const AREAS = [
@@ -39,8 +72,34 @@ const AREAS = [
   },
 ];
 
-export default function ReservationIntro({ onNext }: ReservationIntroProps) {
+export default function ReservationIntro({ onNext, sessions: initialSessions }: ReservationIntroProps) {
   const [isAgreed, setIsAgreed] = useState(false);
+  const [sessions, setSessions] = useState<PublicSessionInfo[]>(
+    initialSessions && initialSessions.length > 0 ? initialSessions : []
+  );
+
+  useEffect(() => {
+    if (initialSessions && initialSessions.length > 0) {
+      setSessions(initialSessions);
+      return;
+    }
+
+    let isMounted = true;
+    fetch("/api/public/sessions")
+      .then((res) => res.json())
+      .then((payload) => {
+        if (isMounted && payload?.success && Array.isArray(payload.data) && payload.data.length > 0) {
+          setSessions(payload.data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialSessions]);
+
+  const displaySessions = sessions.length > 0 ? sessions : DEFAULT_SESSIONS;
 
   return (
     <div className="w-full max-w-4xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -125,45 +184,37 @@ export default function ReservationIntro({ onNext }: ReservationIntroProps) {
                 <div>
                   <h4 className="font-bold text-slate-900">Dining Sessions</h4>
                   <p className="text-sm text-slate-600 leading-relaxed mt-1 mb-3">
-                    Each table is reserved for <strong className="text-slate-900">120 minutes</strong>. Choose from our available session times:
+                    Dining duration is <strong className="text-slate-900">90 minutes</strong> for Lunch &amp; Afternoon sessions, and <strong className="text-slate-900">120 minutes</strong> for Dinner sessions. Choose from our available session times:
                   </p>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-sm">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-semibold text-slate-900">Session One</span>
-                        <span className="text-xs text-slate-500">15:00 – 17:00</span>
-                      </div>
-                      <span className="text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded-full">
-                        Indoor Only
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-sm">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-semibold text-slate-900">Session Two</span>
-                        <span className="text-xs text-slate-500">17:30 – 19:30</span>
-                      </div>
-                      <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                        Indoor &amp; Outdoor
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-sm">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-semibold text-slate-900">Dinner</span>
-                        <span className="text-xs text-slate-500">18:00 – 20:00</span>
-                      </div>
-                      <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                        Indoor &amp; Outdoor
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-sm">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-semibold text-slate-900">Session Three</span>
-                        <span className="text-xs text-slate-500">20:00 – 22:00</span>
-                      </div>
-                      <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                        Indoor &amp; Outdoor
-                      </span>
-                    </div>
+                    {displaySessions.map((session, idx) => {
+                      const isOutdoor = session.isOutdoorAllowed !== false;
+                      const startTimeStr = formatSessionTime(session.startTime);
+                      const endTimeStr = formatSessionTime(session.endTime);
+
+                      return (
+                        <div
+                          key={session.id || idx}
+                          className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-sm"
+                        >
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-semibold text-slate-900">{session.name}</span>
+                            <span className="text-xs text-slate-500">
+                              {startTimeStr} – {endTimeStr}
+                            </span>
+                          </div>
+                          {isOutdoor ? (
+                            <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                              Indoor &amp; Outdoor
+                            </span>
+                          ) : (
+                            <span className="text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded-full">
+                              Indoor Only
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>

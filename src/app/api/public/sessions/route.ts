@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { SessionUseCase } from "@/application/use-cases/sessions/session.usecase";
+import { prisma } from "@/infrastructure/database/prisma";
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const dateStr = searchParams.get("date");
     if (!dateStr) {
-      return NextResponse.json(
-        { success: false, error: "Missing required query param: date (YYYY-MM-DD)" },
-        { status: 400 }
-      );
+      const activeSessions = await prisma.restaurantSession.findMany({
+        where: { isActive: true },
+        orderBy: { startTime: "asc" },
+      });
+      return NextResponse.json({
+        success: true,
+        data: activeSessions,
+      });
     }
 
     const date = new Date(`${dateStr}T00:00:00.000Z`);
