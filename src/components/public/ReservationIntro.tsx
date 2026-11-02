@@ -124,12 +124,47 @@ export default function ReservationIntro({ onNext }: ReservationIntroProps) {
                 </div>
                 <div>
                   <h4 className="font-bold text-slate-900">Dining Sessions</h4>
-                  <p className="text-sm text-slate-600 leading-relaxed mt-1">
-                    Each table is reserved for <strong className="text-slate-900">120 minutes</strong>. Our session times are:
-                    <br/>• 15:00 - 17:00
-                    <br/>• 17:30 - 19:30
-                    <br/>• 20:00 - 22:00
+                  <p className="text-sm text-slate-600 leading-relaxed mt-1 mb-3">
+                    Each table is reserved for <strong className="text-slate-900">120 minutes</strong>. Choose from our available session times:
                   </p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-sm">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-semibold text-slate-900">Session One</span>
+                        <span className="text-xs text-slate-500">15:00 – 17:00</span>
+                      </div>
+                      <span className="text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200/70 px-2 py-0.5 rounded-full">
+                        Indoor Only
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-sm">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-semibold text-slate-900">Session Two</span>
+                        <span className="text-xs text-slate-500">17:30 – 19:30</span>
+                      </div>
+                      <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                        Indoor &amp; Outdoor
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-sm">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-semibold text-slate-900">Dinner</span>
+                        <span className="text-xs text-slate-500">18:00 – 20:00</span>
+                      </div>
+                      <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                        Indoor &amp; Outdoor
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-lg px-3 py-2 text-sm">
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-semibold text-slate-900">Session Three</span>
+                        <span className="text-xs text-slate-500">20:00 – 22:00</span>
+                      </div>
+                      <span className="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                        Indoor &amp; Outdoor
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
