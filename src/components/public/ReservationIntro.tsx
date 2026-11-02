@@ -80,7 +80,6 @@ export default function ReservationIntro({ onNext, sessions: initialSessions }: 
 
   useEffect(() => {
     if (initialSessions && initialSessions.length > 0) {
-      setSessions(initialSessions);
       return;
     }
 
