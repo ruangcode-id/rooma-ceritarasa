@@ -1,36 +1,31 @@
 -- ============================================================
--- Table Capacity Update — Flexible Tables
--- Rooma Ceritarasa Restaurant
+-- Table Capacity Update — Meja 8 & Meja 10
+-- Rooma Ceritarasa (maintenance Nov 2026)
 --
--- Context:
--- Table 5, 8, and 10 are physically expandable — staff can
--- add extra chairs. This script updates their capacity to
--- the true maximum they can accommodate.
+-- Target:
+--   Table 8  → 3 pax
+--   Table 10 → 2 pax (previously 3 in the system)
 --
--- Before running: verify table numbers match current data
---   SELECT "tableNumber", "capacity" FROM "Table" ORDER BY "tableNumber"::int;
+-- Matches Prisma mapping:
+--   model Table @@map("tables")
+--   tableNumber @map("table_number")
 --
--- Run on VPS:
---   psql -U <user> -d <db_name> -f scripts/update-table-capacity.sql
+-- Before running:
+--   SELECT table_number, capacity FROM tables ORDER BY table_number;
+--
+-- Run:
+--   psql "$DATABASE_URL" -f scripts/update-table-capacity.sql
 -- ============================================================
 
--- Table 5: default 4 seats → max 6 seats (2 extra chairs)
-UPDATE "Table"
-SET "capacity" = 6
-WHERE "tableNumber" = '5';
+UPDATE tables
+SET capacity = 3
+WHERE table_number IN ('8', 'Table 8', 'T8');
 
--- Table 8: default 2 seats → max 3 seats (1 extra chair)
-UPDATE "Table"
-SET "capacity" = 3
-WHERE "tableNumber" = '8';
+UPDATE tables
+SET capacity = 2
+WHERE table_number IN ('10', 'Table 10', 'T10');
 
--- Table 10: default 2 seats → max 3 seats (1 extra chair)
-UPDATE "Table"
-SET "capacity" = 3
-WHERE "tableNumber" = '10';
-
--- Verify
-SELECT "tableNumber", "capacity"
-FROM "Table"
-WHERE "tableNumber" IN ('5', '8', '10')
-ORDER BY "tableNumber"::int;
+SELECT table_number, capacity
+FROM tables
+WHERE table_number IN ('8', 'Table 8', 'T8', '10', 'Table 10', 'T10')
+ORDER BY table_number;

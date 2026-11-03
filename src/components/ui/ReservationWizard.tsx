@@ -59,8 +59,8 @@ const TABLE_COMBINATIONS = [
   // 3. Combined Groups
   { id: "combo_4_5", name: "Table 4 & 5", tables: ["Table 4", "Table 5"], minPax: 4, maxPax: 7, note: "Combined Area" },
   { id: "combo_6_7", name: "Table 6 & 7", tables: ["Table 6", "Table 7"], minPax: 3, maxPax: 4, note: "Combined Area" },
-  { id: "combo_8_9", name: "Table 8 & 9", tables: ["Table 8", "Table 9"], minPax: 8, maxPax: 10, note: "Combined for Large Groups" },
-  { id: "combo_8_9_10", name: "Table 8, 9 & 10", tables: ["Table 8", "Table 9", "Table 10"], minPax: 10, maxPax: 13, note: "Combined for VIP/Events" },
+  { id: "combo_8_9", name: "Table 8 & 9", tables: ["Table 8", "Table 9"], minPax: 8, maxPax: 9, note: "Combined for Large Groups" },
+  { id: "combo_8_9_10", name: "Table 8, 9 & 10", tables: ["Table 8", "Table 9", "Table 10"], minPax: 10, maxPax: 11, note: "Combined for VIP/Events" },
   { id: "combo_6_7_8_9_10", name: "Table 6, 7, 8, 9 & 10", tables: ["Table 6", "Table 7", "Table 8", "Table 9", "Table 10"], minPax: 14, maxPax: 15, note: "Combined for Very Large Groups" },
 
   // 4. Outdoor Tables
