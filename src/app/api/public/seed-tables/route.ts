@@ -8,7 +8,7 @@ export async function GET() {
 
     const tables = [
       { tableNumber: "Table 1", capacity: 2, posX: 10, posY: 10 },
-      { tableNumber: "Table 2", capacity: 3, posX: 20, posY: 10 },
+      { tableNumber: "Table 2", capacity: 4, posX: 20, posY: 10 },
       { tableNumber: "Table 3", capacity: 2, posX: 30, posY: 10 },
       { tableNumber: "Table 4", capacity: 2, posX: 10, posY: 30 },
       { tableNumber: "Table 5", capacity: 5, posX: 20, posY: 30 },

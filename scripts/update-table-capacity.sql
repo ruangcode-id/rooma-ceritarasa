@@ -1,8 +1,9 @@
 -- ============================================================
--- Table Capacity Update — Meja 8 & Meja 10
+-- Table Capacity Update — Meja 2, Meja 8 & Meja 10
 -- Rooma Ceritarasa (maintenance Nov 2026)
 --
 -- Target:
+--   Table 2  → 4 pax (align with UI 3-4 pax rule)
 --   Table 8  → 3 pax
 --   Table 10 → 2 pax (previously 3 in the system)
 --
@@ -18,6 +19,10 @@
 -- ============================================================
 
 UPDATE tables
+SET capacity = 4
+WHERE table_number IN ('2', 'Table 2', 'T2');
+
+UPDATE tables
 SET capacity = 3
 WHERE table_number IN ('8', 'Table 8', 'T8');
 
@@ -27,5 +32,5 @@ WHERE table_number IN ('10', 'Table 10', 'T10');
 
 SELECT table_number, capacity
 FROM tables
-WHERE table_number IN ('8', 'Table 8', 'T8', '10', 'Table 10', 'T10')
+WHERE table_number IN ('2', 'Table 2', 'T2', '8', 'Table 8', 'T8', '10', 'Table 10', 'T10')
 ORDER BY table_number;

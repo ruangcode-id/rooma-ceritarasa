@@ -1,6 +1,7 @@
 import { prisma } from "../prisma";
 
 const TARGETS: Array<{ keys: string[]; capacity: number; label: string }> = [
+  { keys: ["2", "Table 2", "T2"], capacity: 4, label: "Table 2" },
   { keys: ["8", "Table 8", "T8"], capacity: 3, label: "Table 8" },
   { keys: ["10", "Table 10", "T10"], capacity: 2, label: "Table 10" },
 ];
