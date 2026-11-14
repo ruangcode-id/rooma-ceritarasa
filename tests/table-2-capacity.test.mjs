@@ -27,3 +27,4 @@ test("Table 2 capacity validation allows 4 pax reservation", () => {
   
   assert.equal(totalCapacity >= partySize, true, "Capacity 4 must be sufficient for 4 guests");
 });
+

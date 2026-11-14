@@ -2,3 +2,4 @@
 UPDATE "tables"
 SET "capacity" = 4
 WHERE "table_number" IN ('2', 'Table 2', 'T2');
+
